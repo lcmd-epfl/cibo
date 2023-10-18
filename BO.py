@@ -15,6 +15,9 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import matplotlib.pyplot as plt
 import numpy as np
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dtype = torch.float
+
 class CustomGPModel:
     def __init__(self, kernel_type="RBF"):
         self.kernel_type = kernel_type
@@ -46,9 +49,12 @@ class CustomGPModel:
             def __init__(self, train_X, train_Y, kernel):
                 super().__init__(train_X, train_Y)
                 self.covar_module = ScaleKernel(kernel)
-
+        #If in doubt consult
+        #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
+        self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
         self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
+        self.mll.to(self.X_train_tensor)
         fit_gpytorch_model(self.mll)
 
     def predict(self, X_test):
@@ -159,7 +165,9 @@ class ExperimentHoldout:
         self.batch_size = batch_size
         self.n_exp = n_exp
 
-        model = CustomGPModel(kernel_type="Matern")
+        self.kernel_type = "RBF"
+
+        model = CustomGPModel(kernel_type=self.kernel_type)
         model.fit(self.X_initial, self.y_initial)
         self.surrogate = model
 
@@ -175,7 +183,7 @@ class ExperimentHoldout:
 
         for i in range(self.n_exp):
             
-            acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.01))          
+            acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.05))          
             top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
             top_k_molecules = self.test_molecules[top_k_indices]
             y_top_k         = self.y_test[top_k_indices]
@@ -193,7 +201,7 @@ class ExperimentHoldout:
             
             X = np.concatenate((X, X_top_k))
             y = np.concatenate((y, y_top_k))
-            model = CustomGPModel(kernel_type="Matern")
+            model = CustomGPModel(kernel_type=self.kernel_type)
             model.fit(X, y)
             self.surrogate = model
             print("Iteration: ", i, "Top k values: ", y_top_k, "Best value: ", y_best)
