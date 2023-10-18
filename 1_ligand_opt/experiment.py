@@ -117,17 +117,17 @@ if __name__ == "__main__":
         RANDOM_RESULTS, BO_RESULTS = [],[]
         for ITER in range(15):
             random.seed(ITER+1)
-            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(rep_type="ECFP", fraction_test=0.99)
+            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(rep_type="ECFP", fraction_test=0.90)
             initial_molecules           = LIGAND_SMILES_train
             y_initial                   = y_train
             test_molecules              = LIGAND_SMILES_test
             X_initial                   = X_train
 
-            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=10, batch_size=20)
+            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=10, batch_size=10)
             random_experiment.run()
             
             best_molecule_random,y_better_random = random_experiment.run()                      
-            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,acqfct=ExpectedImprovement, n_exp=10, batch_size=20)
+            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,acqfct=ExpectedImprovement, n_exp=10, batch_size=10)
             best_molecule_BO,y_better_BO = experiment.run()
             RANDOM_RESULTS.append(y_better_random)
             BO_RESULTS.append(y_better_BO)

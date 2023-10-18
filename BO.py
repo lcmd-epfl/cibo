@@ -189,6 +189,7 @@ class ExperimentHoldout:
             y_better.append(y_best)
             self.test_molecules = np.delete(self.test_molecules, top_k_indices)
             self.X_test = np.delete(self.X_test, top_k_indices, axis=0)
+            self.y_test = np.delete(self.y_test, top_k_indices)
             
             X = np.concatenate((X, X_top_k))
             y = np.concatenate((y, y_top_k))
