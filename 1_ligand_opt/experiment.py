@@ -75,9 +75,9 @@ def gen_rep_from_df(rep_type="onehot"):
     return LIGAND_SMILES, X, y
 
 
-def split_for_bo(rep_type="onehot", fraction_test=0.1):
+def split_for_bo(state, rep_type="onehot", fraction_test=0.1):
     LIGAND_SMILES,X,y = gen_rep_from_df(rep_type)
-    LIGAND_SMILES_train, LIGAND_SMILES_test, X_train, X_test, y_train, y_test = train_test_split(LIGAND_SMILES, X,y, test_size=fraction_test)
+    LIGAND_SMILES_train, LIGAND_SMILES_test, X_train, X_test, y_train, y_test = train_test_split(LIGAND_SMILES, X,y,random_state=state, test_size=fraction_test)
 
     return LIGAND_SMILES_train, LIGAND_SMILES_test, X_train, X_test, y_train, y_test
     
@@ -117,17 +117,17 @@ if __name__ == "__main__":
         RANDOM_RESULTS, BO_RESULTS = [],[]
         for ITER in range(15):
             random.seed(ITER+1)
-            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(rep_type="ECFP", fraction_test=0.90)
+            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(ITER+1, rep_type="ECFP", fraction_test=0.95)
             initial_molecules           = LIGAND_SMILES_train
             y_initial                   = y_train
             test_molecules              = LIGAND_SMILES_test
             X_initial                   = X_train
 
-            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=10, batch_size=10)
+            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=7, batch_size=20)
             random_experiment.run()
             
             best_molecule_random,y_better_random = random_experiment.run()                      
-            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,acqfct=ExpectedImprovement, n_exp=10, batch_size=10)
+            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,type_acqfct="EI", n_exp=7, batch_size=20)
             best_molecule_BO,y_better_BO = experiment.run()
             RANDOM_RESULTS.append(y_better_random)
             BO_RESULTS.append(y_better_BO)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         iters = np.arange(len(MEAN_RANDOM_RESULTS))
         plt.plot(iters, MEAN_RANDOM_RESULTS, label='Random')
         plt.fill_between(iters, lower_rnd, upper_rnd, alpha=0.2)
-        plt.plot(iters, MEAN_BO_RESULTS, label='EI')
+        plt.plot(iters, MEAN_BO_RESULTS, label='Acquisition Function')
         plt.fill_between(iters, lower_ei, upper_ei, alpha=0.2)
         plt.xlabel('Number of Iterations')
         plt.ylabel('Best Objective Value')
