@@ -167,12 +167,12 @@ def compute_descriptors_from_smiles_list(smiles_list, normalize=False, missingVa
     
     return np.array(descriptor_vectors)
 
-def generate_fingerprints(smiles_list):
+def generate_fingerprints(smiles_list, nBits=512):
     fingerprints = []
     for smiles in smiles_list:
         mol = Chem.MolFromSmiles(smiles)
         if mol is not None:
-            fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=512)
+            fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=nBits)
             fp_array = np.array(list(fp.ToBitString()), dtype=int)  # Convert to NumPy array
             fingerprints.append(fp_array)
         else:
@@ -256,3 +256,22 @@ def get_dummy_nuclear_charge_values(smiles_list):
             values.append(None)
     
     return values, non_none_indices
+
+
+
+# auxiliary function to calculate the fragment representation of a molecule
+def fragments(smiles):
+    # descList[115:] contains fragment-based features only
+    # (https://www.rdkit.org/docs/source/rdkit.Chem.Fragments.html)
+    # Update: in the new RDKit version the indices are [124:]
+    fragments = {d[0]: d[1] for d in Descriptors.descList[124:]}
+    frags = np.zeros((len(smiles), len(fragments)))
+    for i in range(len(smiles)):
+        mol = Chem.MolFromSmiles(smiles[i])
+        try:
+            features = [fragments[d](mol) for d in fragments]
+        except:
+            raise Exception("molecule {}".format(i) + " is not canonicalised")
+        frags[i, :] = features
+
+    return frags
