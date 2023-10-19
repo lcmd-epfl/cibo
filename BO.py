@@ -11,12 +11,129 @@ from botorch.models import SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from botorch.fit import fit_gpytorch_model
 from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel,PolynomialKernel, AdditiveKernel
+from gpytorch.kernels import Kernel
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import norm, entropy
+from scipy.optimize import minimize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
+
+
+#from here https://github.com/leojklarner/gauche/blob/main/gauche/kernels/fingerprint_kernels/tanimoto_kernel.py
+def batch_tanimoto_sim(
+        x1: torch.Tensor, x2: torch.Tensor, eps: float = 1e-6
+) -> torch.Tensor:
+    """
+    Tanimoto similarity between two batched tensors, across last 2 dimensions.
+    eps argument ensures numerical stability if all zero tensors are added. Tanimoto similarity is proportional to:
+
+    (<x, y>) / (||x||^2 + ||y||^2 - <x, y>)
+
+    where x and y may be bit or count vectors or in set notation:
+
+    |A \cap B | / |A| + |B| - |A \cap B |
+
+    Args:
+        x1: `[b x n x d]` Tensor where b is the batch dimension
+        x2: `[b x m x d]` Tensor
+        eps: Float for numerical stability. Default value is 1e-6
+    Returns:
+        Tensor denoting the Tanimoto similarity.
+    """
+
+    if x1.ndim < 2 or x2.ndim < 2:
+        raise ValueError("Tensors must have a batch dimension")
+
+    dot_prod = torch.matmul(x1, torch.transpose(x2, -1, -2))
+    x1_norm = torch.sum(x1 ** 2, dim=-1, keepdims=True)
+    x2_norm = torch.sum(x2 ** 2, dim=-1, keepdims=True)
+
+    tan_similarity = (dot_prod + eps) / (
+            eps + x1_norm + torch.transpose(x2_norm, -1, -2) - dot_prod
+    )
+
+    return tan_similarity.clamp_min_(0)  # zero out negative values for numerical stability
+
+
+class TanimotoKernel(Kernel):
+    r"""
+     Computes a covariance matrix based on the Tanimoto kernel
+     between inputs :math:`\mathbf{x_1}` and :math:`\mathbf{x_2}`:
+
+     .. math::
+
+    \begin{equation*}
+     k_{\text{Tanimoto}}(\mathbf{x}, \mathbf{x'}) = \frac{\langle\mathbf{x},
+     \mathbf{x'}\rangle}{\left\lVert\mathbf{x}\right\rVert^2 + \left\lVert\mathbf{x'}\right\rVert^2 -
+     \langle\mathbf{x}, \mathbf{x'}\rangle}
+    \end{equation*}
+
+    .. note::
+
+     This kernel does not have an `outputscale` parameter. To add a scaling parameter,
+     decorate this kernel with a :class:`gpytorch.test_kernels.ScaleKernel`.
+
+     Example:
+         >>> x = torch.randint(0, 2, (10, 5))
+         >>> # Non-batch: Simple option
+         >>> covar_module = gpytorch.kernels.ScaleKernel(TanimotoKernel())
+         >>> covar = covar_module(x)  # Output: LazyTensor of size (10 x 10)
+         >>>
+         >>> batch_x = torch.randint(0, 2, (2, 10, 5))
+         >>> # Batch: Simple option
+         >>> covar_module = gpytorch.kernels.ScaleKernel(TanimotoKernel())
+         >>> covar = covar_module(batch_x)  # Output: LazyTensor of size (2 x 10 x 10)
+    """
+
+    is_stationary = False
+    has_lengthscale = False
+
+    def __init__(self, **kwargs):
+        super(TanimotoKernel, self).__init__(**kwargs)
+
+    def forward(self, x1, x2, diag=False, **params):
+        if diag:
+            assert x1.size() == x2.size() and torch.equal(x1, x2)
+            return torch.ones(
+                *x1.shape[:-2], x1.shape[-2], dtype=x1.dtype, device=x1.device
+            )
+        else:
+            return self.covar_dist(x1, x2, **params)
+
+    def covar_dist(
+            self,
+            x1,
+            x2,
+            last_dim_is_batch=False,
+            **params,
+    ):
+        r"""This is a helper method for computing the bit vector similarity between
+        all pairs of points in x1 and x2.
+
+        Args:
+            :attr:`x1` (Tensor `n x d` or `b1 x ... x bk x n x d`):
+                First set of data.
+            :attr:`x2` (Tensor `m x d` or `b1 x ... x bk x m x d`):
+                Second set of data.
+            :attr:`last_dim_is_batch` (tuple, optional):
+                Is the last dimension of the data a batch dimension or not?
+
+        Returns:
+            (:class:`Tensor`, :class:`Tensor) corresponding to the distance matrix between `x1` and `x2`.
+            The shape depends on the kernel's mode
+            * `diag=False`
+            * `diag=False` and `last_dim_is_batch=True`: (`b x d x n x n`)
+            * `diag=True`
+            * `diag=True` and `last_dim_is_batch=True`: (`b x d x n`)
+        """
+        if last_dim_is_batch:
+            x1 = x1.transpose(-1, -2).unsqueeze(-1)
+            x2 = x2.transpose(-1, -2).unsqueeze(-1)
+
+        return batch_tanimoto_sim(x1, x2)
 
 class CustomGPModel:
     def __init__(self, kernel_type="RBF"):
@@ -42,6 +159,8 @@ class CustomGPModel:
             kernel = PolynomialKernel(power=2, offset=0.0)
         elif self.kernel_type == "Product":
             kernel = MaternKernel(nu=2.5,active_dims=torch.tensor(np.arange(216).tolist()))*RBFKernel(active_dims=torch.tensor([216]))*RBFKernel(active_dims=torch.tensor([217]))
+        elif self.kernel_type == "Tanimoto":
+            kernel = TanimotoKernel()
         else:
             raise ValueError("Invalid kernel type")
 
@@ -96,6 +215,69 @@ def ExpectedImprovement(X_candidates, gp_model,y_best, kappa=0.01):
     ei_values = (y_best - mu - kappa) * norm.cdf(Z) + sigma * norm.pdf(Z)
     ei_values[sigma <= 1e-9] = 0.0
     return ei_values, mu, sigma
+
+
+
+def find_min_max_distance_and_ratio(x, vectors):
+    # Calculate the squared differences between x and each vector in the list
+    squared_diffs_x = np.sum((vectors - x)**2, axis=1)
+    # Calculate the Euclidean distances between x and each vector in the list
+    distances_x = np.sqrt(squared_diffs_x)
+    # Calculate all pairwise squared differences among the vectors in the list
+    pairwise_diffs = np.sum((vectors[:, np.newaxis, :] - vectors[np.newaxis, :, :])**2, axis=-1)
+    # Calculate the pairwise Euclidean distances among the vectors in the list
+    pairwise_distances = np.sqrt(pairwise_diffs)
+    # Find the minimal distance
+    min_distance = np.min(distances_x)
+    # Find the maximal distance among all vectors, including x
+    max_distance = np.max([np.max(pairwise_distances), np.max(distances_x)])
+    # Calculate the ratio p = min_distance / max_distance
+    p = min_distance / max_distance
+    return min_distance, max_distance, 1- p
+
+def CostAwareExpectedImprovement(X, X_candidates, gp_model,y_best, kappa=0.01):
+    pass
+
+
+def LogNoisyExpectedImprovement(X_candidates, gp_model,n_fantasies=10):
+
+    """
+
+    Calculate the Log Noisy Expected Improvement (LogNEI) at given points.
+    Parameters:
+
+        X_candidates (ndarray): Points at which to evaluate the LogNEI
+        gp_model (GaussianProcessRegressor): Trained GP model
+        y_best (float): The best observed value
+        n_fantasies (int): The number of fantasy samples to average over
+
+    Returns:
+
+        lognei_values (ndarray): LogNEI values at X_candidates
+
+    """
+    mu, sigma = gp_model.predict(X_candidates)
+    # Generate fantasy samples
+    fantasy_samples = np.random.laplace(loc=mu, scale=sigma, size=(n_fantasies, len(X_candidates)))
+    #np.random.normal(loc=mu, scale=sigma, size=(n_fantasies, len(X_candidates)))
+    #you can assume different noise models, e.g. laplace, normal, etc. , laplacian would be 
+    # equivalent to having some outliers in the data
+    # Calculate EI for each fantasy sample
+    ei_fantasy_values = []
+    for fantasy in fantasy_samples:
+        fantasy_best = np.max(fantasy)
+        with np.errstate(divide='warn'):
+            Z = (fantasy_best - mu) / (sigma + 1e-9)
+        ei_values = np.maximum(fantasy_best - mu, 0) * norm.cdf(Z) + sigma * norm.pdf(Z)
+        ei_values[sigma <= 1e-9] = 0.0
+        ei_fantasy_values.append(ei_values)
+
+    # Average EI over all fantasy samples and take the log
+    avg_ei_values = np.mean(ei_fantasy_values, axis=0)
+    lognei_values = np.log(avg_ei_values + 1e-9)  # Add epsilon to avoid log(0)
+
+    return lognei_values, mu, sigma
+
 
 
 def exploration_estimate(values, p=0.02):
@@ -154,18 +336,27 @@ class ExperimentHoldout:
     """
     Larger is better!
     """
-    def __init__(self,X_initial, y_initial,test_molecules,X_test,y_test,acqfct=ExpectedImprovement, n_exp=10, batch_size=10):
+    def __init__(self,X_initial, y_initial,test_molecules,X_test,y_test,type_acqfct="EI", n_exp=10, batch_size=10):
         
         self.X_initial = X_initial
         self.y_initial = y_initial
         self.test_molecules = test_molecules
         self.X_test = X_test
         self.y_test = y_test
-        self.acqfct = acqfct
+
+        self.type_acqfct = type_acqfct
+        if type_acqfct == "EI":
+            self.acqfct = ExpectedImprovement
+        elif type_acqfct == "UCB":
+            self.acqfct = UCB
+        elif type_acqfct == "LogNEI":
+            self.acqfct = LogNoisyExpectedImprovement
+        else:
+            raise ValueError("Invalid acquisition function type")
         self.batch_size = batch_size
         self.n_exp = n_exp
 
-        self.kernel_type = "RBF"
+        self.kernel_type = "Tanimoto" #"RBF"
 
         model = CustomGPModel(kernel_type=self.kernel_type)
         model.fit(self.X_initial, self.y_initial)
@@ -183,12 +374,20 @@ class ExperimentHoldout:
 
         for i in range(self.n_exp):
             
-            acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.05))          
+            #
+            if self.type_acqfct == "EI":
+                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.01))          
+            elif self.type_acqfct == "UCB":
+                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate, kappa = exploration_estimate(mu, p=0.01))
+            elif self.type_acqfct == "LogNEI":
+                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,n_fantasies=10)
+            else:
+                raise ValueError("Invalid acquisition function type")
+            
             top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
             top_k_molecules = self.test_molecules[top_k_indices]
             y_top_k         = self.y_test[top_k_indices]
             X_top_k         = self.X_test[top_k_indices]
-    
             if y_best < np.max(y_top_k):
                 y_best = np.max(y_top_k)
                 best_molecule = top_k_molecules[np.argmax(y_top_k)]
@@ -209,6 +408,9 @@ class ExperimentHoldout:
         y_better = np.array(y_better)
 
         return best_molecule,y_better
+
+
+
 
 
 class RandomExperiment:
@@ -248,42 +450,6 @@ class RandomExperiment:
         return best_molecule,y_better
 
 
-def LogNoisyExpectedImprovement(X_candidates, gp_model, n_fantasies=10):
-
-    """
-
-    Calculate the Log Noisy Expected Improvement (LogNEI) at given points.
-    Parameters:
-
-        X_candidates (ndarray): Points at which to evaluate the LogNEI
-        gp_model (GaussianProcessRegressor): Trained GP model
-        y_best (float): The best observed value
-        n_fantasies (int): The number of fantasy samples to average over
-
-    Returns:
-
-        lognei_values (ndarray): LogNEI values at X_candidates
-
-    """
-    mu, sigma = gp_model.predict(X_candidates, return_std=True)
-    # Generate fantasy samples
-    fantasy_samples = np.random.normal(loc=mu, scale=sigma, size=(n_fantasies, len(X_candidates)))
-    # Calculate EI for each fantasy sample
-    ei_fantasy_values = []
-    for fantasy in fantasy_samples:
-        fantasy_best = np.max(fantasy)
-        with np.errstate(divide='warn'):
-            Z = (fantasy_best - mu) / (sigma + 1e-9)
-        ei_values = np.maximum(fantasy_best - mu, 0) * norm.cdf(Z) + sigma * norm.pdf(Z)
-        ei_values[sigma <= 1e-9] = 0.0
-        ei_fantasy_values.append(ei_values)
-
-
-    # Average EI over all fantasy samples and take the log
-    avg_ei_values = np.mean(ei_fantasy_values, axis=0)
-    lognei_values = np.log(avg_ei_values + 1e-9)  # Add epsilon to avoid log(0)
-
-    return lognei_values, mu, sigma
 
 
 class Experiment:
@@ -322,7 +488,7 @@ class Experiment:
         X, y = self.X_initial, self.y_initial
         mu = self.y_initial
 
-        y_better = []#
+        y_better = []
         y_best = np.min(self.y_initial)
         y_better.append(y_best)
 

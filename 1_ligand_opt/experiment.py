@@ -9,13 +9,16 @@ import matplotlib.pyplot as plt
 from plot_selection import *
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+import matplotlib.pyplot as plt
 
 random.seed(45577)
 np.random.seed(4565777)
 
 #https://zinc20.docking.org/substances/subsets/for-sale/
 
-def gen_rep_from_df(rep_type="onehot"):
+def gen_rep_from_df(rep_type_1="ECFP",rep_type_2="onehot", dimred=False):
 
     experiment = pd.read_csv("experiment_index.csv")
     #randomly shuffle the data
@@ -31,9 +34,9 @@ def gen_rep_from_df(rep_type="onehot"):
     LIGAND_SMILES  = experiment["Ligand_SMILES"].values
 
 
-    if rep_type == "onehot":
+    if rep_type_2 == "onehot":
 
-        from sklearn.preprocessing import OneHotEncoder
+        
     
         encoder1,encoder2,  = OneHotEncoder(sparse=False),OneHotEncoder(sparse=False)
 
@@ -46,19 +49,19 @@ def gen_rep_from_df(rep_type="onehot"):
         X_BASE = BASE_SMILES_one_hot
         X_SOLVENT = SOLVENT_SMILES_one_hot
 
-    elif rep_type == "ECFP":
+    elif rep_type_2 == "ECFP":
         X_BASE    = generate_fingerprints(BASE_SMILES, nBits=64)
         X_SOLVENT = generate_fingerprints(SOLVENT_SMILES, nBits=64)
 
-    elif rep_type == "descriptors":
+    elif rep_type_2 == "descriptors":
         X_BASE    = compute_descriptors_from_smiles_list(BASE_SMILES)
         X_SOLVENT = compute_descriptors_from_smiles_list(SOLVENT_SMILES)
 
-    elif rep_type == "frags":
+    elif rep_type_2 == "frags":
         X_BASE    = fragments(BASE_SMILES)
         X_SOLVENT = fragments(SOLVENT_SMILES)
 
-    elif rep_type == "mix":
+    elif rep_type_2 == "mix":
         X_BASE    = np.column_stack((fragments(BASE_SMILES),  generate_fingerprints(BASE_SMILES, nBits=32)))
         X_SOLVENT = np.column_stack((fragments(SOLVENT_SMILES), generate_fingerprints(SOLVENT_SMILES, nBits=32)))
 
@@ -66,19 +69,42 @@ def gen_rep_from_df(rep_type="onehot"):
         raise ValueError("Unknown representation type")
         
 
-    X_LIGAND =  generate_fingerprints(BASE_SMILES, nBits=256)
-    #compute_descriptors_from_smiles_list(LIGAND_SMILES)
+    if rep_type_1 == "ECFP":
+        X_LIGAND =  generate_fingerprints(BASE_SMILES, nBits=256)
+    elif rep_type_1 == "onehot":
+        encoder3 = OneHotEncoder(sparse=False)
+        LIGAND_SMILES_2D = LIGAND_SMILES.reshape(-1, 1)
+        X_LIGAND = encoder3.fit_transform(LIGAND_SMILES_2D)
+    elif rep_type_1 == "descriptors":
+        X_LIGAND = compute_descriptors_from_smiles_list(LIGAND_SMILES)
+    elif rep_type_1 == "frags":
+        X_LIGAND = fragments(LIGAND_SMILES)
+    else:
+        raise ValueError("Unknown representation type")
 
     X = np.column_stack((X_BASE, X_LIGAND, X_SOLVENT, CONCENTRATION, TEMPERATURE))
+
+    if dimred:
+        X = MinMaxScaler().fit_transform(X)
+        umap_model = umap.UMAP(n_components=100)
+        umap_model.fit(X)
+        X = umap_model.transform(X)
+
     y = experiment["yield"].values
 
     return LIGAND_SMILES, X, y
 
-
-def split_for_bo(state, rep_type="onehot", fraction_test=0.1):
-    LIGAND_SMILES,X,y = gen_rep_from_df(rep_type)
-    LIGAND_SMILES_train, LIGAND_SMILES_test, X_train, X_test, y_train, y_test = train_test_split(LIGAND_SMILES, X,y,random_state=state, test_size=fraction_test)
-
+            
+def split_for_bo(state,rep_type_1="ECFP", rep_type_2="onehot", train_size=100, dimred=False):
+    LIGAND_SMILES,X,y = gen_rep_from_df(rep_type_1=rep_type_1,rep_type_2=rep_type_2, dimred=dimred)
+    
+    #get the worst 100 with yield < 70
+    index_worst = np.random.choice(np.argwhere(y<70).flatten(), size=train_size, replace=False)
+    index_others = np.setdiff1d(np.arange(len(y)), index_worst)
+    #randomly shuffle the data
+    index_others = np.random.permutation(index_others)
+    LIGAND_SMILES_train, LIGAND_SMILES_test, X_train, X_test, y_train, y_test = LIGAND_SMILES[index_worst], LIGAND_SMILES[index_others], X[index_worst], X[index_others], y[index_worst], y[index_others]
+    
     return LIGAND_SMILES_train, LIGAND_SMILES_test, X_train, X_test, y_train, y_test
     
 
@@ -88,9 +114,9 @@ BAYES_OPT = True
 if __name__ == "__main__":
     if FIT_TEST:
         #scale the features
-        LIGAND_SMILES,X, y = gen_rep_from_df(rep_type="ECFP")
+        LIGAND_SMILES,X, y = gen_rep_from_df(rep_type="ECFP", dimred=False)
         PLOT_SOAP(MinMaxScaler().fit_transform(X), y, label='yield', dimred="PCA", selection=None, random_points=None)
-        from sklearn.model_selection import train_test_split
+        
 
         X_train, X_test, y_train, y_test = train_test_split(X,y, random_state=42, test_size=0.2)
         model = CustomGPModel(kernel_type="Matern")
@@ -98,7 +124,7 @@ if __name__ == "__main__":
         y_pred, sigma = model.predict(X_test)
 
         #make a scatter plot
-        import matplotlib.pyplot as plt
+        
         plt.scatter(y_test, y_pred, c='blue', alpha=0.5, label='Predicted')
         plt.errorbar(y_test, y_pred, yerr=sigma, fmt='o', ecolor='gray', capsize=5)
         plt.xlabel("Experimental")
@@ -114,23 +140,41 @@ if __name__ == "__main__":
 
     if BAYES_OPT:    
 
+        all_tests = [{"rep_type_1":"ECFP" ,"rep_type_2": "ECFP", "dimred": False}, 
+                     {"rep_type_1":"ECFP" ,"rep_type_2": "onehot", "dimred": False},
+                     {"rep_type_1":"ECFP" ,"rep_type_2": "descriptors", "dimred": False},
+                     {"rep_type_1":"ECFP" ,"rep_type_2": "frags", "dimred": False},
+                     {"rep_type_1":"ECFP" ,"rep_type_2": "mix", "dimred": False},
+                     {"rep_type_1":"descriptors" ,"rep_type_2": "ECFP", "dimred": False},
+                     {"rep_type_1":"descriptors" ,"rep_type_2": "onehot", "dimred": False},
+                     {"rep_type_1":"descriptors" ,"rep_type_2": "descriptors", "dimred": False},
+                     {"rep_type_1":"descriptors" ,"rep_type_2": "frags", "dimred": False},
+                     {"rep_type_1":"descriptors" ,"rep_type_2": "mix", "dimred": False},
+                     {"rep_type_1":"frags" ,"rep_type_2": "ECFP", "dimred": False},
+                     {"rep_type_1":"frags" ,"rep_type_2": "onehot", "dimred": False},
+                     {"rep_type_1":"frags" ,"rep_type_2": "descriptors", "dimred": False},
+                     {"rep_type_1":"frags" ,"rep_type_2": "frags", "dimred": False},
+                     {"rep_type_1":"frags" ,"rep_type_2": "mix", "dimred": False}]
+
+ 
         RANDOM_RESULTS, BO_RESULTS = [],[]
         for ITER in range(15):
             random.seed(ITER+1)
-            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(ITER+1, rep_type="ECFP", fraction_test=0.95)
+            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(ITER+1,rep_type_1="ECFP", rep_type_2="ECFP", train_size=100, dimred=False)
             initial_molecules           = LIGAND_SMILES_train
             y_initial                   = y_train
             test_molecules              = LIGAND_SMILES_test
             X_initial                   = X_train
 
-            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=7, batch_size=20)
+            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=20, batch_size=1)
             random_experiment.run()
             
             best_molecule_random,y_better_random = random_experiment.run()                      
-            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,type_acqfct="EI", n_exp=7, batch_size=20)
+            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,type_acqfct="LogNEI", n_exp=20, batch_size=1)
             best_molecule_BO,y_better_BO = experiment.run()
             RANDOM_RESULTS.append(y_better_random)
             BO_RESULTS.append(y_better_BO)
+
 
 
         RANDOM_RESULTS, BO_RESULTS           = np.array(RANDOM_RESULTS), np.array(BO_RESULTS)
