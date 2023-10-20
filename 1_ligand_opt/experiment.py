@@ -95,7 +95,7 @@ def gen_rep_from_df(rep_type_1="ECFP",rep_type_2="onehot", dimred=False):
     return LIGAND_SMILES, X, y
 
             
-def split_for_bo(state,rep_type_1="ECFP", rep_type_2="onehot", train_size=100, dimred=False):
+def split_for_bo(rep_type_1="ECFP", rep_type_2="onehot", train_size=100, dimred=False):
     LIGAND_SMILES,X,y = gen_rep_from_df(rep_type_1=rep_type_1,rep_type_2=rep_type_2, dimred=dimred)
     
     #get the worst 100 with yield < 70
@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     if BAYES_OPT:    
 
-        all_tests = [{"rep_type_1":"ECFP" ,"rep_type_2": "ECFP", "dimred": False}, 
+        all_tests = [{"rep_type_1":"ECFP" ,"rep_type_2": "ECFP", "acqft": "EI" ,"dimred": False}, 
                      {"rep_type_1":"ECFP" ,"rep_type_2": "onehot", "dimred": False},
                      {"rep_type_1":"ECFP" ,"rep_type_2": "descriptors", "dimred": False},
                      {"rep_type_1":"ECFP" ,"rep_type_2": "frags", "dimred": False},
@@ -159,8 +159,10 @@ if __name__ == "__main__":
  
         RANDOM_RESULTS, BO_RESULTS = [],[]
         for ITER in range(15):
-            random.seed(ITER+1)
-            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(ITER+1,rep_type_1="ECFP", rep_type_2="ECFP", train_size=100, dimred=False)
+            #random.seed(ITER+1)
+            #np.random.seed(ITER+1)
+
+            LIGAND_SMILES_train, LIGAND_SMILES_test, X_train,X_test, y_train, y_test = split_for_bo(rep_type_1="ECFP", rep_type_2="ECFP", train_size=100, dimred=False)
             initial_molecules           = LIGAND_SMILES_train
             y_initial                   = y_train
             test_molecules              = LIGAND_SMILES_test

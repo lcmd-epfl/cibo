@@ -18,6 +18,11 @@ import numpy as np
 from scipy.stats import norm, entropy
 from scipy.optimize import minimize
 
+
+
+random.seed(45577)
+np.random.seed(4565777)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
 
@@ -356,7 +361,7 @@ class ExperimentHoldout:
         self.batch_size = batch_size
         self.n_exp = n_exp
 
-        self.kernel_type = "Tanimoto" #"RBF"
+        self.kernel_type = "Matern" #"RBF"
 
         model = CustomGPModel(kernel_type=self.kernel_type)
         model.fit(self.X_initial, self.y_initial)
