@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm, entropy
 from scipy.optimize import minimize
-
+import copy as cp
 
 
 random.seed(45577)
@@ -263,7 +263,7 @@ def LogNoisyExpectedImprovement(X_candidates, gp_model,n_fantasies=10):
     """
     mu, sigma = gp_model.predict(X_candidates)
     # Generate fantasy samples
-    fantasy_samples = np.random.laplace(loc=mu, scale=sigma, size=(n_fantasies, len(X_candidates)))
+    fantasy_samples = np.random.normal(loc=mu, scale=sigma, size=(n_fantasies, len(X_candidates)))
     #np.random.normal(loc=mu, scale=sigma, size=(n_fantasies, len(X_candidates)))
     #you can assume different noise models, e.g. laplace, normal, etc. , laplacian would be 
     # equivalent to having some outliers in the data
@@ -283,6 +283,27 @@ def LogNoisyExpectedImprovement(X_candidates, gp_model,n_fantasies=10):
 
     return lognei_values, mu, sigma
 
+
+
+
+def BatchFantasizingWithEI(gp_model,X, X_candidates, batch_size=3, n_fantasies=10):
+    mu, sigma = gp_model.predict(X_candidates)
+    
+    ei_values, mu, sigma = ExpectedImprovement(X_candidates, gp_model,np.max(mu), kappa=0.01)
+    top_ind = np.argsort(ei_values)
+    x1 = X_candidates[top_ind[0]]
+    for j in range(1, batch_size):
+        xj = X_candidates[top_ind[j]]
+        X_dummy = cp.deepcopy(X)
+        X_dummy = np.concatenate((X_dummy, x1.reshape(1,-1)))
+
+        for i in range(n_fantasies):
+            dummy_model = CustomGPModel(kernel_type="Matern")
+            exit()
+            #dummy_model.fit(X_dummy, 
+
+
+        
 
 
 def exploration_estimate(values, p=0.02):
@@ -350,12 +371,17 @@ class ExperimentHoldout:
         self.y_test = y_test
 
         self.type_acqfct = type_acqfct
+
         if type_acqfct == "EI":
             self.acqfct = ExpectedImprovement
         elif type_acqfct == "UCB":
             self.acqfct = UCB
         elif type_acqfct == "LogNEI":
             self.acqfct = LogNoisyExpectedImprovement
+        elif type_acqfct == "CostAwareEI":
+            pass
+        elif type_acqfct == "BatchFantasizingWithEI":
+            self.acqfct = BatchFantasizingWithEI
         else:
             raise ValueError("Invalid acquisition function type")
         self.batch_size = batch_size
@@ -381,18 +407,26 @@ class ExperimentHoldout:
             
             #
             if self.type_acqfct == "EI":
-                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.01))          
+                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.01)) 
+                top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]         
             elif self.type_acqfct == "UCB":
                 acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate, kappa = exploration_estimate(mu, p=0.01))
+                top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
             elif self.type_acqfct == "LogNEI":
                 acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,n_fantasies=10)
+                top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
+            elif self.type_acqfct == "CostAwareEI":
+                pass
+            elif self.type_acqfct == "BatchFantasizingWithEI":
+                top_k_indices, mu, sigma = self.acqfct(self.surrogate,X, self.X_test, batch_size=self.batch_size, n_fantasies=10)
             else:
                 raise ValueError("Invalid acquisition function type")
             
-            top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
+            
             top_k_molecules = self.test_molecules[top_k_indices]
             y_top_k         = self.y_test[top_k_indices]
             X_top_k         = self.X_test[top_k_indices]
+            
             if y_best < np.max(y_top_k):
                 y_best = np.max(y_top_k)
                 best_molecule = top_k_molecules[np.argmax(y_top_k)]

@@ -168,11 +168,11 @@ if __name__ == "__main__":
             test_molecules              = LIGAND_SMILES_test
             X_initial                   = X_train
 
-            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=20, batch_size=1)
+            random_experiment   = RandomExperimentHoldout(y_initial,test_molecules,y_test, n_exp=20, batch_size=5)
             random_experiment.run()
             
             best_molecule_random,y_better_random = random_experiment.run()                      
-            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,type_acqfct="LogNEI", n_exp=20, batch_size=1)
+            experiment          =   ExperimentHoldout(X_initial,y_initial,test_molecules,X_test,y_test,type_acqfct="BatchFantasizingWithEI", n_exp=20, batch_size=5)
             best_molecule_BO,y_better_BO = experiment.run()
             RANDOM_RESULTS.append(y_better_random)
             BO_RESULTS.append(y_better_BO)
