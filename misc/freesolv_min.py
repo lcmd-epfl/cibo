@@ -15,7 +15,7 @@ from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntr
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from BO import CustomGPModel
 
-torch.manual_seed(123456)
+torch.manual_seed(111)
 import copy as cp
 
 featurizer = dc.feat.CircularFingerprint(size=1024)
@@ -95,6 +95,8 @@ import matplotlib.pyplot as plt
 
 X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_candidate)
 
+
+y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
 #bounds_norm = torch.tensor([GP_class.scaler_X.data_min_.tolist(), GP_class.scaler_X.data_max_.tolist()])
 #bounds_norm = bounds_norm.to(dtype=torch.float32)
 
@@ -106,21 +108,32 @@ RAW_SAMPLES = 512
 y_better_BO = []
 y_better_RANDOM = []
 
-for i in range(10):
+
+y_better_BO.append(y_best)
+y_better_RANDOM.append(y_best)
+
+y_best_BO, y_best_RANDOM = y_best, y_best
+
+
+NITER = 10
+for i in range(NITER):
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate)
-    candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=20,choices=X_candidate, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=True)
+    candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=1,choices=X_candidate, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=True)
 
     #find the indices of the candidates in X_candidate
     indices = []
     for candidate in candidates:
         indices.append(np.argwhere((X_candidate==candidate).all(1)).flatten()[0])
 
+    #pdb.set_trace()
     X, y = np.concatenate((X,candidates)), np.concatenate((y, y_candidate[indices, :]))
-    y_best  = max(y)[0]
+    if max(y)[0] > y_best_BO:
+        y_best_BO = max(y)[0]
+
+    y_better_BO.append(y_best_BO)
+
     GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
     model = GP_class.fit(X, y)
-
-
 
     X_candidate = np.delete(X_candidate, indices, axis=0)
     y_candidate = np.delete(y_candidate, indices, axis=0)
@@ -128,10 +141,28 @@ for i in range(10):
     pred = GP_class.scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
 
     
-    plt.scatter(pred, y_candidate_FULL)
-    plt.show()
+    #plt.scatter(pred, y_candidate_FULL)
+    #plt.show()
+    #plt.clf()
+    ##pick a random value from y_candidate_RANDOM
+    index = np.random.choice(np.arange(len(y_candidate_RANDOM)))
+    #pdb.set_trace()
+    if y_candidate_RANDOM[index][0] > y_best_RANDOM:
+        y_best_RANDOM = y_candidate_RANDOM[index][0]
+
+    y_better_RANDOM.append(y_best_RANDOM)
+
+    y_candidate_RANDOM = np.delete(y_candidate_RANDOM, index, axis=0)
 
 
     #print(candidates, acq_value)
-    print(i, y_best)
+    print(i, y_best_BO, y_best_RANDOM)
 
+#pdb.set_trace()
+#compare the two plots
+fig, ax = plt.subplots()
+#pdb.set_trace()
+ax.plot(np.arange(NITER+1) , y_better_BO, label="BO")
+ax.plot(np.arange(NITER+1) , y_better_RANDOM, label="RANDOM")
+ax.legend()
+plt.show()
