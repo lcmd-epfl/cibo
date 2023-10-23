@@ -11,11 +11,16 @@ import numpy as np
 from botorch.utils.transforms import standardize, normalize
 from botorch.optim import optimize_acqf, optimize_acqf_discrete
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy, qMaxValueEntropy
+from botorch.acquisition import (
+    ExpectedImprovement,
+    ProbabilityOfImprovement,
+    qMaxValueEntropy,
+)
 #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from BO import CustomGPModel
 
-torch.manual_seed(111)
+torch.manual_seed(23532)
 import copy as cp
 
 featurizer = dc.feat.CircularFingerprint(size=1024)
@@ -117,7 +122,13 @@ y_best_BO, y_best_RANDOM = y_best, y_best
 
 NITER = 10
 for i in range(NITER):
-    qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate)
+    qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate ) 
+    #ExpectedImprovement(model, best_f=y_best_BO)
+    #qLowerBoundMaxValueEntropy(model,X_candidate ) 
+    #ExpectedImprovement(model, best_f=y_best_BO)
+    #qLowerBoundMaxValueEntropy(model,X_candidate ) 
+    
+    #qGIBBON = ExpectedImprovement(model, best_f=y_best_BO)
     candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=1,choices=X_candidate, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=True)
 
     #find the indices of the candidates in X_candidate
