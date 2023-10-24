@@ -9,7 +9,7 @@ import torch
 import gpytorch
 from botorch.models import SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood,LeaveOneOutPseudoLikelihood
-from botorch.fit import fit_gpytorch_model
+from botorch.fit import fit_gpytorch_model,fit_gpytorch_mll
 from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel,PolynomialKernel, AdditiveKernel
 from gpytorch.kernels import Kernel
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -19,6 +19,7 @@ from scipy.stats import norm, entropy
 from scipy.optimize import minimize
 import copy as cp
 from sklearn.metrics import pairwise_distances
+from torch.optim import Adam, Adamax
 
 random.seed(45577)
 np.random.seed(4565777)
@@ -206,18 +207,64 @@ class CustomGPModel:
         self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
 
 
-        FIT_METHOD = False
+        FIT_METHOD = True
         if FIT_METHOD:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
-            fit_gpytorch_model(self.mll, max_retries=1000)
+            fit_gpytorch_model(self.mll, max_retries=2000)
+            #fit_gpytorch_mll(self.mll, num_retries=2000)
         else:
             self.mll = LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
-            from torch.optim import Adam, Adamax
             optimizer = Adamax([{"params": self.gp.parameters()}], lr=1e-2)
-            NUM_EPOCHS = 3000
             self.gp.train()
+
+            LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(np.logspace(-3, 3, 10), np.logspace(-5, 1, 10))
+            NUM_EPOCHS_INIT = 50
+
+
+            best_loss = float('inf')
+            best_lengthscale = None
+            best_noise = None
+
+            # Loop over each grid point
+            for lengthscale, noise in zip(LENGTHSCALE_GRID.flatten(), NOISE_GRID.flatten()):
+                # Manually set the hyperparameters
+                self.gp.covar_module.base_kernel.lengthscale = lengthscale
+                self.gp.likelihood.noise = noise
+                
+                # Perform a brief round of training to get a loss value
+                for epoch in range(NUM_EPOCHS_INIT):
+                    # clear gradients
+                    optimizer.zero_grad()
+                    # forward pass through the model to obtain the output MultivariateNormal
+                    output = self.gp(self.X_train_tensor)
+                    # calculate the negative log likelihood
+                    loss = -self.mll(output, self.y_train_tensor.flatten())
+                    # back prop gradients
+                    loss.backward()
+                    optimizer.step()
+                
+                # If this loss is the best so far, update best_loss and best hyperparameters
+                if loss.item() < best_loss:
+                    best_loss = loss.item()
+                    best_lengthscale = lengthscale
+                    best_noise = noise
+                #print(f"Finished grid point with lengthscale {lengthscale}, noise {noise}, loss {loss.item()}")
+
+            # Set the best found hyperparameters
+            self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
+            self.gp.likelihood.noise = best_noise
+            print(f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}")
+
+
+            """
+            finished hyperparameter optimization
+            """
+
+
+            NUM_EPOCHS = 1000
+            
             for epoch in range(NUM_EPOCHS):
                 # clear gradients
                 optimizer.zero_grad()
@@ -237,9 +284,7 @@ class CustomGPModel:
                 optimizer.step()
 
             self.gp.eval()
-     
-
-
+    
         return self.gp
 
     def predict(self, X_test):

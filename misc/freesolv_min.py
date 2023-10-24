@@ -15,15 +15,17 @@ from botorch.acquisition import (
     ExpectedImprovement,
     ProbabilityOfImprovement,
     qMaxValueEntropy,
+    UpperConfidenceBound
 )
 #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from BO import CustomGPModel
 
-torch.manual_seed(23532)
+torch.manual_seed(45)
 import copy as cp
 
-featurizer = dc.feat.CircularFingerprint(size=1024)
+featurizer = dc.feat.RDKitDescriptors()
+#dc.feat.CircularFingerprint(size=1024)
 
 
 # Load FreeSolv dataset
@@ -43,11 +45,12 @@ y_test = test_dataset.y[:, 0]
 #connect all numpy arrays into one
 X = np.concatenate((X_train, X_valid, X_test))
 y = np.concatenate((y_train, y_valid, y_test)) 
+
 #multiply the columns number 3 of X by 100
 #X[:, 3] = X[:, 3]*10
 
-#pdb.set_trace()
-index_worst =np.random.choice(np.argwhere(y<-2).flatten(), size=50, replace=False)
+
+index_worst =np.random.choice(np.argwhere(y<-2).flatten(), size=20, replace=False)
 #np.random.choice(np.arange(len(y)), size=500, replace=False)
 #
 index_others = np.setdiff1d(np.arange(len(y)), index_worst)
@@ -59,25 +62,33 @@ X_candidate, y_candidate = X[index_others], y[index_others]
 
 
 
-
-
 X_init = torch.from_numpy(X_init).float()
 X_candidate = torch.from_numpy(X_candidate).float()
+#pdb.set_trace()
 y_init = torch.from_numpy(y_init).float().reshape(-1,1)
 y_candidate = torch.from_numpy(y_candidate).float().reshape(-1,1)
 
 
-bounds_norm = torch.tensor([[0]*1024, [1]*1024])
+bounds_norm = torch.tensor([torch.min(X_candidate, dim=0).values.tolist(),torch.max(X_candidate, dim=0).values.tolist()])
+# add 0.5 to the max value
+bounds_norm[1] = bounds_norm[1] + 1.0
+#multiply the max value by 2
+bounds_norm[1] = bounds_norm[1]*2
+
+
+#torch.tensor([[0]*200, [1]*200])
+#torch.tensor([[0]*1024, [1]*1024])
 bounds_norm = bounds_norm.to(dtype=torch.float32)
 
 #y_candidate = standardize(y_candidate)
 X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
 # multiply the columns number 3 of X by 100
-X[:, 0] = X[:, 0]*70
+#X[:, 0] = X[:, 0]*2
 #adapt the bounds to the new X
-bounds_norm[1][0] = 70
+#bounds_norm[1][0] = 2
 #pdb.set_trace()
  # normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
+
 y_best = torch.max(y)
 
 
@@ -86,17 +97,24 @@ GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_no
 #array([0., 0., 0., ..., 0., 0., 0.])
 #(Pdb) GP_class.scaler_X.data_max_
 #array([1., 1., 1., ..., 1., 1., 1.])
+
 model = GP_class.fit(X, y)
+
 #pdb.set_trace()
 #in case sklearn scaler is used
 # X_candidate =    torch.from_numpy(GP_class.scaler_X.transform(X_candidate.detach().numpy()))
 #pdb.set_trace()
 
 X_candidate = normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
+
 pred = GP_class.scaler_y.inverse_transform(model.posterior(X_candidate).mean.detach().numpy())
 
 #make a scatter plot of the predictions
 import matplotlib.pyplot as plt
+plt.scatter(pred, y_candidate)
+plt.show()
+
+
 
 X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_candidate)
 
@@ -106,7 +124,7 @@ y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
 #bounds_norm = bounds_norm.to(dtype=torch.float32)
 
 
-NUM_RESTARTS = 10
+NUM_RESTARTS = 20
 RAW_SAMPLES = 512
 
 #model.posterior(X_candidate).mean
@@ -122,7 +140,10 @@ y_best_BO, y_best_RANDOM = y_best, y_best
 
 NITER = 10
 for i in range(NITER):
-    qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate ) 
+    qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate)
+    #UpperConfidenceBound(model, beta=2)
+    #qLowerBoundMaxValueEntropy(model,X_candidate)
+    #qLowerBoundMaxValueEntropy(model,X_candidate ) 
     #ExpectedImprovement(model, best_f=y_best_BO)
     #qLowerBoundMaxValueEntropy(model,X_candidate ) 
     #ExpectedImprovement(model, best_f=y_best_BO)
