@@ -21,7 +21,7 @@ from botorch.acquisition import (
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from BO import CustomGPModel
 
-torch.manual_seed(45)
+torch.manual_seed(34634)
 import copy as cp
 
 featurizer = dc.feat.RDKitDescriptors()
@@ -46,13 +46,9 @@ y_test = test_dataset.y[:, 0]
 X = np.concatenate((X_train, X_valid, X_test))
 y = np.concatenate((y_train, y_valid, y_test)) 
 
-#multiply the columns number 3 of X by 100
-#X[:, 3] = X[:, 3]*10
 
 
-index_worst =np.random.choice(np.argwhere(y<-2).flatten(), size=20, replace=False)
-#np.random.choice(np.arange(len(y)), size=500, replace=False)
-#
+index_worst =np.random.choice(np.argwhere(y<-2).flatten(), size=300, replace=False)
 index_others = np.setdiff1d(np.arange(len(y)), index_worst)
 #randomly shuffle the data
 index_others = np.random.permutation(index_others)
@@ -76,42 +72,34 @@ bounds_norm[1] = bounds_norm[1] + 1.0
 bounds_norm[1] = bounds_norm[1]*2
 
 
-#torch.tensor([[0]*200, [1]*200])
-#torch.tensor([[0]*1024, [1]*1024])
 bounds_norm = bounds_norm.to(dtype=torch.float32)
 
-#y_candidate = standardize(y_candidate)
+
 X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
-# multiply the columns number 3 of X by 100
-#X[:, 0] = X[:, 0]*2
-#adapt the bounds to the new X
-#bounds_norm[1][0] = 2
-#pdb.set_trace()
- # normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
+
 
 y_best = torch.max(y)
 
 
 GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
-#(Pdb) GP_class.scaler_X.data_min_
-#array([0., 0., 0., ..., 0., 0., 0.])
-#(Pdb) GP_class.scaler_X.data_max_
-#array([1., 1., 1., ..., 1., 1., 1.])
 
 model = GP_class.fit(X, y)
 
-#pdb.set_trace()
-#in case sklearn scaler is used
-# X_candidate =    torch.from_numpy(GP_class.scaler_X.transform(X_candidate.detach().numpy()))
-#pdb.set_trace()
-
 X_candidate = normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
 
-pred = GP_class.scaler_y.inverse_transform(model.posterior(X_candidate).mean.detach().numpy())
+
+pred = model.posterior(X_candidate).mean.detach().numpy()
+pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
+#pred = GP_class.scaler_y.inverse_transform(model.posterior(X_candidate).mean.detach().numpy())
+#pred_error = np.abs( GP_class.scaler_y.inverse_transform(model.posterior(X_candidate).variance.sqrt().detach().numpy()))
 
 #make a scatter plot of the predictions
 import matplotlib.pyplot as plt
+#plot the predictions and error bars
+pdb.set_trace()
 plt.scatter(pred, y_candidate)
+plt.errorbar(pred.flatten(), y_candidate.flatten(), yerr=pred_error.flatten(), fmt='o')
+
 plt.show()
 
 
@@ -120,14 +108,12 @@ X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_can
 
 
 y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
-#bounds_norm = torch.tensor([GP_class.scaler_X.data_min_.tolist(), GP_class.scaler_X.data_max_.tolist()])
-#bounds_norm = bounds_norm.to(dtype=torch.float32)
+
 
 
 NUM_RESTARTS = 20
 RAW_SAMPLES = 512
 
-#model.posterior(X_candidate).mean
 y_better_BO = []
 y_better_RANDOM = []
 
@@ -170,7 +156,8 @@ for i in range(NITER):
     X_candidate = np.delete(X_candidate, indices, axis=0)
     y_candidate = np.delete(y_candidate, indices, axis=0)
 
-    pred = GP_class.scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
+    pred = model.posterior(X_candidate_FULL).mean.detach().numpy()
+    #GP_class.scaler_y.inverse_transform(
 
     
     #plt.scatter(pred, y_candidate_FULL)
