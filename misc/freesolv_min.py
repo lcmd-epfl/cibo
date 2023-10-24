@@ -21,7 +21,7 @@ from botorch.acquisition import (
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from BO import CustomGPModel
 
-torch.manual_seed(34634)
+torch.manual_seed(111)
 import copy as cp
 
 featurizer = dc.feat.RDKitDescriptors()
@@ -31,24 +31,20 @@ featurizer = dc.feat.RDKitDescriptors()
 # Load FreeSolv dataset
 tasks, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
 train_dataset, valid_dataset, test_dataset = datasets
-
 # Extract training data from DeepChem dataset
 X_train = train_dataset.X
 y_train = train_dataset.y[:, 0]
-
 X_valid = valid_dataset.X
 y_valid = valid_dataset.y[:, 0]
-
 X_test = test_dataset.X
 y_test = test_dataset.y[:, 0]
-
 #connect all numpy arrays into one
 X = np.concatenate((X_train, X_valid, X_test))
 y = np.concatenate((y_train, y_valid, y_test)) 
 
 
 
-index_worst =np.random.choice(np.argwhere(y<-2).flatten(), size=300, replace=False)
+index_worst =np.random.choice(np.argwhere(y<-2).flatten(), size=25, replace=False)
 index_others = np.setdiff1d(np.arange(len(y)), index_worst)
 #randomly shuffle the data
 index_others = np.random.permutation(index_others)
@@ -88,6 +84,7 @@ model = GP_class.fit(X, y)
 X_candidate = normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
 
 
+
 pred = model.posterior(X_candidate).mean.detach().numpy()
 pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
 #pred = GP_class.scaler_y.inverse_transform(model.posterior(X_candidate).mean.detach().numpy())
@@ -96,23 +93,30 @@ pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
 #make a scatter plot of the predictions
 import matplotlib.pyplot as plt
 #plot the predictions and error bars
-pdb.set_trace()
-plt.scatter(pred, y_candidate)
-plt.errorbar(pred.flatten(), y_candidate.flatten(), yerr=pred_error.flatten(), fmt='o')
-
-plt.show()
-
-
+#pdb.set_trace()
+#plt.scatter(pred, y_candidate)
+#plt.errorbar(pred.flatten(), y_candidate.flatten(), yerr=pred_error.flatten(), fmt='o')
+#plt.show()
 
 X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_candidate)
 
 
+X_candidate_BO = cp.deepcopy(X_candidate)
+y_candidate_BO = cp.deepcopy(y_candidate)
 y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
 
 
+y_better_BO_ALL, y_better_RANDOM_ALL = [], []
 
+
+N_RUNS = 5
+NITER = 10
 NUM_RESTARTS = 20
 RAW_SAMPLES = 512
+
+
+
+
 
 y_better_BO = []
 y_better_RANDOM = []
@@ -124,9 +128,9 @@ y_better_RANDOM.append(y_best)
 y_best_BO, y_best_RANDOM = y_best, y_best
 
 
-NITER = 10
+
 for i in range(NITER):
-    qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate)
+    qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate_BO)
     #UpperConfidenceBound(model, beta=2)
     #qLowerBoundMaxValueEntropy(model,X_candidate)
     #qLowerBoundMaxValueEntropy(model,X_candidate ) 
@@ -136,15 +140,15 @@ for i in range(NITER):
     #qLowerBoundMaxValueEntropy(model,X_candidate ) 
     
     #qGIBBON = ExpectedImprovement(model, best_f=y_best_BO)
-    candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=1,choices=X_candidate, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=True)
+    candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=1,choices=X_candidate_BO, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=True)
 
     #find the indices of the candidates in X_candidate
     indices = []
     for candidate in candidates:
-        indices.append(np.argwhere((X_candidate==candidate).all(1)).flatten()[0])
+        indices.append(np.argwhere((X_candidate_BO==candidate).all(1)).flatten()[0])
 
     #pdb.set_trace()
-    X, y = np.concatenate((X,candidates)), np.concatenate((y, y_candidate[indices, :]))
+    X, y = np.concatenate((X,candidates)), np.concatenate((y, y_candidate_BO[indices, :]))
     if max(y)[0] > y_best_BO:
         y_best_BO = max(y)[0]
 
@@ -153,17 +157,11 @@ for i in range(NITER):
     GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
     model = GP_class.fit(X, y)
 
-    X_candidate = np.delete(X_candidate, indices, axis=0)
-    y_candidate = np.delete(y_candidate, indices, axis=0)
+    X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+    y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
 
     pred = model.posterior(X_candidate_FULL).mean.detach().numpy()
     #GP_class.scaler_y.inverse_transform(
-
-    
-    #plt.scatter(pred, y_candidate_FULL)
-    #plt.show()
-    #plt.clf()
-    ##pick a random value from y_candidate_RANDOM
     index = np.random.choice(np.arange(len(y_candidate_RANDOM)))
     #pdb.set_trace()
     if y_candidate_RANDOM[index][0] > y_best_RANDOM:
@@ -177,6 +175,9 @@ for i in range(NITER):
     #print(candidates, acq_value)
     print(i, y_best_BO, y_best_RANDOM)
 
+
+y_better_BO_ALL.append(y_better_BO)
+y_better_RANDOM_ALL.append(y_better_RANDOM)
 #pdb.set_trace()
 #compare the two plots
 fig, ax = plt.subplots()
