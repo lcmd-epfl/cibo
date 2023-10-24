@@ -8,7 +8,7 @@ from process import *
 import torch
 import gpytorch
 from botorch.models import SingleTaskGP
-from gpytorch.mlls import ExactMarginalLogLikelihood
+from gpytorch.mlls import ExactMarginalLogLikelihood,LeaveOneOutPseudoLikelihood
 from botorch.fit import fit_gpytorch_model
 from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel,PolynomialKernel, AdditiveKernel
 from gpytorch.kernels import Kernel
@@ -18,7 +18,7 @@ import numpy as np
 from scipy.stats import norm, entropy
 from scipy.optimize import minimize
 import copy as cp
-
+from sklearn.metrics import pairwise_distances
 
 random.seed(45577)
 np.random.seed(4565777)
@@ -141,19 +141,45 @@ class TanimotoKernel(Kernel):
         return batch_tanimoto_sim(x1, x2)
 
 class CustomGPModel:
-    def __init__(self, kernel_type="RBF"):
+    def __init__(self, kernel_type="RBF", scale_type_X="sklearn", bounds_norm=None):
         self.kernel_type = kernel_type
-        self.scaler_X = MinMaxScaler()
+        self.scale_type_X = scale_type_X
+        self.bounds_norm = bounds_norm
+
+        if scale_type_X == "sklearn":
+            self.scaler_X = MinMaxScaler()
+        elif scale_type_X == "botorch":
+            #bounds_norm = torch.tensor([[0]*1024, [1]*1024])
+            #bounds_norm = bounds_norm.to(dtype=torch.float32)
+            pass
+        else:
+            raise ValueError("Invalid scaler type")
+
+
         self.scaler_y = StandardScaler()
 
     def fit(self, X_train, y_train):
-        X_train = self.scaler_X.fit_transform(X_train)
+        if self.scale_type_X == "sklearn":
+            X_train = self.scaler_X.fit_transform(X_train)
+        elif self.scale_type_X == "botorch":
+            from botorch.utils.transforms import normalize
+            
+            if type(X_train) == np.ndarray:
+                X_train = torch.tensor(X_train, dtype=torch.float32)
+
+
+            X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32) 
+            #(X_train - self.bounds_norm[0]) / (self.bounds_norm[1] - self.bounds_norm[0])
+            #
+            
+        
+        
         self.scaler_y.fit(y_train.reshape(-1, 1))
         y_train = self.scaler_y.transform(y_train.reshape(-1, 1))
-
+        
         self.X_train_tensor = torch.tensor(X_train, dtype=torch.float64)
         self.y_train_tensor = torch.tensor(y_train, dtype=torch.float64).view(-1, 1)
-
+        
         if self.kernel_type == "RBF":
             kernel = RBFKernel()
         elif self.kernel_type == "Matern":
@@ -175,11 +201,46 @@ class CustomGPModel:
                 self.covar_module = ScaleKernel(kernel)
         #If in doubt consult
         #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
+        
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
-        self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
-        self.mll.to(self.X_train_tensor)
-        fit_gpytorch_model(self.mll)
+
+
+        FIT_METHOD = False
+        if FIT_METHOD:
+            self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
+            self.mll.to(self.X_train_tensor)
+            fit_gpytorch_model(self.mll, max_retries=1000)
+        else:
+            self.mll = LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
+            self.mll.to(self.X_train_tensor)
+            from torch.optim import Adam, Adamax
+            optimizer = Adamax([{"params": self.gp.parameters()}], lr=1e-2)
+            NUM_EPOCHS = 3000
+            self.gp.train()
+            for epoch in range(NUM_EPOCHS):
+                # clear gradients
+                optimizer.zero_grad()
+                # forward pass through the model to obtain the output MultivariateNormal
+                output = self.gp(self.X_train_tensor)
+                # calculate the negative log likelihood
+                loss = -self.mll(output, self.y_train_tensor.flatten())
+                # back prop gradients
+                loss.backward()
+                # print every 10 iterations
+                if (epoch + 1) % 10 == 0:
+                    print(
+                        f"Epoch {epoch+1:>3}/{NUM_EPOCHS} - Loss: {loss.item():>4.3f} "
+                        f"lengthscale: {self.gp.covar_module.base_kernel.lengthscale.item():>4.3f} "
+                        f"noise: {self.gp.likelihood.noise.item():>4.3f}"
+                    )
+                optimizer.step()
+
+            self.gp.eval()
+     
+
+
+        return self.gp
 
     def predict(self, X_test):
         X_test_norm = self.scaler_X.transform(X_test)
@@ -196,7 +257,7 @@ class CustomGPModel:
 
         return mean_original, std_dev_original
 
-def UCB(X_candidates, gp_model, kappa=1.0):
+def UCB(X_candidates, gp_model, kappa=0.1):
     """
     Calculate the Upper Confidence Bound (UCB) acquisition function values for given candidates.
     
@@ -208,9 +269,9 @@ def UCB(X_candidates, gp_model, kappa=1.0):
     Returns:
         numpy.ndarray: The UCB values at the candidate points.
     """
-    mu, sigma = gp_model.predict(X_candidates, return_std=True)
-    neg_ucb_values = -mu - kappa * sigma
-    return neg_ucb_values, mu, sigma
+    mu, sigma = gp_model.predict(X_candidates)
+    ucb_values = mu  + kappa * sigma
+    return ucb_values, mu, sigma
 
 def ExpectedImprovement(X_candidates, gp_model,y_best, kappa=0.01):
     mu, sigma = gp_model.predict(X_candidates)
@@ -240,8 +301,46 @@ def find_min_max_distance_and_ratio(x, vectors):
     p = min_distance / max_distance
     return min_distance, max_distance, 1- p
 
-def CostAwareExpectedImprovement(X, X_candidates, gp_model,y_best, kappa=0.01):
-    pass
+
+
+def fps_selection_simple(X, n_to_select):
+
+    """
+
+    Farthest Point Sampling (FPS) selection function.
+    Parameters:
+
+    - X: np.ndarray, the data points [n_samples, n_features]
+
+    - n_to_select: int, the number of points to select
+    Returns:
+    - selected_idx: list of int, the indices of the selected points
+    """
+
+    X = StandardScaler().fit_transform(X)
+
+    n_samples = X.shape[0]
+    selected_idx = []
+
+    # Initialize with a random point
+    current_idx = np.random.randint(n_samples)
+    selected_idx.append(current_idx)
+
+    
+
+    # Initialize distance vector
+    distance = pairwise_distances(X, X[current_idx, :].reshape(1, -1)).flatten()
+    # Iteratively add points
+
+    for _ in range(n_to_select - 1):
+
+        farthest_point_idx = np.argmax(distance)
+        selected_idx.append(farthest_point_idx)
+        # Update distance vector
+        new_distance = pairwise_distances(X, X[farthest_point_idx, :].reshape(1, -1)).flatten()
+        distance = np.minimum(distance, new_distance)
+
+    return selected_idx
 
 
 def LogNoisyExpectedImprovement(X_candidates, gp_model,n_fantasies=10):
@@ -285,25 +384,61 @@ def LogNoisyExpectedImprovement(X_candidates, gp_model,n_fantasies=10):
 
 
 
-
-def BatchFantasizingWithEI(gp_model,X, X_candidates, batch_size=3, n_fantasies=10):
-    mu, sigma = gp_model.predict(X_candidates)
+        
+def BatchFantasizingWithEI(gp_model, X, Y, X_candidates, batch_size=3, n_fantasies=10):
+    # Initialize variables
+    X_batch = []
+    inds_batch = []
+    Y_fantasies = [cp.deepcopy(Y) for _ in range(n_fantasies)]
     
-    ei_values, mu, sigma = ExpectedImprovement(X_candidates, gp_model,np.max(mu), kappa=0.01)
+    # Make a copy of X_candidates to remove selected candidates later
+    remaining_candidates = cp.deepcopy(X_candidates)
+
+    # Calculate the initial EI and select x1
+    ei_values, _, _ = ExpectedImprovement(remaining_candidates, gp_model, np.max(Y), kappa=0.01)
     top_ind = np.argsort(ei_values)
-    x1 = X_candidates[top_ind[0]]
+    x1 = remaining_candidates[top_ind[0]]
+    X_batch.append(x1)
+    inds_batch.append(top_ind[0])
+
+    # Remove the selected candidate
+    remaining_candidates = np.delete(remaining_candidates, top_ind[0], axis=0)
+
     for j in range(1, batch_size):
-        xj = X_candidates[top_ind[j]]
-        X_dummy = cp.deepcopy(X)
-        X_dummy = np.concatenate((X_dummy, x1.reshape(1,-1)))
+        avg_ei = np.zeros(remaining_candidates.shape[0])
 
         for i in range(n_fantasies):
-            dummy_model = CustomGPModel(kernel_type="Matern")
-            exit()
-            #dummy_model.fit(X_dummy, 
+            # Copy the existing GP model
+            dummy_model = cp.deepcopy(gp_model)
 
+            # Update the model with new point and corresponding fantasy y-value
+            X_dummy = np.vstack([X, np.array(X_batch)])
+            y_dummy = Y_fantasies[i]
+            
+            mu, sigma = dummy_model.predict(np.array(X_batch))
+            sampled_y = np.random.normal(mu[-1], sigma[-1], 1)
+            
+            y_dummy = np.append(y_dummy, sampled_y)
+            Y_fantasies[i] = y_dummy
+            
+            dummy_model.fit(X_dummy, y_dummy)
+            
+            ei_fantasy, _, _ = ExpectedImprovement(remaining_candidates, dummy_model, np.max(y_dummy), kappa=0.01)
+            avg_ei += ei_fantasy
 
+        avg_ei /= n_fantasies
         
+        max_ei_ind = np.argmax(avg_ei)
+        xj = remaining_candidates[max_ei_ind]
+        X_batch.append(xj)
+
+        # Remove the selected candidate
+        remaining_candidates = np.delete(remaining_candidates, max_ei_ind, axis=0)
+        
+        # Append index of selected candidate
+        inds_batch.append(max_ei_ind)
+    
+    return inds_batch, mu, sigma
 
 
 def exploration_estimate(values, p=0.02):
@@ -362,7 +497,7 @@ class ExperimentHoldout:
     """
     Larger is better!
     """
-    def __init__(self,X_initial, y_initial,test_molecules,X_test,y_test,type_acqfct="EI", n_exp=10, batch_size=10):
+    def __init__(self,X_initial, y_initial,test_molecules,X_test,y_test,type_acqfct="EI", n_exp=10, batch_size=10, fps=False):
         
         self.X_initial = X_initial
         self.y_initial = y_initial
@@ -371,6 +506,7 @@ class ExperimentHoldout:
         self.y_test = y_test
 
         self.type_acqfct = type_acqfct
+        self.fps = fps
 
         if type_acqfct == "EI":
             self.acqfct = ExpectedImprovement
@@ -407,25 +543,36 @@ class ExperimentHoldout:
             
             #
             if self.type_acqfct == "EI":
-                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.01)) 
+                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,y_best, kappa = exploration_estimate(mu, p=0.05)) 
                 top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]         
             elif self.type_acqfct == "UCB":
-                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate, kappa = exploration_estimate(mu, p=0.01))
-                top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
+                acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate, kappa = exploration_estimate(mu, p=0.05))
+                top_k_indices   = np.argsort(acqfct_values)[::-1][:self.batch_size]
             elif self.type_acqfct == "LogNEI":
                 acqfct_values, mu, sigma = self.acqfct(self.X_test, self.surrogate,n_fantasies=10)
                 top_k_indices   = np.argsort(acqfct_values)[:self.batch_size]
             elif self.type_acqfct == "CostAwareEI":
                 pass
             elif self.type_acqfct == "BatchFantasizingWithEI":
-                top_k_indices, mu, sigma = self.acqfct(self.surrogate,X, self.X_test, batch_size=self.batch_size, n_fantasies=10)
+                top_k_indices, mu, sigma = self.acqfct(self.surrogate,X,y, self.X_test, batch_size=self.batch_size, n_fantasies=10)
             else:
                 raise ValueError("Invalid acquisition function type")
             
-            
-            top_k_molecules = self.test_molecules[top_k_indices]
-            y_top_k         = self.y_test[top_k_indices]
-            X_top_k         = self.X_test[top_k_indices]
+            if not self.fps:
+                top_k_molecules = self.test_molecules[top_k_indices]
+                y_top_k         = self.y_test[top_k_indices]
+                X_top_k         = self.X_test[top_k_indices]
+            else:
+                top_100_indices   = np.argsort(acqfct_values)[:100]
+                top_100_molecules = self.test_molecules[top_100_indices]
+                top_100_y         = self.y_test[top_100_indices]
+                top_100_X         = self.X_test[top_100_indices]
+
+                top_k_indices   = fps_selection_simple(top_100_X, self.batch_size)
+                top_k_molecules = top_100_molecules[top_k_indices]
+                y_top_k         = top_100_y[top_k_indices]
+                X_top_k         = top_100_X[top_k_indices]
+
             
             if y_best < np.max(y_top_k):
                 y_best = np.max(y_top_k)
@@ -447,9 +594,6 @@ class ExperimentHoldout:
         y_better = np.array(y_better)
 
         return best_molecule,y_better
-
-
-
 
 
 class RandomExperiment:
