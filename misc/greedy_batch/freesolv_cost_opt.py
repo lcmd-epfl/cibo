@@ -38,9 +38,9 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     return None
 
 def update_model(X, y, bounds_norm):
-    GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
+    GP_class = CustomGPModel(kernel_type="Tanimoto", scale_type_X="botorch", bounds_norm=bounds_norm)
     model    = GP_class.fit(X, y)
-    return model
+    return model, GP_class.scaler_y
 
 
 def find_indices(X_candidate_BO, candidates):
@@ -52,7 +52,10 @@ def find_indices(X_candidate_BO, candidates):
 
 
 
-featurizer = dc.feat.RDKitDescriptors()
+featurizer = dc.feat.CircularFingerprint(size=1024)
+#dc.feat.RDKitDescriptors()
+#dc.feat.CircularFingerprint(size=1024)
+#dc.feat.RDKitDescriptors()
 tasks, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
 train_dataset, valid_dataset, test_dataset = datasets
 costs = np.random.randint(2, size=(642, 1))
@@ -63,7 +66,7 @@ N_RUNS = 10
 NITER = 10
 NUM_RESTARTS = 20
 RAW_SAMPLES = 512
-BATCH_SIZE = 5
+BATCH_SIZE = 2 #2
 SEQUENTIAL = False
 y_better_BO_ALL, y_better_RANDOM_ALL = [], []
 running_costs_BO_ALL, running_costs_RANDOM_ALL = [], []
@@ -87,7 +90,7 @@ for run in range(N_RUNS):
     y_orig = np.concatenate((y_train, y_valid, y_test)) 
     
     
-    index_worst =np.random.choice(np.argwhere(y_orig<-2).flatten(), size=20, replace=False)
+    index_worst =np.random.choice(np.argwhere(y_orig<-2).flatten(), size=100, replace=False)
     index_others = np.setdiff1d(np.arange(len(y_orig)), index_worst)
     #randomly shuffle the data
     index_others = np.random.permutation(index_others)
@@ -96,8 +99,6 @@ for run in range(N_RUNS):
     costs_init = costs[index_worst]
     X_candidate, y_candidate = X_orig[index_others], y_orig[index_others]
     costs_candidate = costs[index_others]
-
-
 
     X_init = torch.from_numpy(X_init).float()
     X_candidate = torch.from_numpy(X_candidate).float()
@@ -108,17 +109,16 @@ for run in range(N_RUNS):
     bounds_norm = torch.tensor([torch.min(X_candidate, dim=0).values.tolist(),torch.max(X_candidate, dim=0).values.tolist()])
     bounds_norm[1] = bounds_norm[1] + 1.0
     bounds_norm[1] = bounds_norm[1]*2
+    #bounds_norm = torch.tensor([[0]*1024,[1]*1024])
     bounds_norm = bounds_norm.to(dtype=torch.float32)
-
 
     X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
     y_best = float(torch.max(y))
 
-
-    model = update_model(X, y, bounds_norm)
+    X = normalize(X, bounds=bounds_norm).to(dtype=torch.float32)
+    model, _ = update_model(X, y, bounds_norm)
 
     X_candidate = normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
-
     pred = model.posterior(X_candidate).mean.detach().numpy()
     pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
     X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_candidate)
@@ -132,8 +132,8 @@ for run in range(N_RUNS):
     running_costs_BO = [0]
     running_costs_RANDOM = [0]
 
-    costs_BO = cp.deepcopy(costs_candidate)
-    costs_RANDOM = cp.deepcopy(costs_candidate)
+    costs_BO        = cp.deepcopy(costs_candidate)
+    costs_RANDOM    = cp.deepcopy(costs_candidate)
 
     y_better_BO = []
     y_better_RANDOM = []
@@ -155,13 +155,12 @@ for run in range(N_RUNS):
 
             y_better_BO.append(y_best_BO)
             running_costs_BO.append((running_costs_BO[-1] + sum(costs_BO[indices]))[0])
-            model = update_model(X, y, bounds_norm)
+            model, _ = update_model(X, y, bounds_norm)
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             costs_BO = np.delete(costs_BO, indices, axis=0)            
 
-
-        else:
+        else:    
             qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate_BO)
             candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=2*BATCH_SIZE,choices=X_candidate_BO, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=SEQUENTIAL)
             indices = find_indices(X_candidate_BO, candidates)
@@ -198,7 +197,15 @@ for run in range(N_RUNS):
                     BATCH_COST = sum(costs_BO[cheap_indices])[0]
                     print("Batch cost: ", BATCH_COST)
                     running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-                    model = update_model(X, y, bounds_norm)
+                    model, scaler_y = update_model(X, y, bounds_norm)
+
+                
+                    pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
+                    #pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
+                    plt.scatter(pred, y_candidate_FULL, label='Full data')
+                    plt.show()
+
+
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
                     y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
                     costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
@@ -215,12 +222,10 @@ for run in range(N_RUNS):
                 BATCH_COST = sum(costs_BO[cheap_indices])[0]
                 print("Batch cost: ", BATCH_COST)
                 running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-                model = update_model(X, y, bounds_norm)
-
+                model,scaler_y = update_model(X, y, bounds_norm)
                 X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
                 y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
                 costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
-
 
         if COST_AWARE_RANDOM == False:
             indices_random = np.random.choice(np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False)
@@ -246,7 +251,7 @@ for run in range(N_RUNS):
             y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
             costs_RANDOM = np.delete(costs_RANDOM, indices_random, axis=0)
 
-        print(i, y_best_BO, y_best_RANDOM)
+        print(i, y_best_BO, "at Ntrain = {}".format(len(X)) , y_best_RANDOM)
 
 
     y_better_BO_ALL.append(y_better_BO)

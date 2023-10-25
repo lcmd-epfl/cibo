@@ -20,12 +20,57 @@ from scipy.optimize import minimize
 import copy as cp
 from sklearn.metrics import pairwise_distances
 from torch.optim import Adam, Adamax
+import torch
+from torch import Tensor
 
 random.seed(45577)
 np.random.seed(4565777)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
+class TensorStandardScaler:
+    def __init__(self, dim: int = -2, epsilon: float = 1e-9):
+        self.dim = dim
+        self.epsilon = epsilon
+        self.mean = None
+        self.std = None
+
+    def fit(self, Y):
+        if isinstance(Y, np.ndarray):
+            Y = torch.from_numpy(Y).float()
+        self.mean = Y.mean(dim=self.dim, keepdim=True)
+        self.std = Y.std(dim=self.dim, keepdim=True)
+        self.std = self.std.where(self.std >= self.epsilon, torch.full_like(self.std, 1.0))
+
+    def transform(self, Y):
+        if self.mean is None or self.std is None:
+            raise ValueError("Mean and standard deviation not initialized, run `fit` method first.")
+        original_type = None
+        if isinstance(Y, np.ndarray):
+            original_type = np.ndarray
+            Y = torch.from_numpy(Y).float()
+        Y_transformed = (Y - self.mean) / self.std
+        if original_type is np.ndarray:
+            return Y_transformed.numpy()
+        else:
+            return Y_transformed
+
+    def fit_transform(self, Y):
+        self.fit(Y)
+        return self.transform(Y)
+
+    def inverse_transform(self, Y):
+        if self.mean is None or self.std is None:
+            raise ValueError("Mean and standard deviation not initialized, run `fit` method first.")
+        original_type = None
+        if isinstance(Y, np.ndarray):
+            original_type = np.ndarray
+            Y = torch.from_numpy(Y).float()
+        Y_inv_transformed = (Y * self.std) + self.mean
+        if original_type is np.ndarray:
+            return Y_inv_transformed.numpy()
+        else:
+            return Y_inv_transformed
 
 
 #from here https://github.com/leojklarner/gauche/blob/main/gauche/kernels/fingerprint_kernels/tanimoto_kernel.py
@@ -143,9 +188,9 @@ class TanimotoKernel(Kernel):
 
 class CustomGPModel:
     def __init__(self, kernel_type="RBF", scale_type_X="sklearn", bounds_norm=None):
-        self.kernel_type = kernel_type
+        self.kernel_type  = kernel_type
         self.scale_type_X = scale_type_X
-        self.bounds_norm = bounds_norm
+        self.bounds_norm  = bounds_norm
 
         if scale_type_X == "sklearn":
             self.scaler_X = MinMaxScaler()
@@ -157,7 +202,8 @@ class CustomGPModel:
             raise ValueError("Invalid scaler type")
 
 
-        self.scaler_y = StandardScaler()
+        self.scaler_y = TensorStandardScaler()
+        #StandardScaler()
 
     def fit(self, X_train, y_train):
         if self.scale_type_X == "sklearn":
@@ -175,9 +221,9 @@ class CustomGPModel:
             
         
         
-        self.scaler_y.fit(y_train.reshape(-1, 1))
-        y_train = self.scaler_y.transform(y_train.reshape(-1, 1))
-        
+        #self.scaler_y.fit(y_train.reshape(-1, 1))
+        y_train = self.scaler_y.fit_transform(y_train)
+        # y_train.reshape(-1, 1)
         self.X_train_tensor = torch.tensor(X_train, dtype=torch.float64)
         self.y_train_tensor = torch.tensor(y_train, dtype=torch.float64).view(-1, 1)
         
@@ -204,19 +250,20 @@ class CustomGPModel:
         #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
         
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
-        self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+        #self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
 
 
         FIT_METHOD = True
         if FIT_METHOD:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
-            fit_gpytorch_model(self.mll, max_retries=2000)
-            #fit_gpytorch_mll(self.mll, num_retries=2000)
+            #fit_gpytorch_model(self.mll, max_retries=2000)
+            fit_gpytorch_mll(self.mll, num_retries=5000)
+            #pdb.set_trace()
         else:
             self.mll = LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
-            optimizer = Adamax([{"params": self.gp.parameters()}], lr=1e-2)
+            optimizer = Adamax([{"params": self.gp.parameters()}], lr=1e-1)
             self.gp.train()
 
             LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(np.logspace(-3, 3, 10), np.logspace(-5, 1, 10))
@@ -251,6 +298,7 @@ class CustomGPModel:
                     best_lengthscale = lengthscale
                     best_noise = noise
                 #print(f"Finished grid point with lengthscale {lengthscale}, noise {noise}, loss {loss.item()}")
+
 
             # Set the best found hyperparameters
             self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
