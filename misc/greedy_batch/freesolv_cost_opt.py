@@ -38,7 +38,7 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     return None
 
 def update_model(X, y, bounds_norm):
-    GP_class = CustomGPModel(kernel_type="Tanimoto", scale_type_X="botorch", bounds_norm=bounds_norm)
+    GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
     model    = GP_class.fit(X, y)
     return model, GP_class.scaler_y
 
