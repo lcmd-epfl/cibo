@@ -259,8 +259,10 @@ def get_dummy_nuclear_charge_values(smiles_list):
 
 
 
-# auxiliary function to calculate the fragment representation of a molecule
 def fragments(smiles):
+    """
+    auxiliary function to calculate the fragment representation of a molecule
+    """
     # descList[115:] contains fragment-based features only
     # (https://www.rdkit.org/docs/source/rdkit.Chem.Fragments.html)
     # Update: in the new RDKit version the indices are [124:]
