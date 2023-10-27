@@ -25,10 +25,14 @@ def check_entries(array_of_arrays):
 
 class Evaluation_data:
     def __init__(self, dataset, init_size, prices, init_strategy="values"):
+
         self.dataset = dataset
         self.init_strategy = init_strategy
         self.init_size = init_size
         self.prices = prices
+
+        self.ECFP_size = 1024
+        self.radius = 2
 
         self.get_raw_dataset()
 
@@ -47,7 +51,7 @@ class Evaluation_data:
                 print("Deepchem not installed. Please install deepchem to use this dataset.")
                 exit()
 
-            featurizer = dc.feat.CircularFingerprint(size=1024)
+            featurizer = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
             _, datasets, _ = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
             train_dataset, valid_dataset, test_dataset = datasets
 
@@ -58,12 +62,16 @@ class Evaluation_data:
             X_test = test_dataset.X
             y_test = test_dataset.y[:, 0]
 
-            X = np.concatenate((X_train, X_valid, X_test))
-            y = np.concatenate((y_train, y_valid, y_test)) 
+            self.X = np.concatenate((X_train, X_valid, X_test))
+            self.y = np.concatenate((y_train, y_valid, y_test)) 
 
-            random_inds = np.random.permutation(len(X))
-            self.X = X[random_inds]
-            self.y = y[random_inds]
+            random_inds = np.random.permutation(len(self.X))
+            self.X = self.X[random_inds]
+            self.y = self.y[random_inds]
+            
+            self.bounds_norm = torch.tensor([[0]*self.ECFP_size,[1]*self.ECFP_size])
+            self.bounds_norm = self.bounds_norm.to(dtype=torch.float32)
+
 
         elif self.dataset == "buchwald_hartwig":
             #e.g. download datasets with requests from some url you put here as
@@ -86,24 +94,23 @@ class Evaluation_data:
             """
             Select the init_size worst values and the rest randomly.
             """
-
-            indices_worst  =  np.argsort(self.y)[:self.init_size]
-            indices_others = np.setdiff1d(np.arange(len(self.y)), indices_worst)
-            index_others   = np.random.permutation(index_others)
-
-            X_init, y_init = self.X[indices_worst], self.y[indices_worst]
-            costs_init = self.costs[indices_worst]
-            costs_candidate = self.costs[indices_others]
-            X_candidate, y_candidate = self.X[indices_others], self.y[indices_others]
-
+            sorted_indices    =  np.argsort(self.y)
+            indices_init      =  sorted_indices[:self.init_size]
+            indices_holdout   =  sorted_indices[self.init_size:]
+           
+            X_init, y_init = self.X[indices_init], self.y[indices_init]
+            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+            
+            costs_init = self.costs[indices_init]
+            costs_holdout = self.costs[indices_holdout]
 
             X_init = torch.from_numpy(X_init).float()
-            X_candidate = torch.from_numpy(X_candidate).float()
             y_init = torch.from_numpy(y_init).float().reshape(-1,1)
-            y_candidate = torch.from_numpy(y_candidate).float().reshape(-1,1)
+            X_holdout = torch.from_numpy(X_holdout).float()
+            y_holdout = torch.from_numpy(y_holdout).float().reshape(-1,1)
 
-            return X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate
-
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+                
         elif self.init_strategy == "random":
             """
             Randomly select init_size values.

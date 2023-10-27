@@ -6,7 +6,6 @@ from botorch.models import SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood,LeaveOneOutPseudoLikelihood
 from botorch.fit import fit_gpytorch_model,fit_gpytorch_mll
 from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel,PolynomialKernel
-
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from torch.optim import Adam
@@ -15,6 +14,7 @@ from scipy.spatial import distance
 from itertools import combinations
 from utils import *
 from kernels import *
+from botorch.utils.transforms import normalize
 random.seed(45577)
 np.random.seed(4565777)
 
@@ -86,9 +86,6 @@ def update_model(X, y, bounds_norm):
     GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
     model    = GP_class.fit(X, y)
     return model, GP_class.scaler_y
-
-
-
 
 
 def find_min_max_distance_and_ratio_scipy(x, vectors):
@@ -208,7 +205,8 @@ class CustomGPModel:
         self.bounds_norm  = bounds_norm
 
         self.FIT_METHOD = True
-        self.NUM_EPOCHS_GD = 1000
+        if self.FIT_METHOD:
+            self.NUM_EPOCHS_GD = 2000
 
         if scale_type_X == "sklearn":
             self.scaler_X = MinMaxScaler()
@@ -224,11 +222,10 @@ class CustomGPModel:
         if self.scale_type_X == "sklearn":
             X_train = self.scaler_X.fit_transform(X_train)
         elif self.scale_type_X == "botorch":
-            from botorch.utils.transforms import normalize
+            
             
             if type(X_train) == np.ndarray:
                 X_train = torch.tensor(X_train, dtype=torch.float32)
-
 
             X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32) 
         

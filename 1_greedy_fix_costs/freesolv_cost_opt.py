@@ -11,73 +11,111 @@ import random
 import copy as cp
 from BO import *
 from utils import *
+#import train test split from sklearn
+from sklearn.model_selection import train_test_split
 
 
-featurizer = dc.feat.CircularFingerprint(size=1024)
-tasks, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
-train_dataset, valid_dataset, test_dataset = datasets
 
-X_train = train_dataset.X
-y_train = train_dataset.y[:, 0]
-X_valid = valid_dataset.X
-y_valid = valid_dataset.y[:, 0]
-X_test = test_dataset.X
-y_test = test_dataset.y[:, 0]
 
-X_orig = np.concatenate((X_train, X_valid, X_test))
-y_orig = np.concatenate((y_train, y_valid, y_test)) 
 
-costs       = np.random.randint(2, size=(642, 1))
 
-bounds_norm = torch.tensor([[0]*1024,[1]*1024])
-bounds_norm = bounds_norm.to(dtype=torch.float32)
+FREESOLV = Evaluation_data("freesolv", 400, "random", init_strategy="values")
+
+
+y = cp.deepcopy(FREESOLV.y)
+X = cp.deepcopy(FREESOLV.X)
+sorted_indices    =  np.argsort(np.arange(len(y))) #np.argsort(y)
+indices_init      =  sorted_indices[:FREESOLV.init_size]
+indices_holdout   =  sorted_indices[FREESOLV.init_size:]
+
+#shuffle the indices 
+np.random.shuffle(indices_init)
+np.random.shuffle(indices_holdout)
+
+X_init, y_init = X[indices_init], y[indices_init]
+X_holdout, y_holdout = X[indices_holdout], y[indices_holdout]
+
+#fit sklearn random forest regressor
+# import random forest regressor
+from sklearn import ensemble
+
+reg = ensemble.RandomForestRegressor()
+
+reg.fit(X_init, y_init.reshape(-1,1))
+pred = reg.predict(X_holdout)
+plt.scatter(pred, y_holdout, label='Full data')
+plt.show()
+exit()
+X_init = torch.from_numpy(X_init).float()
+y_init = torch.from_numpy(y_init).float().reshape(-1,1)
+X_holdout = torch.from_numpy(X_holdout).float()
+y_holdout = torch.from_numpy(y_holdout).float().reshape(-1,1)
+bounds_norm = FREESOLV.bounds_norm
+
+
+model, scaler_y = update_model(X_init, y_init, FREESOLV.bounds_norm)
+pred = scaler_y.inverse_transform(model.posterior(X_holdout).mean.detach().numpy())
+plt.scatter(pred, y_holdout, label='Full data')
+plt.show()
+
+
+
+
+pdb.set_trace()
+#X_train, X_test, y_train, y_test = train_test_split(FREESOLV.X, FREESOLV.y.reshape(-1,1), test_size=0.2, random_state=42)
+#FREESOLV.bounds_norm
+#pdb.set_trace()
+#model, scaler_y = update_model(X_train, y_train, FREESOLV.bounds_norm)
+#pred = scaler_y.inverse_transform(model.posterior(torch.from_numpy(X_test).float()).mean.detach().numpy())
+#plt.scatter(pred, y_test, label='Full data')
+#plt.show()
+#pdb.set_trace()
+#exit()
+
+
+
+
 
 
 N_RUNS = 10
 NITER = 10
 NUM_RESTARTS = 20
 RAW_SAMPLES = 512
-BATCH_SIZE = 2 #2
+BATCH_SIZE = 5 #2
 SEQUENTIAL = False
 y_better_BO_ALL, y_better_RANDOM_ALL = [], []
 running_costs_BO_ALL, running_costs_RANDOM_ALL = [], []
 
 MAX_BATCH_COST = 0
 
-COST_AWARE_BO = True
-COST_AWARE_RANDOM = True
+COST_AWARE_BO = False
+COST_AWARE_RANDOM = False
 
 for run in range(N_RUNS):
-    random.seed(666+run)
-    torch.manual_seed(666+run)
+    random.seed(111+run)
+    torch.manual_seed(111+run)
 
-    index_worst = np.random.choice(np.argwhere(y_orig<-2).flatten(), size=100, replace=False)
-    index_others = np.setdiff1d(np.arange(len(y_orig)), index_worst)
-    #randomly shuffle the data
-    index_others = np.random.permutation(index_others)
-
-    X_init, y_init = X_orig[index_worst], y_orig[index_worst]
-    costs_init = costs[index_worst]
-    X_candidate, y_candidate = X_orig[index_others], y_orig[index_others]
-    costs_candidate = costs[index_others]
-
-    X_init = torch.from_numpy(X_init).float()
-    X_candidate = torch.from_numpy(X_candidate).float()
-    y_init = torch.from_numpy(y_init).float().reshape(-1,1)
-    y_candidate = torch.from_numpy(y_candidate).float().reshape(-1,1)
-
-
-
+    #pdb.set_trace()
+    X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate = FREESOLV.get_init_holdout_data()
     X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
     y_best = float(torch.max(y))
+    #pdb.set_trace()
+    #X = normalize(X, bounds=bounds_norm).to(dtype=torch.float32)
+    #model, scaler_y = update_model(X, y, bounds_norm)
 
-    X = normalize(X, bounds=bounds_norm).to(dtype=torch.float32)
-    model, _ = update_model(X, y, bounds_norm)
+    model, scaler_y = update_model(X_init, y_init, bounds_norm)
+
 
     X_candidate = normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
-    pred = model.posterior(X_candidate).mean.detach().numpy()
-    pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
     X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_candidate)
+    pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
+    pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
+    
+
+
+    plt.scatter(pred, y_candidate_FULL, label='Full data')
+    plt.show()
+
 
     costs_FULL          = cp.deepcopy(costs_candidate)
     X_candidate_BO      = cp.deepcopy(X_candidate)
@@ -154,12 +192,11 @@ for run in range(N_RUNS):
                     print("Batch cost: ", BATCH_COST)
                     running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
                     model, scaler_y = update_model(X, y, bounds_norm)
-
                 
-                    #pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
-                    #pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
-                    #plt.scatter(pred, y_candidate_FULL, label='Full data')
-                    #plt.show()
+                    pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
+                    pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
+                    plt.scatter(pred, y_candidate_FULL, label='Full data')
+                    plt.show()
 
 
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
