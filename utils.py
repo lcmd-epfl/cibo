@@ -12,9 +12,173 @@ import math
 from collections import Counter
 import leruli
 from time import sleep
-import gzip
+import matplotlib.pyplot as plt
 import random
-from process import *
+
+def check_entries(array_of_arrays):
+    for array in array_of_arrays:
+        for item in array:
+            if item < 0 or item > 1:
+                return False
+    return True
+
+class Evaluation_data:
+    def __init__(self, dataset, init_size, prices, init_strategy="values"):
+        self.dataset = dataset
+        self.init_strategy = init_strategy
+        self.init_size = init_size
+        self.prices = prices
+
+        self.get_raw_dataset()
+
+        if not check_entries(self.X):
+            print("Entries of X are not between 0 and 1. Add MinMaxScaler to the pipeline.")
+            exit()
+
+        self.get_prices()
+
+    def get_raw_dataset(self):
+        
+        if self.dataset == "freesolv":
+            try:
+                import deepchem as dc
+            except:
+                print("Deepchem not installed. Please install deepchem to use this dataset.")
+                exit()
+
+            featurizer = dc.feat.CircularFingerprint(size=1024)
+            _, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
+            train_dataset, valid_dataset, test_dataset = datasets
+
+            X_train = train_dataset.X
+            y_train = train_dataset.y[:, 0]
+            X_valid = valid_dataset.X
+            y_valid = valid_dataset.y[:, 0]
+            X_test = test_dataset.X
+            y_test = test_dataset.y[:, 0]
+
+            X = np.concatenate((X_train, X_valid, X_test))
+            y = np.concatenate((y_train, y_valid, y_test)) 
+
+            random_inds = np.random.permutation(len(X))
+            self.X = X[random_inds]
+            self.y = y[random_inds]
+
+        elif self.dataset == "buchwald_hartwig":
+            pass
+        else:
+            print("Dataset not implemented.")
+            exit()
+        
+    def get_prices(self):
+        if self.prices == "random":
+            self.costs = np.random.randint(2, size=(642, 1))
+        else:
+            print("Price model not implemented.")
+            exit()
+
+    def get_init_holdout_data(self):
+        if self.init_strategy == "values":
+
+            """
+            Select the init_size worst values and the rest randomly.
+            """
+
+            indices_worst  =  np.argsort(self.y)[:self.init_size]
+            indices_others = np.setdiff1d(np.arange(len(self.y)), indices_worst)
+            index_others   = np.random.permutation(index_others)
+
+            X_init, y_init = self.X[index_worst], self.y[index_worst]
+            costs_init = self.costs[index_worst]
+            costs_candidate = costs[index_others]
+            X_candidate, y_candidate = self.X[index_others], self.y[index_others]
+
+
+            X_init = torch.from_numpy(X_init).float()
+            X_candidate = torch.from_numpy(X_candidate).float()
+            y_init = torch.from_numpy(y_init).float().reshape(-1,1)
+            y_candidate = torch.from_numpy(y_candidate).float().reshape(-1,1)
+
+            return X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate
+
+        elif self.init_strategy == "random":
+            """
+            Randomly select init_size values.
+            """
+            pass
+        elif self.init_strategy == "furthest":
+            """
+            Select molecules furthest away the global optimum.
+            """
+            pass
+
+        else:
+            print("Init strategy not implemented.")
+            exit()
+
+        return X_init, y_init, costs_init
+
+
+def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL):
+    """
+    Plot the utility of the BO vs RS (Random Search) for each iteration.
+    """  
+    
+    y_BO_MEAN, y_BO_STD = np.mean(y_better_BO_ALL, axis=0), np.std(y_better_BO_ALL, axis=0)
+    y_RANDOM_MEAN, y_RANDOM_STD = np.mean(y_better_RANDOM_ALL, axis=0), np.std(y_better_RANDOM_ALL, axis=0)
+
+    lower_rnd = y_RANDOM_MEAN - y_BO_STD
+    upper_rnd = y_RANDOM_MEAN + y_BO_STD
+    lower_bo = y_BO_MEAN - y_BO_STD
+    upper_bo = y_BO_MEAN + y_BO_STD
+
+
+    NITER = len(y_BO_MEAN)
+    fig1, ax1 = plt.subplots()
+
+    
+
+    ax1.plot(np.arange(NITER), y_RANDOM_MEAN, label='Random')
+    ax1.fill_between(np.arange(NITER), lower_rnd, upper_rnd, alpha=0.2)
+    ax1.plot(np.arange(NITER), y_BO_MEAN, label='Acquisition Function')
+    ax1.fill_between(np.arange(NITER), lower_bo, upper_bo, alpha=0.2)
+    ax1.set_xlabel('Number of Iterations')
+    ax1.set_ylabel('Best Objective Value')
+    plt.legend(loc="lower right")
+    plt.xticks(list(np.arange(NITER)))
+    plt.savefig("optimization.png")
+
+    plt.clf()
+
+
+def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL):
+    """
+    Plot the running costs of the BO vs RS (Random Search) for each iteration.
+    """
+
+    running_costs_BO_ALL_MEAN, running_costs_BO_ALL_STD = np.mean(running_costs_BO_ALL, axis=0), np.std(running_costs_BO_ALL, axis=0)
+    running_costs_RANDOM_ALL_MEAN, running_costs_RANDOM_ALL_STD = np.mean(running_costs_RANDOM_ALL, axis=0), np.std(running_costs_RANDOM_ALL, axis=0)
+    lower_rnd_costs = running_costs_RANDOM_ALL_MEAN - running_costs_RANDOM_ALL_STD
+    upper_rnd_costs = running_costs_RANDOM_ALL_MEAN + running_costs_RANDOM_ALL_STD
+    lower_bo_costs = running_costs_BO_ALL_MEAN - running_costs_BO_ALL_STD
+    upper_bo_costs = running_costs_BO_ALL_MEAN + running_costs_BO_ALL_STD
+
+
+    fig2, ax2 = plt.subplots()
+    NITER = len(running_costs_BO_ALL_MEAN)
+
+    ax2.plot(np.arange(NITER), running_costs_RANDOM_ALL_MEAN, label='Random')
+    ax2.fill_between(np.arange(NITER), lower_rnd_costs, upper_rnd_costs, alpha=0.2)
+    ax2.plot(np.arange(NITER), running_costs_BO_ALL_MEAN, label='Acquisition Function')
+    ax2.fill_between(np.arange(NITER+1), lower_bo_costs, upper_bo_costs, alpha=0.2)
+    ax2.set_xlabel('Number of Iterations')
+    ax2.set_ylabel('Running Costs [$]')
+    plt.legend(loc="lower right")
+    plt.xticks(list(np.arange(NITER)))
+    plt.savefig("costs.png")
+
+    plt.clf()
+
 
 def select_random_smiles(file_path, N, exclude_set=None):
     """
