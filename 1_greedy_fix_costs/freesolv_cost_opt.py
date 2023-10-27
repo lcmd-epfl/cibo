@@ -11,11 +11,7 @@ import random
 import copy as cp
 from BO import *
 from utils import *
-#import train test split from sklearn
 from sklearn.model_selection import train_test_split
-
-
-
 
 
 
