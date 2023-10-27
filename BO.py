@@ -13,7 +13,7 @@ from torch.optim import Adam
 import torch
 from scipy.spatial import distance
 from itertools import combinations
-from process import *
+from utils import *
 from kernels import *
 random.seed(45577)
 np.random.seed(4565777)
@@ -101,6 +101,15 @@ def find_min_max_distance_and_ratio_scipy(x, vectors):
         vectors (numpy.ndarray): The set of vectors.
     Returns:
         tuple: The ratio between the minimum and maximum distance, the minimum distance, and the maximum distance.
+
+    Equation for computation of the ratio:
+    \[
+    p(x, \text{vectors}) = \frac{\min_{i} d(x, \text{vectors}[i])}{\max \left( \max_{i,k} d(\text{vectors}[i], \text{vectors}[k]), \max_{i} d(x, \text{vectors}[i]) \right)}
+    \]
+
+    \[
+    d(a, b) = \sqrt{\sum_{j=1}^{n} (a[j] - b[j])^2}
+    \]    
     """
     # Calculate the minimum distance between x and vectors using cdist
     dist_1 = distance.cdist([x], vectors, 'euclidean')
@@ -198,7 +207,7 @@ class CustomGPModel:
         self.scale_type_X = scale_type_X
         self.bounds_norm  = bounds_norm
 
-        self.FIT_METHOD = False
+        self.FIT_METHOD = True
         self.NUM_EPOCHS_GD = 1000
 
         if scale_type_X == "sklearn":

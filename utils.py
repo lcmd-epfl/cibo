@@ -14,6 +14,7 @@ import leruli
 from time import sleep
 import matplotlib.pyplot as plt
 import random
+import torch
 
 def check_entries(array_of_arrays):
     for array in array_of_arrays:
@@ -47,7 +48,7 @@ class Evaluation_data:
                 exit()
 
             featurizer = dc.feat.CircularFingerprint(size=1024)
-            _, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
+            _, datasets, _ = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
             train_dataset, valid_dataset, test_dataset = datasets
 
             X_train = train_dataset.X
@@ -65,6 +66,8 @@ class Evaluation_data:
             self.y = y[random_inds]
 
         elif self.dataset == "buchwald_hartwig":
+            #e.g. download datasets with requests from some url you put here as
+            # string
             pass
         else:
             print("Dataset not implemented.")
@@ -88,10 +91,10 @@ class Evaluation_data:
             indices_others = np.setdiff1d(np.arange(len(self.y)), indices_worst)
             index_others   = np.random.permutation(index_others)
 
-            X_init, y_init = self.X[index_worst], self.y[index_worst]
-            costs_init = self.costs[index_worst]
-            costs_candidate = costs[index_others]
-            X_candidate, y_candidate = self.X[index_others], self.y[index_others]
+            X_init, y_init = self.X[indices_worst], self.y[indices_worst]
+            costs_init = self.costs[indices_worst]
+            costs_candidate = self.costs[indices_others]
+            X_candidate, y_candidate = self.X[indices_others], self.y[indices_others]
 
 
             X_init = torch.from_numpy(X_init).float()

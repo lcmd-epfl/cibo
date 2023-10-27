@@ -1,36 +1,66 @@
+import math
 import torch
-from botorch.utils.transforms import normalize
-
+from botorch.fit import fit_gpytorch_mll
+from botorch.models import SingleTaskGP
+from botorch.utils.transforms import standardize, normalize
+from gpytorch.mlls import ExactMarginalLogLikelihood
+import os
+import deepchem as dc
 import pdb
 import numpy as np
-from botorch.optim import optimize_acqf_discrete
+from sklearn.preprocessing import MinMaxScaler
+from botorch.optim import optimize_acqf, optimize_acqf_discrete
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
+from BO import CustomGPModel
 import matplotlib.pyplot as plt
 import random
 import copy as cp
-from BO import *
-from utils import *
+from itertools import combinations
 
 
-featurizer = dc.feat.CircularFingerprint(size=1024)
+
+
+def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
+    n = len(suggested_costs)
+    # Check if BATCH_SIZE is larger than the length of the array, if so return None
+    if BATCH_SIZE > n:
+        return None
+
+    best_indices = None
+    # We start checking combinations from BATCH_SIZE down to 1 to prioritize getting BATCH_SIZE elements
+    for size in reversed(range(1, BATCH_SIZE + 1)):
+        for indices in combinations(range(n), size):
+            batch_sum = sum(suggested_costs[i] for i in indices)
+            if batch_sum <= MAX_BATCH_COST:
+                best_indices = list(indices)
+                return best_indices  # Return the first combination that meets the condition
+    return None
+
+def update_model(X, y, bounds_norm):
+    GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
+    model    = GP_class.fit(X, y)
+    return model, GP_class.scaler_y
+
+
+def find_indices(X_candidate_BO, candidates):
+    indices = []
+    for candidate in candidates:
+        indices.append(np.argwhere((X_candidate_BO==candidate).all(1)).flatten()[0])
+    indices = np.array(indices)
+    return indices
+
+
+
+featurizer = dc.feat.RDKitDescriptors()
+#dc.feat.CircularFingerprint(size=1024)
+#dc.feat.RDKitDescriptors()
+#dc.feat.CircularFingerprint(size=1024)
+#dc.feat.RDKitDescriptors()
 tasks, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
 train_dataset, valid_dataset, test_dataset = datasets
+costs = np.random.randint(2, size=(642, 1))
 
-X_train = train_dataset.X
-y_train = train_dataset.y[:, 0]
-X_valid = valid_dataset.X
-y_valid = valid_dataset.y[:, 0]
-X_test = test_dataset.X
-y_test = test_dataset.y[:, 0]
-
-X_orig = np.concatenate((X_train, X_valid, X_test))
-y_orig = np.concatenate((y_train, y_valid, y_test)) 
-
-costs       = np.random.randint(2, size=(642, 1))
-
-bounds_norm = torch.tensor([[0]*1024,[1]*1024])
-bounds_norm = bounds_norm.to(dtype=torch.float32)
 
 
 N_RUNS = 10
@@ -48,10 +78,21 @@ COST_AWARE_BO = True
 COST_AWARE_RANDOM = True
 
 for run in range(N_RUNS):
-    random.seed(666+run)
-    torch.manual_seed(666+run)
+    random.seed(66786+run)
+    torch.manual_seed(1711+run)
 
-    index_worst = np.random.choice(np.argwhere(y_orig<-2).flatten(), size=100, replace=False)
+    X_train = train_dataset.X
+    y_train = train_dataset.y[:, 0]
+    X_valid = valid_dataset.X
+    y_valid = valid_dataset.y[:, 0]
+    X_test = test_dataset.X
+    y_test = test_dataset.y[:, 0]
+    X_orig = np.concatenate((X_train, X_valid, X_test))
+    X_orig = MinMaxScaler().fit_transform(X_orig)
+    y_orig = np.concatenate((y_train, y_valid, y_test)) 
+    
+    
+    index_worst =np.random.choice(np.argwhere(y_orig<-2).flatten(), size=100, replace=False)
     index_others = np.setdiff1d(np.arange(len(y_orig)), index_worst)
     #randomly shuffle the data
     index_others = np.random.permutation(index_others)
@@ -67,6 +108,11 @@ for run in range(N_RUNS):
     y_candidate = torch.from_numpy(y_candidate).float().reshape(-1,1)
 
 
+    #bounds_norm = torch.tensor([torch.min(X_candidate, dim=0).values.tolist(),torch.max(X_candidate, dim=0).values.tolist()])
+    #bounds_norm[1] = bounds_norm[1] + 1.0
+    #bounds_norm[1] = bounds_norm[1]*2
+    bounds_norm = torch.tensor([[0]*200,[1]*200])
+    bounds_norm = bounds_norm.to(dtype=torch.float32)
 
     X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
     y_best = float(torch.max(y))
@@ -156,10 +202,11 @@ for run in range(N_RUNS):
                     model, scaler_y = update_model(X, y, bounds_norm)
 
                 
-                    #pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
-                    #pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
-                    #plt.scatter(pred, y_candidate_FULL, label='Full data')
-                    #plt.show()
+                    pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
+                    pred_error = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).variance.detach().sqrt().numpy())
+                    plt.scatter(pred, y_candidate_FULL, label='Full data')
+                    plt.savefig("preds.png")
+                    pdb.set_trace()
 
 
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
@@ -218,8 +265,52 @@ for run in range(N_RUNS):
 
 y_better_BO_ALL = np.array(y_better_BO_ALL)
 y_better_RANDOM_ALL = np.array(y_better_RANDOM_ALL)
+
 running_costs_BO_ALL = np.array(running_costs_BO_ALL)
 running_costs_RANDOM_ALL = np.array(running_costs_RANDOM_ALL)
 
-plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL)
-plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL)
+
+y_BO_MEAN, y_BO_STD = np.mean(y_better_BO_ALL, axis=0), np.std(y_better_BO_ALL, axis=0)
+y_RANDOM_MEAN, y_RANDOM_STD = np.mean(y_better_RANDOM_ALL, axis=0), np.std(y_better_RANDOM_ALL, axis=0)
+
+running_costs_BO_ALL_MEAN, running_costs_BO_ALL_STD = np.mean(running_costs_BO_ALL, axis=0), np.std(running_costs_BO_ALL, axis=0)
+running_costs_RANDOM_ALL_MEAN, running_costs_RANDOM_ALL_STD = np.mean(running_costs_RANDOM_ALL, axis=0), np.std(running_costs_RANDOM_ALL, axis=0)
+
+lower_rnd = y_RANDOM_MEAN - y_BO_STD
+upper_rnd = y_RANDOM_MEAN + y_BO_STD
+lower_bo = y_BO_MEAN - y_BO_STD
+upper_bo = y_BO_MEAN + y_BO_STD
+
+lower_rnd_costs = running_costs_RANDOM_ALL_MEAN - running_costs_RANDOM_ALL_STD
+upper_rnd_costs = running_costs_RANDOM_ALL_MEAN + running_costs_RANDOM_ALL_STD
+lower_bo_costs = running_costs_BO_ALL_MEAN - running_costs_BO_ALL_STD
+upper_bo_costs = running_costs_BO_ALL_MEAN + running_costs_BO_ALL_STD
+
+
+fig1, ax1 = plt.subplots()
+
+ax1.plot(np.arange(NITER+1), y_RANDOM_MEAN, label='Random')
+ax1.fill_between(np.arange(NITER+1), lower_rnd, upper_rnd, alpha=0.2)
+ax1.plot(np.arange(NITER+1), y_BO_MEAN, label='Acquisition Function')
+ax1.fill_between(np.arange(NITER+1), lower_bo, upper_bo, alpha=0.2)
+ax1.set_xlabel('Number of Iterations')
+ax1.set_ylabel('Best Objective Value')
+plt.legend(loc="lower right")
+plt.xticks(list(np.arange(NITER+1)))
+plt.savefig("optimization_rdkit.png")
+
+plt.clf()
+
+fig2, ax2 = plt.subplots()
+
+ax2.plot(np.arange(NITER+1), running_costs_RANDOM_ALL_MEAN, label='Random')
+ax2.fill_between(np.arange(NITER+1), lower_rnd_costs, upper_rnd_costs, alpha=0.2)
+ax2.plot(np.arange(NITER+1), running_costs_BO_ALL_MEAN, label='Acquisition Function')
+ax2.fill_between(np.arange(NITER+1), lower_bo_costs, upper_bo_costs, alpha=0.2)
+ax2.set_xlabel('Number of Iterations')
+ax2.set_ylabel('Running Costs [$]')
+plt.legend(loc="lower right")
+plt.xticks(list(np.arange(NITER+1)))
+plt.savefig("costs_rdkit.png")
+
+plt.clf()
