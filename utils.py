@@ -15,6 +15,7 @@ from time import sleep
 import matplotlib.pyplot as plt
 import random
 import torch
+import copy as cp
 
 def check_entries(array_of_arrays):
     for array in array_of_arrays:
@@ -22,6 +23,12 @@ def check_entries(array_of_arrays):
             if item < 0 or item > 1:
                 return False
     return True
+
+
+def convert2pytorch(X, y):
+    X = torch.from_numpy(X).float()
+    y = torch.from_numpy(y).float().reshape(-1, 1)
+    return X, y
 
 class Evaluation_data:
     def __init__(self, dataset, init_size, prices, init_strategy="values"):
@@ -76,7 +83,29 @@ class Evaluation_data:
         elif self.dataset == "buchwald_hartwig":
             #e.g. download datasets with requests from some url you put here as
             # string
-            pass
+            """
+            data = pd.read_csv("../data_table.csv").fillna({"base_smiles":"","ligand_smiles":"","aryl_halide_number":0,"aryl_halide_smiles":"","additive_number":0, "additive_smiles": ""}, inplace=False)
+            size = 64
+            ftzr = CircularFingerprint(size=size,radius=2)
+
+            col_0_base = np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["base_smiles"]])
+            col_1_ligand = np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["ligand_smiles"]]) 
+            col_2_aryl_halide =np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["aryl_halide_smiles"]]) 
+            col_3_additive = np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["additive_smiles"]])
+            # col_4_product = ftzr.featurize(data["product_smiles"])
+            col_5_aryl_halide_number = data["aryl_halide_number"].to_numpy().reshape(-1,1)
+            col_6_additive_number = data["additive_number"].to_numpy().reshape(-1,1)
+
+            representation = np.concatenate([col_0_base,
+                                            col_1_ligand,
+                                            col_2_aryl_halide,
+                                            col_3_additive,
+                                            col_5_aryl_halide_number,
+                                            col_6_additive_number],axis=1)
+
+            target = data["yield"].to_numpy()   
+            """
+
         else:
             print("Dataset not implemented.")
             exit()
@@ -94,20 +123,16 @@ class Evaluation_data:
             """
             Select the init_size worst values and the rest randomly.
             """
-            sorted_indices    =  np.argsort(self.y)
-            indices_init      =  sorted_indices[:self.init_size]
-            indices_holdout   =  sorted_indices[self.init_size:]
-           
-            X_init, y_init = self.X[indices_init], self.y[indices_init]
-            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
-            
-            costs_init = self.costs[indices_init]
-            costs_holdout = self.costs[indices_holdout]
 
-            X_init = torch.from_numpy(X_init).float()
-            y_init = torch.from_numpy(y_init).float().reshape(-1,1)
-            X_holdout = torch.from_numpy(X_holdout).float()
-            y_holdout = torch.from_numpy(y_holdout).float().reshape(-1,1)
+            X, y, costs = cp.deepcopy(self.X), cp.deepcopy(self.y), cp.deepcopy(self.costs)
+            sorted_indices    =  np.argsort(y)
+            X, y, costs = X[sorted_indices], y[sorted_indices], costs[sorted_indices]
+
+            X_init, y_init, costs_init = X[:self.init_size], y[:self.init_size], costs[:self.init_size]
+            X_holdout, y_holdout, costs_holdout = X[self.init_size:], y[self.init_size:], costs[self.init_size:]
+
+            X_init, y_init       = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
                 
@@ -115,18 +140,100 @@ class Evaluation_data:
             """
             Randomly select init_size values.
             """
-            pass
+            indices_init      =  np.random.choice(np.arange(len(self.y)), size=self.init_size, replace=False)
+            indices_holdout   =  np.array([i for i in np.arange(len(self.y)) if i not in indices_init])
+            
+            np.random.shuffle(indices_init)
+            np.random.shuffle(indices_holdout)
+
+            X_init, y_init = self.X[indices_init], self.y[indices_init]
+            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+            costs_init = self.costs[indices_init]
+            costs_holdout = self.costs[indices_holdout]
+
+            X_init, y_init       = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+        
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+
         elif self.init_strategy == "furthest":
             """
-            Select molecules furthest away the global optimum.
+            Select molecules furthest away the representation of the global optimum.
             """
-            pass
+
+
+            idx_max_y = np.argmax(self.y)
+    
+            # Step 2: Retrieve the corresponding vector in X
+            X_max_y = self.X[idx_max_y]
+
+            # Step 3: Compute the distance between each row in X and X_max_y
+            # Using Euclidean distance as an example
+            distances = np.linalg.norm(self.X - X_max_y, axis=1)
+
+            # Step 4: Sort these distances and get the indices of the 100 largest distances
+            indices_init = np.argsort(distances)[::-1][:self.init_size]
+
+            # Step 5: Get the 100 entries corresponding to these indices from X and y
+            X_init = self.X[indices_init]
+            y_init = self.y[indices_init]
+
+            # Step 6: Get the remaining entries
+            indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
+            np.random.shuffle(indices_holdout)
+            X_holdout = self.X[indices_holdout]
+            y_holdout = self.y[indices_holdout]
+            costs_init = self.costs[indices_init]
+            costs_holdout = self.costs[indices_holdout]
+
+            X_init, y_init       = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+
+        elif self.init_strategy == "ratio_furthest":
+
+            y_sorted = np.sort(self.y)
+            cutoff_20_percent = y_sorted[int(0.3 * len(self.y))]
+
+            # Step 2: Identify the indices for the top 20% y values
+            indices_top_20 = np.where(self.y >= cutoff_20_percent)[0]
+
+            # Step 3: Retrieve the vectors in X corresponding to these indices
+            X_top_20 = self.X[indices_top_20]
+
+            # Step 4: Compute the distance for each row in X against the top 20% y values
+            # Using Euclidean distance and taking the minimum distance as an example
+            distances = np.min([np.linalg.norm(self.X - x, axis=1)
+                            for x in X_top_20], axis=0)
+
+            # Step 5: Sort these distances and get the indices of the 100 largest distances
+            indices_init = np.argsort(distances)[::-1][:self.init_size]
+
+            # Step 6: Get the 100 entries corresponding to these indices from X and y
+            X_init = self.X[indices_init]
+            y_init = self.y[indices_init]
+            costs_init = self.costs[indices_init]
+
+            # Step 7: Get the remaining entries
+            indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
+            np.random.shuffle(indices_holdout)
+            X_holdout = self.X[indices_holdout]
+            y_holdout = self.y[indices_holdout]
+            costs_holdout = self.costs[indices_holdout]
+
+            # Convert to PyTorch (assuming convert2pytorch is a function you have)
+            X_init, y_init = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+
 
         else:
             print("Init strategy not implemented.")
             exit()
 
-        return X_init, y_init, costs_init
+            
 
 
 def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL):
@@ -180,7 +287,7 @@ def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL):
     ax2.plot(np.arange(NITER), running_costs_RANDOM_ALL_MEAN, label='Random')
     ax2.fill_between(np.arange(NITER), lower_rnd_costs, upper_rnd_costs, alpha=0.2)
     ax2.plot(np.arange(NITER), running_costs_BO_ALL_MEAN, label='Acquisition Function')
-    ax2.fill_between(np.arange(NITER+1), lower_bo_costs, upper_bo_costs, alpha=0.2)
+    ax2.fill_between(np.arange(NITER), lower_bo_costs, upper_bo_costs, alpha=0.2)
     ax2.set_xlabel('Number of Iterations')
     ax2.set_ylabel('Running Costs [$]')
     plt.legend(loc="lower right")
@@ -190,31 +297,6 @@ def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL):
     plt.clf()
 
 
-def select_random_smiles(file_path, N, exclude_set=None):
-    """
-    Select N random SMILES from a gzipped file.
-    
-    Parameters:
-        file_path (str): Path to the gzipped SMILES file.
-        N (int): Number of random SMILES to select.
-        exclude_set (set): Set of SMILES to exclude from selection.
-        
-    Returns:
-        list: List of N randomly selected SMILES.
-    """
-    all_smiles = []
-    
-    with gzip.open(file_path, 'rt') as f:
-        for line in f:
-            smiles = line.strip().split(' ')[0]  # Take only the first part before the space
-            if exclude_set and smiles in exclude_set:
-                continue
-            all_smiles.append(smiles)
-    
-    if N > len(all_smiles):
-        raise ValueError("N is greater than the number of available SMILES.")
-    
-    return random.sample(all_smiles, N)
 
 
 

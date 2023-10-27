@@ -14,70 +14,15 @@ from utils import *
 from sklearn.model_selection import train_test_split
 
 
-
-FREESOLV = Evaluation_data("freesolv", 400, "random", init_strategy="values")
-
-
-y = cp.deepcopy(FREESOLV.y)
-X = cp.deepcopy(FREESOLV.X)
-sorted_indices    =  np.argsort(np.arange(len(y))) #np.argsort(y)
-indices_init      =  sorted_indices[:FREESOLV.init_size]
-indices_holdout   =  sorted_indices[FREESOLV.init_size:]
-
-#shuffle the indices 
-np.random.shuffle(indices_init)
-np.random.shuffle(indices_holdout)
-
-X_init, y_init = X[indices_init], y[indices_init]
-X_holdout, y_holdout = X[indices_holdout], y[indices_holdout]
-
-#fit sklearn random forest regressor
-# import random forest regressor
-from sklearn import ensemble
-
-reg = ensemble.RandomForestRegressor()
-
-reg.fit(X_init, y_init.reshape(-1,1))
-pred = reg.predict(X_holdout)
-plt.scatter(pred, y_holdout, label='Full data')
-plt.show()
-exit()
-X_init = torch.from_numpy(X_init).float()
-y_init = torch.from_numpy(y_init).float().reshape(-1,1)
-X_holdout = torch.from_numpy(X_holdout).float()
-y_holdout = torch.from_numpy(y_holdout).float().reshape(-1,1)
+FREESOLV = Evaluation_data("freesolv", 30, "random",init_strategy="random")
 bounds_norm = FREESOLV.bounds_norm
-
-
-model, scaler_y = update_model(X_init, y_init, FREESOLV.bounds_norm)
-pred = scaler_y.inverse_transform(model.posterior(X_holdout).mean.detach().numpy())
-plt.scatter(pred, y_holdout, label='Full data')
-plt.show()
-
-
-
-
-pdb.set_trace()
-#X_train, X_test, y_train, y_test = train_test_split(FREESOLV.X, FREESOLV.y.reshape(-1,1), test_size=0.2, random_state=42)
-#FREESOLV.bounds_norm
-#pdb.set_trace()
-#model, scaler_y = update_model(X_train, y_train, FREESOLV.bounds_norm)
-#pred = scaler_y.inverse_transform(model.posterior(torch.from_numpy(X_test).float()).mean.detach().numpy())
-#plt.scatter(pred, y_test, label='Full data')
-#plt.show()
-#pdb.set_trace()
-#exit()
-
-
-
-
 
 
 N_RUNS = 10
 NITER = 10
-NUM_RESTARTS = 20
+NUM_RESTARTS = 40
 RAW_SAMPLES = 512
-BATCH_SIZE = 5 #2
+BATCH_SIZE = 1 #2
 SEQUENTIAL = False
 y_better_BO_ALL, y_better_RANDOM_ALL = [], []
 running_costs_BO_ALL, running_costs_RANDOM_ALL = [], []
@@ -95,22 +40,22 @@ for run in range(N_RUNS):
     X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate = FREESOLV.get_init_holdout_data()
     X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
     y_best = float(torch.max(y))
-    #pdb.set_trace()
-    #X = normalize(X, bounds=bounds_norm).to(dtype=torch.float32)
-    #model, scaler_y = update_model(X, y, bounds_norm)
-
-    model, scaler_y = update_model(X_init, y_init, bounds_norm)
+    model, scaler_y = update_model(X, y, bounds_norm)
 
 
     X_candidate = normalize(X_candidate, bounds=bounds_norm).to(dtype=torch.float32)
     X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(y_candidate)
     pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
+    #model.posterior(X_candidate_FULL).mean.detach().numpy()
+    #
     pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
     
 
 
     plt.scatter(pred, y_candidate_FULL, label='Full data')
-    plt.show()
+    plt.savefig("preds.png")
+    #exit()
+
 
 
     costs_FULL          = cp.deepcopy(costs_candidate)
@@ -192,7 +137,6 @@ for run in range(N_RUNS):
                     pred = scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach().numpy())
                     pred_error = model.posterior(X_candidate).variance.sqrt().detach().numpy()
                     plt.scatter(pred, y_candidate_FULL, label='Full data')
-                    plt.show()
 
 
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
