@@ -1,4 +1,5 @@
 import torch
+import gpytorch
 from gpytorch.kernels import Kernel
 
 def batch_tanimoto_sim(
@@ -113,3 +114,28 @@ class TanimotoKernel(Kernel):
             x2 = x2.transpose(-1, -2).unsqueeze(-1)
 
         return batch_tanimoto_sim(x1, x2)
+
+
+class BoundedKernel(gpytorch.kernels.Kernel):
+    def __init__(self, lower=0, upper=100):
+        super().__init__()
+        self.base_kernel = gpytorch.kernels.LinearKernel()
+        self.lower = lower
+        self.upper = upper
+
+    def forward(self, x1, x2, diag=False, **params):
+        base_kernel_matrix = self.base_kernel.forward(
+            x1, x2, diag=diag, **params)
+
+        if isinstance(base_kernel_matrix, gpytorch.lazy.LazyTensor):
+            base_kernel_matrix = base_kernel_matrix.evaluate()
+
+        bounded_kernel_matrix = self.lower + \
+            (self.upper - self.lower) * \
+            torch.sigmoid(base_kernel_matrix)
+
+        if diag:
+            # Assuming bounded_kernel_matrix is already the diagonal
+            return bounded_kernel_matrix
+
+        return gpytorch.lazy.NonLazyTensor(bounded_kernel_matrix)

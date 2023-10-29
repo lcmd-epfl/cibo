@@ -4,40 +4,47 @@ from botorch.utils.transforms import normalize
 import pdb
 import numpy as np
 from botorch.optim import optimize_acqf_discrete
-from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
+from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy, qMaxValueEntropy
+from botorch.sampling.normal import SobolQMCNormalSampler
+from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
 import matplotlib.pyplot as plt
 import random
 import copy as cp
 from BO import *
 from utils import *
-from sklearn.model_selection import train_test_split
 
 
-FREESOLV = Evaluation_data("freesolv", 30, "random",init_strategy="random")
-bounds_norm = FREESOLV.bounds_norm
+#DATASET = Evaluation_data("freesolv", 30, "random",
+                           #init_strategy="values")
+#bounds_norm = FREESOLV.bounds_norm
+
+DATASET = Evaluation_data("buchwald", 250, "random", init_strategy="values")
+bounds_norm = DATASET.bounds_norm
 
 
 N_RUNS = 10
-NITER = 10
-NUM_RESTARTS = 40
+NITER = 100 #25
+NUM_RESTARTS = 20
 RAW_SAMPLES = 512
-BATCH_SIZE = 1 #2
+BATCH_SIZE = 1 #5 #2
 SEQUENTIAL = False
 y_better_BO_ALL, y_better_RANDOM_ALL = [], []
 running_costs_BO_ALL, running_costs_RANDOM_ALL = [], []
 
-MAX_BATCH_COST = 0
+MAX_BATCH_COST = 1
 
 COST_AWARE_BO = False
 COST_AWARE_RANDOM = False
 
 for run in range(N_RUNS):
-    random.seed(111+run)
-    torch.manual_seed(111+run)
+    SEED = 111+run
+    random.seed(SEED)
+    torch.manual_seed(SEED)
 
     #pdb.set_trace()
-    X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate = FREESOLV.get_init_holdout_data()
+    X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate = DATASET.get_init_holdout_data(
+        SEED)
     X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
     y_best = float(torch.max(y))
     model, scaler_y = update_model(X, y, bounds_norm)
@@ -55,9 +62,6 @@ for run in range(N_RUNS):
     plt.scatter(pred, y_candidate_FULL, label='Full data')
     plt.savefig("preds.png")
     #exit()
-
-
-
     costs_FULL          = cp.deepcopy(costs_candidate)
     X_candidate_BO      = cp.deepcopy(X_candidate)
     y_candidate_BO      = cp.deepcopy(y_candidate)
@@ -80,7 +84,7 @@ for run in range(N_RUNS):
 
     for i in range(NITER):
         if COST_AWARE_BO == False:
-            qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate_BO)
+            qGIBBON = qLowerBoundMaxValueEntropy(model,X_candidate_BO, maximize=True)
             candidates, acq_value = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=BATCH_SIZE,choices=X_candidate_BO, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=SEQUENTIAL)
             indices = find_indices(X_candidate_BO, candidates)
             X, y = np.concatenate((X,candidates)), np.concatenate((y, y_candidate_BO[indices, :]))
@@ -110,7 +114,7 @@ for run in range(N_RUNS):
                 SUCCESS = False
 
                 INCREMENTED_BATCH_SIZE = 2*BATCH_SIZE + ITERATION
-                print("Incrementing batch size to: ", INCREMENTED_BATCH_SIZE)
+                print("Incrementing canditates for batch to: ", INCREMENTED_BATCH_SIZE)
                 if INCREMENTED_BATCH_SIZE > len(X_candidate_BO):
                     print("WTF")
                     break

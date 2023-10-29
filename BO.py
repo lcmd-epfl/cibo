@@ -1,11 +1,13 @@
 import copy as cp
 import numpy as np
 import torch
-import gpytorch
 from botorch.models import SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood,LeaveOneOutPseudoLikelihood
 from botorch.fit import fit_gpytorch_model,fit_gpytorch_mll
 from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel,PolynomialKernel
+from gpytorch.means import ConstantMean
+from gpytorch.priors import NormalPrior
+from gpytorch.constraints import Positive, LessThan,Interval
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from torch.optim import Adam
@@ -20,8 +22,6 @@ np.random.seed(4565777)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
-
-
 
 
 def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
@@ -82,8 +82,9 @@ def update_model(X, y, bounds_norm):
         model (botorch.models.gpytorch.GP): The updated GP model.
         scaler_y (TensorStandardScaler): The scaler for the labels.
     """
-
-    GP_class = CustomGPModel(kernel_type="Matern", scale_type_X="botorch", bounds_norm=bounds_norm)
+    kernel_type = "Linear"  # "Tanimoto"  # "Matern"  # ""
+    GP_class = CustomGPModel(kernel_type=kernel_type,
+                             scale_type_X="botorch", bounds_norm=bounds_norm)
     model    = GP_class.fit(X, y)
     return model, GP_class.scaler_y
 
@@ -205,8 +206,11 @@ class CustomGPModel:
         self.bounds_norm  = bounds_norm
 
         self.FIT_METHOD = True
-        if self.FIT_METHOD:
-            self.NUM_EPOCHS_GD = 2000
+        if not self.FIT_METHOD:
+            if self.kernel_type == "RBF" or self.kernel_type == "Matern":
+                self.NUM_EPOCHS_GD = 5000
+            elif self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
+                self.NUM_EPOCHS_GD = 500
 
         if scale_type_X == "sklearn":
             self.scaler_X = MinMaxScaler()
@@ -222,14 +226,13 @@ class CustomGPModel:
         if self.scale_type_X == "sklearn":
             X_train = self.scaler_X.fit_transform(X_train)
         elif self.scale_type_X == "botorch":
-            
-            
             if type(X_train) == np.ndarray:
                 X_train = torch.tensor(X_train, dtype=torch.float32)
 
             X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32) 
-        
+    
         y_train = self.scaler_y.fit_transform(y_train)
+        
         self.X_train_tensor = torch.tensor(X_train, dtype=torch.float64)
         self.y_train_tensor = torch.tensor(y_train, dtype=torch.float64).view(-1, 1)
         
@@ -245,18 +248,31 @@ class CustomGPModel:
             kernel = MaternKernel(nu=2.5,active_dims=torch.tensor(np.arange(216).tolist()))*RBFKernel(active_dims=torch.tensor([216]))*RBFKernel(active_dims=torch.tensor([217]))
         elif self.kernel_type == "Tanimoto":
             kernel = TanimotoKernel()
+        elif self.kernel_type == "Bounded":
+            boundary = np.array([[0], [100]])
+            lo = float(self.scaler_y.transform(boundary)[0])
+            hi = float(self.scaler_y.transform(boundary)[1])
+            kernel = BoundedKernel(lower=lo, upper=hi)
         else:
             raise ValueError("Invalid kernel type")
 
         class InternalGP(SingleTaskGP):
             def __init__(self, train_X, train_Y, kernel):
                 super().__init__(train_X, train_Y)
+                #boundary = np.array([[0], [100]])
+                #boundary = self.scaler_y.transform(torch.from_numpy(boundary))
+                #boundary = boundary.numpy()
+                #self.mean_module = ConstantMean(Interval(float(scaler_y.transform(boundary)[0]), float(scaler_y.transform(boundary)[1])))
+                #self.mean_module  = ConstantMean(constant_prior=NormalPrior(torch.mean(train_Y), 3*torch.std(train_Y)))
+                self.mean_module  = ConstantMean()
                 self.covar_module = ScaleKernel(kernel)
         #If in doubt consult
         #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
         
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
-        #self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+        if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
+            #Found that these kernels can be numerically instable if not enough jitter is added
+            self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
         
         if self.FIT_METHOD:
             """
@@ -266,8 +282,8 @@ class CustomGPModel:
 
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
-            #fit_gpytorch_model(self.mll, max_retries=2000)
-            fit_gpytorch_mll(self.mll, num_retries=5000)
+            fit_gpytorch_model(self.mll, max_retries=50000)
+            #fit_gpytorch_mll(self.mll, num_retries=5000)
         else:
             """
             Use gradient descent to fit the hyperparameters of the GP with initial run 
@@ -278,18 +294,24 @@ class CustomGPModel:
             self.mll.to(self.X_train_tensor)
             optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
             self.gp.train()
+            
+            if self.gp.covar_module.base_kernel.lengthscale != None:
+                LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(np.logspace(-3, 3, 10), np.logspace(-5, 1, 10))
+            else:
+                NOISE_GRID = np.logspace(-5, 1, 10)
+                LENGTHSCALE_GRID = np.zeros_like(NOISE_GRID)
 
-            LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(np.logspace(-3, 3, 10), np.logspace(-5, 1, 10))
             NUM_EPOCHS_INIT = 50
 
             best_loss = float('inf')
             best_lengthscale = None
             best_noise = None
-
+            
             # Loop over each grid point
             for lengthscale, noise in zip(LENGTHSCALE_GRID.flatten(), NOISE_GRID.flatten()):
                 # Manually set the hyperparameters
-                self.gp.covar_module.base_kernel.lengthscale = lengthscale
+                if self.gp.covar_module.base_kernel.lengthscale != None:
+                    self.gp.covar_module.base_kernel.lengthscale = lengthscale
                 self.gp.likelihood.noise = noise
                 
                 # Perform a brief round of training to get a loss value
@@ -307,15 +329,20 @@ class CustomGPModel:
                 # If this loss is the best so far, update best_loss and best hyperparameters
                 if loss.item() < best_loss:
                     best_loss = loss.item()
-                    best_lengthscale = lengthscale
+                    if self.gp.covar_module.base_kernel.lengthscale != None:
+                        best_lengthscale = lengthscale
                     best_noise = noise
                 #print(f"Finished grid point with lengthscale {lengthscale}, noise {noise}, loss {loss.item()}")
-
+            
             # Set the best found hyperparameters
-            self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
+            if self.gp.covar_module.base_kernel.lengthscale != None:
+                self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
             self.gp.likelihood.noise = best_noise
-            print(f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}")
-
+            if self.gp.covar_module.base_kernel.lengthscale != None:
+                print(f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}")
+            else:
+                print(f"Best initial noise: {best_noise}")
+            
             for epoch in range(self.NUM_EPOCHS_GD):
                 # clear gradients
                 optimizer.zero_grad()
@@ -326,12 +353,18 @@ class CustomGPModel:
                 # back prop gradients
                 loss.backward()
                 # print every 10 iterations
-                if (epoch + 1) % 10 == 0:
-                    print(
-                        f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
-                        f"lengthscale: {self.gp.covar_module.base_kernel.lengthscale.item():>4.3f} "
-                        f"noise: {self.gp.likelihood.noise.item():>4.3f}"
-                    )
+                if (epoch + 1) % 100 == 0:
+                    if self.gp.covar_module.base_kernel.lengthscale != None:
+                        print(
+                            f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
+                            f"lengthscale: {self.gp.covar_module.base_kernel.lengthscale.item():>4.3f} "
+                            f"noise: {self.gp.likelihood.noise.item():>4.3f}"
+                        )
+                    else:
+                        print(
+                            f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
+                            f"noise: {self.gp.likelihood.noise.item():>4.3f}"
+                        )
                 optimizer.step()
 
             self.gp.eval()

@@ -16,6 +16,10 @@ import matplotlib.pyplot as plt
 import random
 import torch
 import copy as cp
+import morfeus
+from morfeus.conformer import ConformerEnsemble
+from morfeus import SASA, Dispersion
+
 
 def check_entries(array_of_arrays):
     for array in array_of_arrays:
@@ -30,6 +34,37 @@ def convert2pytorch(X, y):
     y = torch.from_numpy(y).float().reshape(-1, 1)
     return X, y
 
+
+def get_morfeus_desc(smiles):
+
+  ce = ConformerEnsemble.from_rdkit(smiles)
+
+  ce.prune_rmsd()
+
+  ce.sort()
+
+  for conformer in ce:
+    sasa = SASA(ce.elements, conformer.coordinates)
+    disp = Dispersion(ce.elements, conformer.coordinates)
+    conformer.properties["sasa"] = sasa.area
+    conformer.properties["p_int"] = disp.p_int
+    conformer.properties["p_min"] = disp.p_min
+    conformer.properties["p_max"] = disp.p_max
+
+
+  ce.get_properties()
+  a= ce.boltzmann_statistic("sasa")
+  b= ce.boltzmann_statistic("p_int")
+  c= ce.boltzmann_statistic("p_min")
+  d = ce.boltzmann_statistic("p_max")
+
+  return np.array([a,b,c,d])
+
+
+def morfeus_ftzr(smiles_list):
+    return np.array([get_morfeus_desc(smiles) for smiles in smiles_list])
+
+
 class Evaluation_data:
     def __init__(self, dataset, init_size, prices, init_strategy="values"):
 
@@ -38,14 +73,20 @@ class Evaluation_data:
         self.init_size = init_size
         self.prices = prices
 
-        self.ECFP_size = 1024
-        self.radius = 2
+        self.ECFP_size = 64 #1024
+        self.radius = 4
 
         self.get_raw_dataset()
 
+        rep_size = self.X.shape[1]
+        self.bounds_norm = torch.tensor([[0]*rep_size, [1]*rep_size])
+        self.bounds_norm = self.bounds_norm.to(dtype=torch.float32)
+
         if not check_entries(self.X):
-            print("Entries of X are not between 0 and 1. Add MinMaxScaler to the pipeline.")
-            exit()
+            print("Entries of X are not between 0 and 1. Adding MinMaxScaler to the pipeline.")
+            from sklearn.preprocessing import MinMaxScaler
+            self.scaler_X = MinMaxScaler()
+            self.X = self.scaler_X.fit_transform(self.X)
 
         self.get_prices()
 
@@ -58,8 +99,12 @@ class Evaluation_data:
                 print("Deepchem not installed. Please install deepchem to use this dataset.")
                 exit()
 
-            featurizer = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
-            _, datasets, _ = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
+            ftzr = dc.feat.RDKitDescriptors()
+            #dc.feat.CircularFingerprint(
+            #    size=self.ECFP_size, radius=self.radius)
+            #
+            #
+            _, datasets, _ = dc.molnet.load_sampl(featurizer=ftzr, splitter='random', transformers = [])
             train_dataset, valid_dataset, test_dataset = datasets
 
             X_train = train_dataset.X
@@ -76,60 +121,118 @@ class Evaluation_data:
             self.X = self.X[random_inds]
             self.y = self.y[random_inds]
             
-            self.bounds_norm = torch.tensor([[0]*self.ECFP_size,[1]*self.ECFP_size])
-            self.bounds_norm = self.bounds_norm.to(dtype=torch.float32)
-
-
-        elif self.dataset == "buchwald_hartwig":
+        elif self.dataset == "buchwald":
             #e.g. download datasets with requests from some url you put here as
             # string
-            """
-            data = pd.read_csv("../data_table.csv").fillna({"base_smiles":"","ligand_smiles":"","aryl_halide_number":0,"aryl_halide_smiles":"","additive_number":0, "additive_smiles": ""}, inplace=False)
-            size = 64
-            ftzr = CircularFingerprint(size=size,radius=2)
+            try:
+                import deepchem as dc
+            except:
+                print(
+                    "Deepchem not installed. Please install deepchem to use this dataset.")
+                exit()
 
-            col_0_base = np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["base_smiles"]])
-            col_1_ligand = np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["ligand_smiles"]]) 
-            col_2_aryl_halide =np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["aryl_halide_smiles"]]) 
-            col_3_additive = np.array([ ftzr.featurize(x)[0] if x!= "" else np.zeros(size) for x in data["additive_smiles"]])
+
+            MORFEUS = False
+            dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
+            #load url directly into pandas dataframe
+            import pandas as pd
+            data = pd.read_csv(dataset_url) #.fillna({"base_smiles":"","ligand_smiles":"","aryl_halide_number":0,"aryl_halide_smiles":"","additive_number":0, "additive_smiles": ""}, inplace=False)
+            # remove rows with nan
+            data = data.dropna()
+            #randomly shuffly df
+            data = data.sample(frac=1).reset_index(drop=True)
+            ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
+            #dc.feat.RDKitDescriptors()
+
+            if MORFEUS:
+            #get_morfeus_desc
+                unique_bases = data["base_smiles"].unique()
+                unique_ligands = data["ligand_smiles"].unique()
+                unique_aryl_halides = data["aryl_halide_smiles"].unique()
+                unique_additives = data["additive_smiles"].unique()
+                morfeus_reps = {
+                                "base_smiles" : {base : get_morfeus_desc(base) for base in unique_bases},
+                                "ligand_smiles" : {ligand : get_morfeus_desc(ligand) for ligand in unique_ligands},
+                                "aryl_halide_smiles" : {aryl_halide : get_morfeus_desc(aryl_halide) for aryl_halide in unique_aryl_halides},
+                                "additive_smiles" : {additive : get_morfeus_desc(additive) for additive in unique_additives}
+                                }
+                
+                base_morfeus = np.array([morfeus_reps["base_smiles"][base] for base in data["base_smiles"]])
+                ligand_morfeus = np.array([morfeus_reps["ligand_smiles"][ligand] for ligand in data["ligand_smiles"]])
+                aryl_halide_morfeus = np.array([morfeus_reps["aryl_halide_smiles"][aryl_halide] for aryl_halide in data["aryl_halide_smiles"]])
+                additive_morfeus = np.array([morfeus_reps["additive_smiles"][additive] for additive in data["additive_smiles"]])
+
+
+            col_0_base = np.array([ftzr.featurize(x)[0] for x in data["base_smiles"]])
+            col_1_ligand = np.array([ftzr.featurize(x)[0] for x in data["ligand_smiles"]])
+            col_2_aryl_halide = np.array([ftzr.featurize(x)[0]  for x in data["aryl_halide_smiles"]])
+            col_3_additive = np.array([ftzr.featurize(x)[0] for x in data["additive_smiles"]])
             # col_4_product = ftzr.featurize(data["product_smiles"])
             col_5_aryl_halide_number = data["aryl_halide_number"].to_numpy().reshape(-1,1)
             col_6_additive_number = data["additive_number"].to_numpy().reshape(-1,1)
 
-            representation = np.concatenate([col_0_base,
-                                            col_1_ligand,
-                                            col_2_aryl_halide,
-                                            col_3_additive,
-                                            col_5_aryl_halide_number,
-                                            col_6_additive_number],axis=1)
+            #self.X = np.concatenate([col_0_base,
+            #                                col_1_ligand,
+            #                                col_2_aryl_halide,
+            #                                col_3_additive,
+            #                                col_5_aryl_halide_number,
+            #                                col_6_additive_number],axis=1)
+            if MORFEUS:
+                self.X = np.concatenate([col_0_base,
+                                                col_1_ligand,
+                                                col_2_aryl_halide,
+                                                col_3_additive,
+                                                col_5_aryl_halide_number,
+                                                col_6_additive_number,
+                                                base_morfeus,
+                                                ligand_morfeus,
+                                                aryl_halide_morfeus,
+                                                additive_morfeus],axis=1)
+            else:
+                self.X = np.concatenate([col_0_base,
+                                                col_1_ligand,
+                                                col_2_aryl_halide,
+                                                col_3_additive,
+                                                col_5_aryl_halide_number,
+                                                col_6_additive_number],axis=1)
 
-            target = data["yield"].to_numpy()   
-            """
-
+            self.y = data["yield"].to_numpy()   
+            
+           # pdb.set_trace()
         else:
             print("Dataset not implemented.")
             exit()
         
     def get_prices(self):
         if self.prices == "random":
-            self.costs = np.random.randint(2, size=(642, 1))
+            self.costs = np.random.randint(2, size=(len(self.X), 1))
         else:
             print("Price model not implemented.")
             exit()
 
-    def get_init_holdout_data(self):
+    def get_init_holdout_data(self, SEED):
+        random.seed(SEED)
+        torch.manual_seed(SEED)
+        np.random.seed(SEED)
+
         if self.init_strategy == "values":
 
             """
             Select the init_size worst values and the rest randomly.
             """
 
-            X, y, costs = cp.deepcopy(self.X), cp.deepcopy(self.y), cp.deepcopy(self.costs)
-            sorted_indices    =  np.argsort(y)
-            X, y, costs = X[sorted_indices], y[sorted_indices], costs[sorted_indices]
+            min_val = np.mean(self.y) - 0.2 * abs(np.std(self.y))
+            print("min_val", min_val)
+            
+            index_worst = np.random.choice(np.argwhere(
+                self.y < min_val).flatten(), size=self.init_size, replace=False)
+            index_others = np.setdiff1d(np.arange(len(self.y)), index_worst)
+            #randomly shuffle the data
+            index_others = np.random.permutation(index_others)
 
-            X_init, y_init, costs_init = X[:self.init_size], y[:self.init_size], costs[:self.init_size]
-            X_holdout, y_holdout, costs_holdout = X[self.init_size:], y[self.init_size:], costs[self.init_size:]
+            X_init, y_init, costs_init = self.X[index_worst], self.y[index_worst], self.costs[index_worst]
+            X_holdout, y_holdout, costs_holdout = self.X[
+                index_others], self.y[index_others], self.costs[index_others]
 
             X_init, y_init       = convert2pytorch(X_init, y_init)
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
