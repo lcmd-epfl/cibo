@@ -17,12 +17,16 @@ from itertools import combinations
 from utils import *
 from kernels import *
 from botorch.utils.transforms import normalize
+from botorch.optim import optimize_acqf_discrete
+from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
+import warnings
+warnings.filterwarnings("ignore")
+
 random.seed(45577)
 np.random.seed(4565777)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
-
 
 def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     """
@@ -82,7 +86,7 @@ def update_model(X, y, bounds_norm):
         model (botorch.models.gpytorch.GP): The updated GP model.
         scaler_y (TensorStandardScaler): The scaler for the labels.
     """
-    kernel_type = "Linear"  # "Tanimoto"  # "Matern"  # ""
+    kernel_type = "Linear" #"Matern" #"Linear"  # "Tanimoto"  # "Matern"  # ""
     GP_class = CustomGPModel(kernel_type=kernel_type,
                              scale_type_X="botorch", bounds_norm=bounds_norm)
     model    = GP_class.fit(X, y)
@@ -283,7 +287,7 @@ class CustomGPModel:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             fit_gpytorch_model(self.mll, max_retries=50000)
-            #fit_gpytorch_mll(self.mll, num_retries=5000)
+            #fit_gpytorch_mll(self.mll, num_retries=50000)
         else:
             """
             Use gradient descent to fit the hyperparameters of the GP with initial run 
@@ -313,7 +317,6 @@ class CustomGPModel:
                 if self.gp.covar_module.base_kernel.lengthscale != None:
                     self.gp.covar_module.base_kernel.lengthscale = lengthscale
                 self.gp.likelihood.noise = noise
-                
                 # Perform a brief round of training to get a loss value
                 for epoch in range(NUM_EPOCHS_INIT):
                     # clear gradients
@@ -371,20 +374,42 @@ class CustomGPModel:
     
         return self.gp
 
-"""
-This function is not unusually used anymore and might be removed in the future
-def predict(self, X_test):
-    X_test_norm = self.scaler_X.transform(X_test)
-    X_test_tensor = torch.tensor(X_test_norm, dtype=torch.float64)
 
-    with torch.no_grad(), gpytorch.settings.fast_pred_var():
-        posterior = self.gp.posterior(X_test_tensor)
-        mean = posterior.mean
-        std_dev = posterior.variance.sqrt()
+def gibbon_search(model, X_candidate_BO,bounds_norm, q,sequential=False, maximize=True):
+    """
+    #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
+    returns index of the q best candidates in X_candidate_BO
+    as well as their feature vectors
 
-    mean_original = self.scaler_y.inverse_transform(mean.detach().numpy().reshape(-1, 1)).flatten()
-    std_dev_original = std_dev.detach().numpy() * self.scaler_y.scale_
-    std_dev_original = std_dev_original.flatten()
+    Parameters:
+        model (botorch.models.gpytorch.GP): The GP model.
+        X_candidate_BO (numpy.ndarray): The holdout set.
+        bounds_norm (numpy.ndarray): The bounds for normalization.
+        q (int): The batch size.
+        sequential (bool): Whether to use sequential optimization.
+        maximize (bool): Whether to maximize or minimize the acquisition function.
+    Returns:
+        nump.ndarray: The indices of the selected molecules.
+        nump.ndarray: The selected molecules.
+    """
 
-    return mean_original, std_dev_original
-"""
+
+    NUM_RESTARTS  = 20
+    RAW_SAMPLES   = 512
+    qGIBBON       = qLowerBoundMaxValueEntropy(model,X_candidate_BO, maximize=True)
+    candidates, _ = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=q,choices=X_candidate_BO, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=sequential)
+    indices       = find_indices(X_candidate_BO, candidates)
+
+    return indices, candidates
+
+
+def check_better(y, y_best_BO):
+    """
+    Check if one of the molecuels in the new batch
+    is better than the current best one.
+    """
+
+    if max(y)[0] > y_best_BO:
+        return max(y)[0]
+    else:
+        return y_best_BO

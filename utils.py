@@ -1,5 +1,3 @@
-#https://codeocean.com/capsule/7056009/tree/v1
-
 import os
 import requests
 import pandas as pd
@@ -19,7 +17,8 @@ import copy as cp
 import morfeus
 from morfeus.conformer import ConformerEnsemble
 from morfeus import SASA, Dispersion
-
+import deepchem as dc
+import pandas as pd
 
 def check_entries(array_of_arrays):
     for array in array_of_arrays:
@@ -51,11 +50,10 @@ def get_morfeus_desc(smiles):
     conformer.properties["p_min"] = disp.p_min
     conformer.properties["p_max"] = disp.p_max
 
-
   ce.get_properties()
-  a= ce.boltzmann_statistic("sasa")
-  b= ce.boltzmann_statistic("p_int")
-  c= ce.boltzmann_statistic("p_min")
+  a = ce.boltzmann_statistic("sasa")
+  b = ce.boltzmann_statistic("p_int")
+  c = ce.boltzmann_statistic("p_min")
   d = ce.boltzmann_statistic("p_max")
 
   return np.array([a,b,c,d])
@@ -73,8 +71,11 @@ class Evaluation_data:
         self.init_size = init_size
         self.prices = prices
 
-        self.ECFP_size = 64 #1024
+        self.ECFP_size = 64
         self.radius = 4
+
+        self.ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
+                    #=dc.feat.RDKitDescriptors() 
 
         self.get_raw_dataset()
 
@@ -83,7 +84,9 @@ class Evaluation_data:
         self.bounds_norm = self.bounds_norm.to(dtype=torch.float32)
 
         if not check_entries(self.X):
+            print("###############################################")
             print("Entries of X are not between 0 and 1. Adding MinMaxScaler to the pipeline.")
+            print("###############################################")
             from sklearn.preprocessing import MinMaxScaler
             self.scaler_X = MinMaxScaler()
             self.X = self.scaler_X.fit_transform(self.X)
@@ -93,18 +96,8 @@ class Evaluation_data:
     def get_raw_dataset(self):
         
         if self.dataset == "freesolv":
-            try:
-                import deepchem as dc
-            except:
-                print("Deepchem not installed. Please install deepchem to use this dataset.")
-                exit()
 
-            ftzr = dc.feat.RDKitDescriptors()
-            #dc.feat.CircularFingerprint(
-            #    size=self.ECFP_size, radius=self.radius)
-            #
-            #
-            _, datasets, _ = dc.molnet.load_sampl(featurizer=ftzr, splitter='random', transformers = [])
+            _, datasets, _ = dc.molnet.load_sampl(featurizer=self.ftzr, splitter='random', transformers = [])
             train_dataset, valid_dataset, test_dataset = datasets
 
             X_train = train_dataset.X
@@ -120,36 +113,45 @@ class Evaluation_data:
             random_inds = np.random.permutation(len(self.X))
             self.X = self.X[random_inds]
             self.y = self.y[random_inds]
+
+        elif self.dataset == "ebdo_direct_arylation":
+            
+            dataset_url = "https://raw.githubusercontent.com/b-shields/edbo/master/experiments/data/direct_arylation/experiment_index.csv"
+            data = pd.read_csv(dataset_url)
+            data = data.dropna()
+            data = data.sample(frac=1).reset_index(drop=True)
+            col_0_base = self.ftzr(data["Base_SMILES"])
+            col_1_ligand = self.ftzr(data["Ligand_SMILES"])
+            col_2_solvent = self.ftzr(data["Solvent_SMILES"])
+            col_3_concentration = data["Concentration"].to_numpy().reshape(-1,1)
+            col_4_temperature = data["Temp_C"].to_numpy().reshape(-1,1)
+
+            self.X = np.concatenate([col_0_base,
+                                    col_1_ligand,
+                                    col_2_solvent,
+                                    col_3_concentration,
+                                    col_4_temperature,
+                                    ],axis=1)
+
+
+            self.y = data["yield"].to_numpy()            
             
         elif self.dataset == "buchwald":
-            #e.g. download datasets with requests from some url you put here as
-            # string
-            try:
-                import deepchem as dc
-            except:
-                print(
-                    "Deepchem not installed. Please install deepchem to use this dataset.")
-                exit()
-
-
             MORFEUS = False
             dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
             #load url directly into pandas dataframe
-            import pandas as pd
+            
             data = pd.read_csv(dataset_url) #.fillna({"base_smiles":"","ligand_smiles":"","aryl_halide_number":0,"aryl_halide_smiles":"","additive_number":0, "additive_smiles": ""}, inplace=False)
             # remove rows with nan
             data = data.dropna()
             #randomly shuffly df
             data = data.sample(frac=1).reset_index(drop=True)
-            ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
-            #dc.feat.RDKitDescriptors()
+            unique_bases = data["base_smiles"].unique()
+            unique_ligands = data["ligand_smiles"].unique()
+            unique_aryl_halides = data["aryl_halide_smiles"].unique()
+            unique_additives = data["additive_smiles"].unique()
 
             if MORFEUS:
-            #get_morfeus_desc
-                unique_bases = data["base_smiles"].unique()
-                unique_ligands = data["ligand_smiles"].unique()
-                unique_aryl_halides = data["aryl_halide_smiles"].unique()
-                unique_additives = data["additive_smiles"].unique()
                 morfeus_reps = {
                                 "base_smiles" : {base : get_morfeus_desc(base) for base in unique_bases},
                                 "ligand_smiles" : {ligand : get_morfeus_desc(ligand) for ligand in unique_ligands},
@@ -162,43 +164,48 @@ class Evaluation_data:
                 aryl_halide_morfeus = np.array([morfeus_reps["aryl_halide_smiles"][aryl_halide] for aryl_halide in data["aryl_halide_smiles"]])
                 additive_morfeus = np.array([morfeus_reps["additive_smiles"][additive] for additive in data["additive_smiles"]])
 
+            col_0_base = np.array([self.ftzr.featurize(x)[0] for x in data["base_smiles"]])
+            col_1_ligand = np.array([self.ftzr.featurize(x)[0] for x in data["ligand_smiles"]])
+            col_2_aryl_halide = np.array([self.ftzr.featurize(x)[0]  for x in data["aryl_halide_smiles"]])
+            col_3_additive = np.array([self.ftzr.featurize(x)[0] for x in data["additive_smiles"]])
 
-            col_0_base = np.array([ftzr.featurize(x)[0] for x in data["base_smiles"]])
-            col_1_ligand = np.array([ftzr.featurize(x)[0] for x in data["ligand_smiles"]])
-            col_2_aryl_halide = np.array([ftzr.featurize(x)[0]  for x in data["aryl_halide_smiles"]])
-            col_3_additive = np.array([ftzr.featurize(x)[0] for x in data["additive_smiles"]])
-            # col_4_product = ftzr.featurize(data["product_smiles"])
-            col_5_aryl_halide_number = data["aryl_halide_number"].to_numpy().reshape(-1,1)
-            col_6_additive_number = data["additive_number"].to_numpy().reshape(-1,1)
 
-            #self.X = np.concatenate([col_0_base,
-            #                                col_1_ligand,
-            #                                col_2_aryl_halide,
-            #                                col_3_additive,
-            #                                col_5_aryl_halide_number,
-            #                                col_6_additive_number],axis=1)
+
+            self.feauture_labels = {"names": {
+                                            "bases":unique_bases,
+                                            "ligands":unique_ligands,
+                                            "aryl_halides":unique_aryl_halides,
+                                            "additives":unique_additives
+                                            }
+                                    ,
+                                    "ordered_smiles": 
+                                     {"bases": data["base_smiles"],
+                                      "ligands": data["ligand_smiles"],
+                                      "aryl_halides": data["aryl_halide_smiles"],
+                                      "additives": data["additive_smiles"]
+                                     }
+                                    }
+
+
             if MORFEUS:
                 self.X = np.concatenate([col_0_base,
-                                                col_1_ligand,
-                                                col_2_aryl_halide,
-                                                col_3_additive,
-                                                col_5_aryl_halide_number,
-                                                col_6_additive_number,
-                                                base_morfeus,
-                                                ligand_morfeus,
-                                                aryl_halide_morfeus,
-                                                additive_morfeus],axis=1)
+                                        col_1_ligand,
+                                        col_2_aryl_halide,
+                                        col_3_additive,
+                                        base_morfeus,
+                                        ligand_morfeus,
+                                        aryl_halide_morfeus,
+                                        additive_morfeus],axis=1)
             else:
                 self.X = np.concatenate([col_0_base,
-                                                col_1_ligand,
-                                                col_2_aryl_halide,
-                                                col_3_additive,
-                                                col_5_aryl_halide_number,
-                                                col_6_additive_number],axis=1)
+                                         col_1_ligand,
+                                         col_2_aryl_halide,
+                                         col_3_additive
+                                        ],axis=1)
 
             self.y = data["yield"].to_numpy()   
             
-           # pdb.set_trace()
+            
         else:
             print("Dataset not implemented.")
             exit()
@@ -206,6 +213,32 @@ class Evaluation_data:
     def get_prices(self):
         if self.prices == "random":
             self.costs = np.random.randint(2, size=(len(self.X), 1))
+
+        elif self.prices == "update_when_used":
+            if self.dataset == "freesolv":
+                print("Not implemented.")
+                exit()
+            elif self.dataset == "ebdo_direct_arylation":
+                print("Not implemented.")
+                exit()
+            elif self.dataset == "buchwald":
+                self.ligand_prices = {}
+                for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
+                    self.ligand_prices[unique_ligand] =   ind+1
+ 
+                
+                all_ligand_prices = []
+                for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
+                    all_ligand_prices.append(self.ligand_prices[ligand])
+                self.costs = np.array(all_ligand_prices).reshape(-1,1)
+
+                pdb.set_trace()
+
+
+
+        
+
+
         else:
             print("Price model not implemented.")
             exit()
@@ -224,8 +257,7 @@ class Evaluation_data:
             min_val = np.mean(self.y) - 0.2 * abs(np.std(self.y))
             print("min_val", min_val)
             
-            index_worst = np.random.choice(np.argwhere(
-                self.y < min_val).flatten(), size=self.init_size, replace=False)
+            index_worst = np.random.choice(np.argwhere(self.y < min_val).flatten(), size=self.init_size, replace=False)
             index_others = np.setdiff1d(np.arange(len(self.y)), index_worst)
             #randomly shuffle the data
             index_others = np.random.permutation(index_others)
@@ -263,8 +295,6 @@ class Evaluation_data:
             """
             Select molecules furthest away the representation of the global optimum.
             """
-
-
             idx_max_y = np.argmax(self.y)
     
             # Step 2: Retrieve the corresponding vector in X
@@ -336,7 +366,6 @@ class Evaluation_data:
             print("Init strategy not implemented.")
             exit()
 
-            
 
 
 def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL):
