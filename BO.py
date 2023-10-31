@@ -276,7 +276,9 @@ class CustomGPModel:
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
             #Found that these kernels can be numerically instable if not enough jitter is added
-            self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+            #self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+            self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(1e-3)
+
         
         if self.FIT_METHOD:
             """

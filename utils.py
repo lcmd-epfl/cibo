@@ -19,6 +19,7 @@ from morfeus.conformer import ConformerEnsemble
 from morfeus import SASA, Dispersion
 import deepchem as dc
 import pandas as pd
+import pickle
 
 def check_entries(array_of_arrays):
     for array in array_of_arrays:
@@ -368,7 +369,7 @@ class Evaluation_data:
 
 
 
-def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL):
+def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/costs.png"):
     """
     Plot the utility of the BO vs RS (Random Search) for each iteration.
     """  
@@ -395,12 +396,12 @@ def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL):
     ax1.set_ylabel('Best Objective Value')
     plt.legend(loc="lower right")
     plt.xticks(list(np.arange(NITER)))
-    plt.savefig("optimization.png")
+    plt.savefig(name)
 
     plt.clf()
 
 
-def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL):
+def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL, name="./figures/costs.png"):
     """
     Plot the running costs of the BO vs RS (Random Search) for each iteration.
     """
@@ -424,7 +425,7 @@ def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL):
     ax2.set_ylabel('Running Costs [$]')
     plt.legend(loc="lower right")
     plt.xticks(list(np.arange(NITER)))
-    plt.savefig("costs.png")
+    plt.savefig(name)
 
     plt.clf()
 
@@ -665,3 +666,19 @@ def fragments(smiles):
         frags[i, :] = features
 
     return frags
+
+
+def reaching_max_n(y_better):
+    return np.argmax(np.mean(np.array(y_better), axis=0))
+
+
+
+#savepkl file
+def save_pkl(file, name):
+    with open(name, 'wb') as f:
+        pickle.dump(file, f)
+
+#load pkl file
+def load_pkl(name):
+    with open(name, 'rb') as f:
+        return pickle.load(f)
