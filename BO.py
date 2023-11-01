@@ -9,9 +9,7 @@ from gpytorch.means import ConstantMean
 from gpytorch.priors import NormalPrior
 from gpytorch.constraints import Positive, LessThan,Interval
 from sklearn.preprocessing import MinMaxScaler
-import numpy as np
 from torch.optim import Adam
-import torch
 from scipy.spatial import distance
 from itertools import combinations
 from utils import *

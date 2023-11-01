@@ -92,7 +92,6 @@ class Evaluation_data:
             self.scaler_X = MinMaxScaler()
             self.X = self.scaler_X.fit_transform(self.X)
 
-        self.get_prices()
 
     def get_raw_dataset(self):
         
@@ -135,7 +134,39 @@ class Evaluation_data:
                                     ],axis=1)
 
 
-            self.y = data["yield"].to_numpy()            
+            self.y = data["yield"].to_numpy()  
+            self.all_ligands     = data["Ligand_SMILES"].to_numpy()
+            unique_bases = np.unique(data["Base_SMILES"])
+            unique_ligands = np.unique(data["Ligand_SMILES"])
+            unique_solvents = np.unique(data["Solvent_SMILES"])
+            unique_concentrations = np.unique(data["Concentration"])
+            unique_temperatures = np.unique(data["Temp_C"])
+
+
+            max_yield_per_ligand = np.array([max(data[data['Ligand_SMILES'] == unique_ligand]["yield"]) for unique_ligand in unique_ligands])
+            self.worst_ligand         = unique_ligands[np.argmin(max_yield_per_ligand)]
+            self.best_ligand          = unique_ligands[np.argmax(max_yield_per_ligand)]
+
+            self.where_worst = np.array(data.index[data['Ligand_SMILES'] == self.worst_ligand].tolist())
+            self.feauture_labels = {"names": {
+                                            "bases":unique_bases,
+                                            "ligands":unique_ligands,
+                                            "solvents":unique_solvents,
+                                            "concentrations":unique_concentrations,
+                                            "temperatures":unique_temperatures
+                                            }
+                                    ,
+                                    "ordered_smiles": 
+                                     {"bases": data["Base_SMILES"],
+                                      "ligands": data["Ligand_SMILES"],
+                                       "solvents": data["Solvent_SMILES"],
+                                       "concentrations": data["Concentration"],
+                                       "temperatures": data["Temp_C"]
+                                     }
+                                    }
+
+
+
             
         elif self.dataset == "buchwald":
             MORFEUS = False
@@ -205,13 +236,14 @@ class Evaluation_data:
                                         ],axis=1)
 
             self.y = data["yield"].to_numpy()   
-            
-            
+               
         else:
             print("Dataset not implemented.")
             exit()
+
         
     def get_prices(self):
+        
         if self.prices == "random":
             self.costs = np.random.randint(2, size=(len(self.X), 1))
 
@@ -220,8 +252,25 @@ class Evaluation_data:
                 print("Not implemented.")
                 exit()
             elif self.dataset == "ebdo_direct_arylation":
-                print("Not implemented.")
-                exit()
+                self.ligand_prices = {}
+
+
+                
+                for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
+                    self.ligand_prices[unique_ligand] =   1
+                
+                self.ligand_prices[self.worst_ligand] = 0
+                self.ligand_prices[self.best_ligand]  = 1
+                
+
+                all_ligand_prices = []
+                for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
+                    all_ligand_prices.append(self.ligand_prices[ligand])
+                self.costs = np.array(all_ligand_prices).reshape(-1,1)
+
+
+
+
             elif self.dataset == "buchwald":
                 self.ligand_prices = {}
                 for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
@@ -235,11 +284,6 @@ class Evaluation_data:
 
                 pdb.set_trace()
 
-
-
-        
-
-
         else:
             print("Price model not implemented.")
             exit()
@@ -248,6 +292,10 @@ class Evaluation_data:
         random.seed(SEED)
         torch.manual_seed(SEED)
         np.random.seed(SEED)
+        self.get_prices()
+
+
+
 
         if self.init_strategy == "values":
 
@@ -325,48 +373,39 @@ class Evaluation_data:
 
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
-        elif self.init_strategy == "ratio_furthest":
 
-            y_sorted = np.sort(self.y)
-            cutoff_20_percent = y_sorted[int(0.3 * len(self.y))]
+        elif self.init_strategy == "worst_ligand":
 
-            # Step 2: Identify the indices for the top 20% y values
-            indices_top_20 = np.where(self.y >= cutoff_20_percent)[0]
-
-            # Step 3: Retrieve the vectors in X corresponding to these indices
-            X_top_20 = self.X[indices_top_20]
-
-            # Step 4: Compute the distance for each row in X against the top 20% y values
-            # Using Euclidean distance and taking the minimum distance as an example
-            distances = np.min([np.linalg.norm(self.X - x, axis=1)
-                            for x in X_top_20], axis=0)
-
-            # Step 5: Sort these distances and get the indices of the 100 largest distances
-            indices_init = np.argsort(distances)[::-1][:self.init_size]
-
-            # Step 6: Get the 100 entries corresponding to these indices from X and y
-            X_init = self.X[indices_init]
-            y_init = self.y[indices_init]
-            costs_init = self.costs[indices_init]
-
-            # Step 7: Get the remaining entries
-            indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
+            assert self.dataset == "ebdo_direct_arylation", "This init strategy is only implemented for the ebdo_direct_arylation dataset."
+            indices_init = self.where_worst[:self.init_size]
+            indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+            np.random.shuffle(indices_init)
             np.random.shuffle(indices_holdout)
-            X_holdout = self.X[indices_holdout]
-            y_holdout = self.y[indices_holdout]
+
+            X_init, y_init = self.X[indices_init], self.y[indices_init]
+            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+
+
+            price_dict_init = self.ligand_prices
+
+            LIGANDS_INIT = self.all_ligands[indices_init]
+            LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
+
+            costs_init = self.costs[indices_init]
             costs_holdout = self.costs[indices_holdout]
 
-            # Convert to PyTorch (assuming convert2pytorch is a function you have)
-            X_init, y_init = convert2pytorch(X_init, y_init)
+            X_init, y_init       = convert2pytorch(X_init, y_init)
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
-            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+
+
+
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout, LIGANDS_INIT, LIGANDS_HOLDOUT, price_dict_init
 
 
         else:
             print("Init strategy not implemented.")
             exit()
-
 
 
 def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/costs.png"):
