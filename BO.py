@@ -27,34 +27,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
 
 
-"""
-def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
-    
-    FUNCTION concerns subfolder 1_greedy_fix_costs
-    Selects a batch of molecules from a list of suggested molecules.
-    Parameters:
-        suggested_costs (list): The list of suggested molecules.
-        MAX_BATCH_COST (float): The maximum cost of the batch.
-        BATCH_SIZE (int): The size of the batch.
-    Returns:
-        list: The indices of the selected molecules.
-    
-
-    n = len(suggested_costs)
-    # Check if BATCH_SIZE is larger than the length of the array, if so return None
-    if BATCH_SIZE > n:
-        return None
-
-    best_indices = None
-    # We start checking combinations from BATCH_SIZE down to 1 to prioritize getting BATCH_SIZE elements
-    for size in reversed(range(1, BATCH_SIZE + 1)):
-        for indices in combinations(range(n), size):
-            batch_sum = sum(suggested_costs[i] for i in indices)
-            if batch_sum <= MAX_BATCH_COST:
-                best_indices = list(indices)
-                return best_indices  # Return the first combination that meets the condition
-    return None
-"""
 
 def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     """
@@ -465,7 +437,6 @@ tkwargs = {
 }
 
 def build_and_optimize_model(train_x, train_y):
-    """ Builds model and optimizes it."""
 
     print('Using hyperparameters optimized for continuous variables.')
     gp_options = {
