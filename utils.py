@@ -10,6 +10,8 @@ import math
 from collections import Counter
 import leruli
 from time import sleep
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import random
 import torch
@@ -414,7 +416,10 @@ def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/
     """
     Plot the utility of the BO vs RS (Random Search) for each iteration.
     """  
-    
+    #create subfolder "./figures" if it does not exist
+    if not os.path.exists("./figures"):
+        os.makedirs("./figures")
+
     y_BO_MEAN, y_BO_STD = np.mean(y_better_BO_ALL, axis=0), np.std(y_better_BO_ALL, axis=0)
     y_RANDOM_MEAN, y_RANDOM_STD = np.mean(y_better_RANDOM_ALL, axis=0), np.std(y_better_RANDOM_ALL, axis=0)
 
