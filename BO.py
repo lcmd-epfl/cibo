@@ -26,9 +26,11 @@ np.random.seed(4565777)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
 
+
+"""
 def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
-    """
-    #FUNCTION concerns subfolder 1_greedy_fix_costs
+    
+    FUNCTION concerns subfolder 1_greedy_fix_costs
     Selects a batch of molecules from a list of suggested molecules.
     Parameters:
         suggested_costs (list): The list of suggested molecules.
@@ -36,7 +38,7 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
         BATCH_SIZE (int): The size of the batch.
     Returns:
         list: The indices of the selected molecules.
-    """
+    
 
     n = len(suggested_costs)
     # Check if BATCH_SIZE is larger than the length of the array, if so return None
@@ -52,7 +54,29 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
                 best_indices = list(indices)
                 return best_indices  # Return the first combination that meets the condition
     return None
+"""
 
+def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
+    """
+    Selects a batch of molecules from a list of suggested molecules that have the lowest indices
+    while meeting the constraints of the maximum cost and batch size.
+
+    """
+    n = len(suggested_costs)
+    # Check if BATCH_SIZE is larger than the length of the array, if so return None
+    if BATCH_SIZE > n:
+        return []
+    valid_combinations = []
+    # Find all valid combinations that meet the cost condition
+    for indices in combinations(range(n), BATCH_SIZE):
+        if sum(suggested_costs[i] for i in indices) <= MAX_BATCH_COST:
+            valid_combinations.append(indices)
+    # If there are no valid combinations, return None
+    if not valid_combinations:
+        return []
+    # Select the combination with the lowest indices
+    best_indices = min(valid_combinations, key=lambda x: tuple(suggested_costs[i] for i in x))
+    return list(best_indices)
 
 
 
@@ -84,7 +108,7 @@ def update_model(X, y, bounds_norm):
         model (botorch.models.gpytorch.GP): The updated GP model.
         scaler_y (TensorStandardScaler): The scaler for the labels.
     """
-    kernel_type = "Linear" #"Matern" #"Linear"  # "Tanimoto"  # "Matern"  # ""
+    kernel_type = "Tanimoto" #"Matern" #"Linear"  # "Tanimoto"  # "Matern"  # ""
     GP_class = CustomGPModel(kernel_type=kernel_type,
                              scale_type_X="botorch", bounds_norm=bounds_norm)
     model    = GP_class.fit(X, y)
@@ -370,7 +394,8 @@ class CustomGPModel:
                         )
                 optimizer.step()
 
-            self.gp.eval()
+        self.gp.eval()
+        self.mll.eval()
     
         return self.gp
 
@@ -398,6 +423,7 @@ def gibbon_search(model, X_candidate_BO,bounds_norm, q,sequential=False, maximiz
     RAW_SAMPLES   = 512
     qGIBBON       = qLowerBoundMaxValueEntropy(model,X_candidate_BO, maximize=True)
     candidates, _ = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=q,choices=X_candidate_BO, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=sequential)
+    
     indices       = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
@@ -413,3 +439,106 @@ def check_better(y, y_best_BO):
         return max(y)[0]
     else:
         return y_best_BO
+    
+
+def check_success(cheap_indices, indices):
+    if cheap_indices == []:
+        return cheap_indices, False
+    else:
+        cheap_indices   = indices[cheap_indices]
+        return cheap_indices,True
+
+
+"""
+#planning to steal this code from ED-BO
+
+import torch
+import gpytorch
+from gpytorch.kernels import MaternKernel, ScaleKernel
+from gpytorch.priors import GammaPrior
+from gpytorch.constraints import GreaterThan
+import numpy as np
+
+tkwargs = {
+    "dtype": torch.double,
+    "device": torch.device("cpu"),
+}
+
+def build_and_optimize_model(train_x, train_y):
+    """ Builds model and optimizes it."""
+
+    print('Using hyperparameters optimized for continuous variables.')
+    gp_options = {
+        'ls_prior1': 2.0, 'ls_prior2': 0.2, 'ls_prior3': 5.0,
+        'out_prior1': 5.0, 'out_prior2': 0.5, 'out_prior3': 8.0,
+        'noise_prior1': 1.5, 'noise_prior2': 0.1, 'noise_prior3': 5.0,
+        'noise_constraint': 1e-5,
+    }
+
+    n_features = np.shape(train_x)[1]
+
+    class ExactGPModel(gpytorch.models.ExactGP):
+        def __init__(self, train_x, train_y, likelihood):
+            super(ExactGPModel, self).__init__(train_x, train_y,
+                                               likelihood)
+            self.mean_module = gpytorch.means.ConstantMean()
+
+            kernels = MaternKernel(
+                ard_num_dims=n_features,
+                lengthscale_prior=GammaPrior(gp_options['ls_prior1'],
+                                             gp_options['ls_prior2'])
+            )
+
+            self.covar_module = ScaleKernel(
+                kernels,
+                outputscale_prior=GammaPrior(gp_options['out_prior1'],
+                                             gp_options['out_prior2']))
+            try:
+                ls_init = gp_options['ls_prior3']
+                self.covar_module.base_kernel.lengthscale = ls_init
+            except:
+                uniform = gp_options['ls_prior3']
+                ls_init = torch.ones(n_features).to(**tkwargs) * uniform
+                self.covar_module.base_kernel.lengthscale = ls_init
+
+        def forward(self, x):
+            mean_x = self.mean_module(x)
+            covar_x = self.covar_module(x)
+            return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+
+    # initialize likelihood and model
+    likelihood = gpytorch.likelihoods.GaussianLikelihood(
+        GammaPrior(gp_options['noise_prior1'], gp_options['noise_prior2'])
+    )
+
+    likelihood.noise = gp_options['noise_prior3']
+    model = ExactGPModel(train_x, train_y, likelihood).to(**tkwargs)
+
+    model.likelihood.noise_covar.register_constraint(
+        "raw_noise", GreaterThan(gp_options['noise_constraint'])
+    )
+
+    model.train()
+    likelihood.train()
+    optimizer = torch.optim.Adam([
+        {'params': model.parameters()},
+    ], lr=0.1)
+
+    # "Loss" for GPs - the marginal log likelihood
+    mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+
+    training_iter = 1000
+    for i in range(training_iter):
+        # Zero gradients from previous iteration
+        optimizer.zero_grad()
+        # Output from model
+        output = model(train_x)
+        # Calc loss and backprop gradients
+        loss = -mll(output, train_y.squeeze(-1).to(**tkwargs))
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    likelihood.eval()
+    return model, likelihood  # Optimized model
+"""

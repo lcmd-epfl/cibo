@@ -26,6 +26,8 @@ import copy as cp
 
 featurizer = dc.feat.RDKitDescriptors()
 #dc.feat.CircularFingerprint(size=1024)
+#dc.feat.RDKitDescriptors()
+#dc.feat.CircularFingerprint(size=1024)
 # Load FreeSolv dataset
 tasks, datasets, transformers = dc.molnet.load_sampl(featurizer=featurizer, splitter='random', transformers = [])
 train_dataset, valid_dataset, test_dataset = datasets

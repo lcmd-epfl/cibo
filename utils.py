@@ -257,7 +257,9 @@ class Evaluation_data:
 
                 
                 for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
-                    self.ligand_prices[unique_ligand] =   1
+                    #self.ligand_prices[unique_ligand] =   
+                    #make random choice between 0 and 1
+                    self.ligand_prices[unique_ligand] =   np.random.randint(2)
                 
                 self.ligand_prices[self.worst_ligand] = 0
                 self.ligand_prices[self.best_ligand]  = 1
@@ -721,3 +723,68 @@ def save_pkl(file, name):
 def load_pkl(name):
     with open(name, 'rb') as f:
         return pickle.load(f)
+    
+
+
+def compute_price_acquisition(NEW_LIGANDS, price_dict):
+    """
+    This function is for 2_greedy_update_costs
+    """
+    
+    price_acquisition = 0
+    for ind,ligand in enumerate(np.unique(NEW_LIGANDS)):
+        price_acquisition += price_dict[ligand]
+
+
+    price_per_ligand = []
+    for ligand in NEW_LIGANDS:
+        price_per_ligand.append(price_dict[ligand])
+
+    price_per_ligand = np.array(price_per_ligand)
+    
+    return price_acquisition, price_per_ligand
+
+
+def update_price_dict(price_dict, NEW_LIGANDS):
+    """
+    This function is for 2_greedy_update_costs
+    """
+    NEW_LIGANDS = np.unique(NEW_LIGANDS)
+    for ligand in NEW_LIGANDS:
+        price_dict[ligand] = 0
+    return price_dict
+
+
+def update_X_y(X, y, cands,y_cands_BO, inds):
+    X, y = np.concatenate((X,cands)), np.concatenate((y, y_cands_BO[inds, :]))    
+    return X, y
+
+def create_aligned_transposed_price_table(price_dict):
+    """
+    Creates a transposed table from a dictionary of compound prices, numbering the compounds in a canonical order.
+    The table is formatted with aligned columns for better readability in terminal.
+
+    Parameters:
+    - price_dict: A dictionary with compound strings as keys and prices as values.
+
+    Returns:
+    A string representing the aligned transposed table of compounds and their prices.
+    """
+    # Check if all values are zero
+    all_zero = all(value == 0 for value in price_dict.values())
+
+    # If all values are zero, return a specific message.
+    if all_zero:
+        return "Bought all ligands"
+
+    # Sort the dictionary to ensure canonical order and extract only prices for transposing
+    sorted_prices = [price for _, price in sorted(price_dict.items(), key=lambda item: item[0])]
+    # Calculate column width based on the largest ligand number
+    col_width = max(len(f"Ligand {len(sorted_prices)}"), len("Price"))
+    # Create the header with aligned column titles
+    header = ' | '.join([f"Ligand {idx+1}".ljust(col_width) for idx in range(len(sorted_prices))])
+    # Create the row with aligned prices
+    row = ' | '.join([f"{price}".ljust(col_width) for price in sorted_prices])
+    # Combine header and row into a single string with a divider line
+    divider = '-' * len(header)
+    return '\n'.join([header, divider, row])

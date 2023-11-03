@@ -57,7 +57,7 @@ for exp_config in benchmark:
         for i in range(NITER):
             if COST_AWARE_BO == False:
                 indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
-                X, y = np.concatenate((X,candidates)), np.concatenate((y, y_candidate_BO[indices, :]))
+                X, y = update_X_y(X, y, candidates, y_candidate_BO,indices)
                 y_best_BO = check_better(y, y_best_BO)
                 y_better_BO.append(y_best_BO)
                 running_costs_BO.append((running_costs_BO[-1] + sum(costs_BO[indices]))[0])
@@ -66,36 +66,40 @@ for exp_config in benchmark:
                 y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
                 costs_BO = np.delete(costs_BO, indices, axis=0)            
             else:    
-                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=2*BATCH_SIZE,sequential=False, maximize=True)
+                SUCCESS = False
+                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
                 suggested_costs = costs_BO[indices].flatten()
                 cheap_indices   = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
-                cheap_indices   = indices[cheap_indices]
-                SUCCESS = True
+                cheap_indices, SUCCESS_1         = check_success(cheap_indices, indices)
                 ITERATION = 1
+                
 
-                while (cheap_indices is None) or (len(cheap_indices) < BATCH_SIZE):
+                while (cheap_indices ==[]) or (len(cheap_indices) < BATCH_SIZE):
                     INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
-                    SUCCESS = False
+                    SUCCESS_1 = False
 
                     INCREMENTED_BATCH_SIZE = BATCH_SIZE + ITERATION
                     print("Incrementing canditates for batch to: ", INCREMENTED_BATCH_SIZE)
                     if INCREMENTED_BATCH_SIZE > len(X_candidate_BO):
-                        print("WTF")
-                        #break
+                        print("Not enough candidates left to account for the costs")
+                        #therefore increasing the max batch cost to finally get enough candidates
                         INCREMENTED_MAX_BATCH_COST  += 1
 
                     indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE,sequential=False, maximize=True)
                     suggested_costs = costs_BO[indices].flatten()
-                    cheap_indices   = select_batch(suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
-                    cheap_indices   = indices[cheap_indices]
 
-                    if cheap_indices is not None and len(cheap_indices) == BATCH_SIZE:
-                        X, y = np.concatenate((X,X_candidate_BO[cheap_indices])), np.concatenate((y, y_candidate_BO[cheap_indices, :]))
+
+                    cheap_indices   = select_batch(suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
+                    cheap_indices, SUCCESS_2         = check_success(cheap_indices, indices)
+                    
+
+                    if (cheap_indices !=[]) and len(cheap_indices) == BATCH_SIZE:
+                        X, y = update_X_y(X, y, X_candidate_BO[cheap_indices], y_candidate_BO, cheap_indices)
                         y_best_BO = check_better(y, y_best_BO)
 
                         y_better_BO.append(y_best_BO)
                         BATCH_COST = sum(costs_BO[cheap_indices])[0]
-                        print("Batch cost: ", BATCH_COST)
+                        print("Batch cost1: ", BATCH_COST)
                         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
                         model, scaler_y = update_model(X, y, bounds_norm)
                     
@@ -107,12 +111,12 @@ for exp_config in benchmark:
                     
                     ITERATION +=1
 
-                if SUCCESS:
-                    X, y = np.concatenate((X,X_candidate_BO[cheap_indices])), np.concatenate((y, y_candidate_BO[cheap_indices, :]))
+                if SUCCESS_1:
+                    X, y = update_X_y(X, y, X_candidate_BO[cheap_indices], y_candidate_BO, cheap_indices)
                     y_best_BO = check_better(y, y_best_BO)
                     y_better_BO.append(y_best_BO)
                     BATCH_COST = sum(costs_BO[cheap_indices])[0]
-                    print("Batch cost: ", BATCH_COST)
+                    print("Batch cost2: ", BATCH_COST)
                     running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
                     model,scaler_y = update_model(X, y, bounds_norm)
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
@@ -142,7 +146,7 @@ for exp_config in benchmark:
                 costs_RANDOM = np.delete(costs_RANDOM, indices_random, axis=0)
 
             print("--------------------")
-            print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tN_train {}".format(i+1,NITER ,y_best_BO, y_best_RANDOM,running_costs_BO[-1],len(X)))
+            print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(i+1,NITER ,y_best_BO, y_best_RANDOM,running_costs_BO[-1],running_costs_RANDOM[-1],len(X)))
 
         y_better_BO_ALL.append(y_better_BO)
         y_better_RANDOM_ALL.append(y_better_RANDOM)

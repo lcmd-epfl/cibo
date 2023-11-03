@@ -14,25 +14,20 @@ REACTTION_1 = "ebdo_direct_arylation"
 REACTTION_2 = "buchwald"
 RESULTS = load_pkl("results.pkl")
 
-ITERATIONS = [1,5, 10, 15, 20]
-
 diff_1 = []
 diff_2 = []
 for i in range(12):
-    curr_diff = []
-    for it in ITERATIONS:
-        random = np.mean(np.array(RESULTS[i]["y_better_RANDOM_ALL"]), axis=0)[it]
-        bo     = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)[it]
+    
+    random = np.mean(np.array(RESULTS[i]["y_better_RANDOM_ALL"]), axis=0)[it]
+    bo     = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)[it]
+    pdb.set_trace()
+    max_n_BO            = reaching_max_n(RESULTS[i]["y_better_BO_ALL"])
+    max_n_RANDOM        = reaching_max_n(RESULTS[i]["y_better_RANDOM_ALL"])
 
 
-        max_n_BO            = reaching_max_n(RESULTS[i]["y_better_BO_ALL"])
-        max_n_RANDOM        = reaching_max_n(RESULTS[i]["y_better_RANDOM_ALL"])
+    print(i, diff, max_n_BO, max_n_RANDOM, RESULTS[i]["settings"]["dataset"])
 
-        #diff = bo_best/max_n_BO - random_best/max_n_RANDOM
-        diff = bo - random
-        print(i, diff, max_n_BO, max_n_RANDOM, RESULTS[i]["settings"]["dataset"])
-
-        curr_diff.append(diff)
+    curr_diff.append(diff)
 
     if i < 6:
         diff_1.append(curr_diff)

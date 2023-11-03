@@ -8,21 +8,6 @@ from BO import *
 from utils import *
 
 
-def compute_price_acquisition(NEW_LIGANDS, price_dict):
-    NEW_LIGANDS = np.unique(NEW_LIGANDS)
-    price_acquisition = 0
-    for ligand in NEW_LIGANDS:
-        price_acquisition += price_dict[ligand]
-    return price_acquisition
-
-
-def update_price_dict(price_dict, NEW_LIGANDS):
-    NEW_LIGANDS = np.unique(NEW_LIGANDS)
-    for ligand in NEW_LIGANDS:
-        price_dict[ligand] = 0
-    return price_dict
-
-
 RESULTS = []
 
 for exp_config in benchmark:
@@ -46,6 +31,7 @@ for exp_config in benchmark:
         torch.manual_seed(SEED)
 
         X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate, LIGANDS_init, LIGANDS_candidate, price_dict =  DATASET.get_init_holdout_data(SEED)
+        print(price_dict)
         X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
         y_best = float(torch.max(y))
         model, scaler_y = update_model(X, y, bounds_norm)
@@ -81,92 +67,94 @@ for exp_config in benchmark:
         for i in range(NITER):
             if COST_AWARE_BO == False:
                 indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
-                X, y = np.concatenate((X,candidates)), np.concatenate((y, y_candidate_BO[indices, :]))
-
+                X, y = update_X_y(X, y, candidates,y_candidate_BO, indices)
                 NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-                price_batch = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
-
-                
+                suggested_costs_all,_ = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
                 y_best_BO = check_better(y, y_best_BO)
                 y_better_BO.append(y_best_BO)
-                running_costs_BO.append((running_costs_BO[-1] + price_batch))
+                running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
                 model, _ = update_model(X, y, bounds_norm)
                 X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
                 y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
                 LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
-                price_dict_BO = update_price_dict(price_dict_BO, NEW_LIGANDS)
-
+                price_dict_BO        = update_price_dict(price_dict_BO, NEW_LIGANDS)
             else:    
-                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=2*BATCH_SIZE,sequential=False, maximize=True)
+                SUCCESS_1 = False
+                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
                 NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-                #check if ligands are already in the batch and take the once with lowest in indices
-                pdb.set_trace()
-                
-                suggested_costs = compute_price_acquisition(NEW_LIGANDS, price_dict)
-                cheap_indices   = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
-                cheap_indices   = indices[cheap_indices]
-                SUCCESS = True
-                ITERATION = 1
+                suggested_costs_all, price_per_ligand = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
+                cheap_indices_1   = select_batch(price_per_ligand, MAX_BATCH_COST, BATCH_SIZE)
+                cheap_indices, SUCCESS_1         = check_success(cheap_indices_1, indices)
 
-                while (cheap_indices is None) or (len(cheap_indices) < BATCH_SIZE):
+                if SUCCESS_1:
+                    BATCH_COST = np.array(price_per_ligand)[cheap_indices_1].sum()
+
+                ITERATION = 1
+                
+
+                while (cheap_indices ==[]) or (len(cheap_indices) < BATCH_SIZE):
                     INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
-                    SUCCESS = False
+                    SUCCESS_1 = False
 
                     INCREMENTED_BATCH_SIZE = BATCH_SIZE + ITERATION
                     print("Incrementing canditates for batch to: ", INCREMENTED_BATCH_SIZE)
                     if INCREMENTED_BATCH_SIZE > len(X_candidate_BO):
-                        print("WTF")
-                        #break
+                        print("Not enough candidates left to account for the costs")
+                        INCREMENTED_MAX_BATCH_COST  += 1
+                    if INCREMENTED_BATCH_SIZE > 50:
+                        print("After 50 iterations, still cost conditions not met. Increasing cost by 1 and trying again")
                         INCREMENTED_MAX_BATCH_COST  += 1
 
-                    indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE,sequential=False, maximize=True)
-                    suggested_costs = costs_BO[indices].flatten()
-                    cheap_indices   = select_batch(suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
-                    cheap_indices   = indices[cheap_indices]
 
-                    if cheap_indices is not None and len(cheap_indices) == BATCH_SIZE:
-                        X, y = np.concatenate((X,X_candidate_BO[cheap_indices])), np.concatenate((y, y_candidate_BO[cheap_indices, :]))
+                    indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE,sequential=False, maximize=True)
+                    NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+                    suggested_costs_all, price_per_ligand = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
+                    
+                    cheap_indices_1   = select_batch(price_per_ligand, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
+                    cheap_indices, SUCCESS_2         = check_success(cheap_indices_1, indices)
+                    BATCH_COST = np.array(price_per_ligand)[cheap_indices_1].sum()
+
+                    if (cheap_indices !=[]) and len(cheap_indices) == BATCH_SIZE:
+                        X, y = update_X_y(X, y, X_candidate_BO[cheap_indices], y_candidate_BO, cheap_indices)
                         y_best_BO = check_better(y, y_best_BO)
+                        if abs(y_best_BO-100.0) < 1e-5:
+                            pdb.set_trace()
+
 
                         y_better_BO.append(y_best_BO)
-                        BATCH_COST = sum(costs_BO[cheap_indices])[0]
-                        print("Batch cost: ", BATCH_COST)
+                        
+                        print("Batch cost1: ", BATCH_COST)
+
                         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
                         model, scaler_y = update_model(X, y, bounds_norm)
-                    
-
                         X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
                         y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
-                        costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
-                        break
+                        LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, cheap_indices, axis=0)
+                        price_dict_BO        = update_price_dict(price_dict_BO, NEW_LIGANDS[cheap_indices_1])
                     
                     ITERATION +=1
 
-                if SUCCESS:
-                    X, y = np.concatenate((X,X_candidate_BO[cheap_indices])), np.concatenate((y, y_candidate_BO[cheap_indices, :]))
+                if SUCCESS_1:
+                    X, y = update_X_y(X, y,X_candidate_BO[cheap_indices], y_candidate_BO, cheap_indices)
                     y_best_BO = check_better(y, y_best_BO)
                     y_better_BO.append(y_best_BO)
-                    BATCH_COST = sum(costs_BO[cheap_indices])[0]
-                    print("Batch cost: ", BATCH_COST)
+                
+                    print("Batch cost2: ", BATCH_COST)
                     running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
                     model,scaler_y = update_model(X, y, bounds_norm)
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
                     y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
-                    costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
+                    LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, cheap_indices, axis=0)
+                    price_dict_BO        = update_price_dict(price_dict_BO, NEW_LIGANDS[cheap_indices_1])
 
             if COST_AWARE_RANDOM == False:
                 indices_random = np.random.choice(np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False)
                 NEW_LIGANDS = LIGANDS_candidate_RANDOM[indices_random]
-                price_batch = compute_price_acquisition(NEW_LIGANDS, price_dict_RANDOM)
-
-
-
+                suggested_costs_all, price_per_ligand = compute_price_acquisition(NEW_LIGANDS, price_dict_RANDOM)
                 if max(y_candidate_RANDOM[indices_random])[0] > y_best_RANDOM:
                     y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0] 
-
                 y_better_RANDOM.append(y_best_RANDOM)
-                
-                running_costs_RANDOM.append(running_costs_RANDOM[-1] + price_batch)
+                running_costs_RANDOM.append(running_costs_RANDOM[-1] + suggested_costs_all)
                 y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
                 LIGANDS_candidate_RANDOM = np.delete(LIGANDS_candidate_RANDOM, indices_random, axis=0)
                 price_dict_RANDOM = update_price_dict(price_dict_RANDOM, NEW_LIGANDS)
@@ -174,22 +162,21 @@ for exp_config in benchmark:
                 all_cheapest_indices = np.argwhere(costs_RANDOM.flatten() == 0).flatten()
                 indices_random = np.random.choice(all_cheapest_indices, size=BATCH_SIZE, replace=False)
                 NEW_LIGANDS = LIGANDS_candidate_RANDOM[indices_random]
-                price_batch = compute_price_acquisition(NEW_LIGANDS, price_dict_RANDOM)
-
-
+                price_acquisition, price_per_ligand = compute_price_acquisition(NEW_LIGANDS, price_dict_RANDOM)
 
                 if max(y_candidate_RANDOM[indices_random])[0] > y_best_RANDOM:
                     y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0]
 
                 y_better_RANDOM.append(y_best_RANDOM)
-                BATCH_COST = sum(costs_RANDOM[indices_random])[0]
-                running_costs_RANDOM.append(running_costs_RANDOM[-1] + price_batch)
+                BATCH_COST = price_acquisition
+                running_costs_RANDOM.append(running_costs_RANDOM[-1] + BATCH_COST)
                 y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
                 price_dict_RANDOM = update_price_dict(price_dict_RANDOM, NEW_LIGANDS)
 
 
             print("--------------------")
-            print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tN_train {}".format(i+1,NITER ,y_best_BO, y_best_RANDOM,running_costs_BO[-1],len(X)))
+            print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(i+1,NITER ,y_best_BO, y_best_RANDOM,running_costs_BO[-1],running_costs_RANDOM[-1],len(X)))
+            print(create_aligned_transposed_price_table(price_dict_BO))
 
         y_better_BO_ALL.append(y_better_BO)
         y_better_RANDOM_ALL.append(y_better_RANDOM)
