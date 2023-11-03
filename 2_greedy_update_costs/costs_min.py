@@ -118,6 +118,7 @@ for exp_config in benchmark:
                         X, y = update_X_y(X, y, X_candidate_BO[cheap_indices], y_candidate_BO, cheap_indices)
                         y_best_BO = check_better(y, y_best_BO)
                         if abs(y_best_BO-100.0) < 1e-5:
+                            print("Found a perfect ligand but should not have")
                             pdb.set_trace()
 
 
