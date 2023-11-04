@@ -3,6 +3,7 @@ import numpy as np
 from utils import *
 import pdb
 import matplotlib.colors as mcolors
+from matplotlib.ticker import MaxNLocator
 
 
 def generate_color_scale(iterations, cmap_name='coolwarm'):
@@ -12,71 +13,60 @@ def generate_color_scale(iterations, cmap_name='coolwarm'):
 
 REACTTION_1 = "ebdo_direct_arylation"
 REACTTION_2 = "buchwald"
-RESULTS = load_pkl("results.pkl")
-
-diff_1 = []
-diff_2 = []
-for i in range(12):
-    
-    random = np.mean(np.array(RESULTS[i]["y_better_RANDOM_ALL"]), axis=0)[it]
-    bo     = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)[it]
-    pdb.set_trace()
-    max_n_BO            = reaching_max_n(RESULTS[i]["y_better_BO_ALL"])
-    max_n_RANDOM        = reaching_max_n(RESULTS[i]["y_better_RANDOM_ALL"])
+RESULTS = load_pkl("results_4_11.pkl")
 
 
-    print(i, diff, max_n_BO, max_n_RANDOM, RESULTS[i]["settings"]["dataset"])
+random_results_ebdo = np.mean(np.array(RESULTS[0]["y_better_RANDOM_ALL"]), axis=0)
+all_bo_results_ebdo = []
+for i in range(6):
+    bo_results = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)
+    all_bo_results_ebdo.append(bo_results)
 
-    curr_diff.append(diff)
+all_bo_results_ebdo = np.array(all_bo_results_ebdo)
 
-    if i < 6:
-        diff_1.append(curr_diff)
-    else:
-        diff_2.append(curr_diff)
+random_results_buchwald = np.mean(np.array(RESULTS[6]["y_better_RANDOM_ALL"]), axis=0)
+all_bo_results_buchwald = []
+for i in range(6, 12):
+    bo_results = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)
+    all_bo_results_buchwald.append(bo_results)
 
+all_bo_results_buchwald = np.array(all_bo_results_buchwald)
+plt.style.use('seaborn-poster')  # Apply a global aesthetic style.
+# Plot
+# Increased figure size for clarity.
+fig, ax = plt.subplots(1, 2, figsize=(14, 7))
 
+# EBDO Direct Arylation
+ax[0].plot(random_results_ebdo, label="Random", color="black", ls="--")
+for i in range(6):
+    ax[0].plot(all_bo_results_ebdo[i],
+               label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
+# Force integer x-axis labels.
+ax[0].xaxis.set_major_locator(MaxNLocator(integer=True))
+ax[0].set_xlabel("Iteration")
+ax[0].set_ylabel("Yield (%)")  # Assuming yield is in percentage.
+ax[0].set_title("EBDO Direct Arylation")
+ax[0].legend()
 
+# Adjusting spines for a cleaner look, keep bottom and left spines visible
+for position in ['top', 'right']:
+    ax[0].spines[position].set_visible(False)
 
-diff_1, diff_2 = np.array(diff_1), np.array(diff_2)
+# Buchwald-Hartwig Amination (assuming this is the reaction)
+ax[1].plot(random_results_buchwald, label="Random", color="black", ls="--")
+for i in range(6):
+    ax[1].plot(all_bo_results_buchwald[i],
+               label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
+# Force integer x-axis labels.
+ax[1].xaxis.set_major_locator(MaxNLocator(integer=True))
+ax[1].set_xlabel("Iteration")
+ax[1].set_ylabel("Yield (%)")  # Assuming yield is in percentage.
+ax[1].set_title("Buchwald-Hartwig Amination")
+ax[1].legend()
 
-#create two plot for each reaction
+# Adjusting spines for a cleaner look, keep bottom and left spines visible
+for position in ['top', 'right']:
+    ax[1].spines[position].set_visible(False)
 
-fig, ax = plt.subplots()
-
-
-#create an iterable colorscale in form of a list
-colors = generate_color_scale(len(ITERATIONS))
-
-ax.set_title("Difference in utility between BO and RS for {}".format(REACTTION_1))
-ax.set_xlabel("Max batch cost")
-ax.set_ylabel("Utility difference")
-for ind, it in enumerate(ITERATIONS):
-    print(ind, it)
-    ax.plot(np.arange(6), diff_1[:,ind],c=colors[ind], label="Iteration {}".format(it))
-
-ax.set_xticks(np.arange(6))
-ax.set_xticklabels(np.arange(6))
-#ax.set_yscale("log")
-ax.legend()
-
-fig.savefig("./figures/diff_{}.png".format(REACTTION_1))
-
-fig, ax = plt.subplots()
-ax.set_title("Difference in utility between BO and RS for {}".format(REACTTION_2))
-ax.set_xlabel("Max batch cost")
-ax.set_ylabel("Utility difference")
-for ind, it in enumerate(ITERATIONS):
-    ax.plot(np.arange(6), diff_2[:,ind], c=colors[ind],label="Iteration {}".format(it))
-
-ax.set_xticks(np.arange(6))
-ax.set_xticklabels(np.arange(6))
-#ax.set_yscale("log")
-ax.legend()
-
-fig.savefig("./figures/diff_{}.png".format(REACTTION_2))
-
-
-#pdb.set_trace()
-
-#ebdo_direct_arylation
-#buchwald
+plt.tight_layout()
+plt.savefig("results_4_11.png")
