@@ -260,7 +260,7 @@ class Evaluation_data:
                 
                 for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
                     #self.ligand_prices[unique_ligand] =   
-                    #make random choice between 0 and 1
+
                     self.ligand_prices[unique_ligand] =   np.random.randint(2)
                 
                 self.ligand_prices[self.worst_ligand] = 0

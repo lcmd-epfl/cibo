@@ -7,42 +7,6 @@ from exp_configs_1 import *
 from BO import *
 from utils import *
 
-
-
-
-
-
-
-def BO_STEP(BO_data):
-
-    indices, candidates        = gibbon_search(BO_data["model"], BO_data["X_candidate_BO"],BO_data["bounds_norm"], q=BO_data["BATCH_SIZE"],sequential=False, maximize=True)
-    BO_data["X"], BO_data["y"] = update_X_y(X, y, candidates, y_candidate_BO,indices)
-    BO_data["y_best_BO"]       = check_better(y, y_best_BO)
-
-    y_better_BO = BO_data["y_better_BO"]
-    y_better_BO.append(y_best_BO)
-    BO_data["y_better_BO"] = y_better_BO
-
-    running_costs_BO = BO_data["running_costs_BO"]
-    running_costs_BO.append((running_costs_BO[-1] + sum(costs_BO[indices]))[0])
-    BO_data["running_costs_BO"].append(running_costs_BO)
-
-
-    BO_data["model"], BO_data["scaler_y"]         = update_model(X, y, bounds_norm)
-    BO_data["X_candidate_BO"]                     = np.delete(X_candidate_BO, indices, axis=0)
-    BO_data["y_candidate_BO"]                     = np.delete(y_candidate_BO, indices, axis=0)
-    BO_data["costs_BO"]                           = np.delete(costs_BO, indices, axis=0) 
-
-    return BO_data
-
-
-
-
-
-
-
-
-
 RESULTS = []
 
 for exp_config in benchmark:
@@ -95,39 +59,31 @@ for exp_config in benchmark:
                    "scaler_y":scaler_y, 
                    "X":X, 
                    "y":y, 
+                   "N_train":len(X),
                    "X_candidate_BO":X_candidate_BO, 
                    "y_candidate_BO":y_candidate_BO, 
                    "y_better_BO": y_better_BO,
                    "costs_BO":costs_BO, 
-                   "bounds_norm":bounds_norm
+                   "running_costs_BO":running_costs_BO,
+                   "bounds_norm":bounds_norm,
                    "BATCH_SIZE":BATCH_SIZE,
                    "MAX_BATCH_COST":MAX_BATCH_COST}
         
-        RANDOM_data_ = {"X_candidate_RANDOM":X_candidate_RANDOM,
-                        "y_candidate_RANDOM":y_candidate_RANDOM,
+        RANDOM_data_ = {"y_candidate_RANDOM":y_candidate_RANDOM,
                         "y_best_RANDOM":y_best_RANDOM,
                         "costs_RANDOM":costs_RANDOM,
                         "BATCH_SIZE":BATCH_SIZE,
                         "MAX_BATCH_COST":MAX_BATCH_COST,
                         "y_better_RANDOM":y_better_RANDOM,
                         "running_costs_RANDOM":running_costs_RANDOM,
-                            }
+                        }
 
         for i in range(NITER):
             if COST_AWARE_BO == False:
-                BO_data = BO_STEP(BO_data)
-                #indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
-                #X, y = update_X_y(X, y, candidates, y_candidate_BO,indices)
-                #y_best_BO = check_better(y, y_best_BO)
-                #y_better_BO.append(y_best_BO)
-                #running_costs_BO.append((running_costs_BO[-1] + sum(costs_BO[indices]))[0])
-                #model, _ = update_model(X, y, bounds_norm)
-                #X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
-                #y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
-                #costs_BO = np.delete(costs_BO, indices, axis=0)            
+                BO_data = BO_CASE_1_STEP(BO_data)
             else:    
                 SUCCESS = False
-                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
+                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE)
                 suggested_costs = costs_BO[indices].flatten()
                 cheap_indices   = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
                 cheap_indices, SUCCESS_1         = check_success(cheap_indices, indices)
@@ -145,7 +101,7 @@ for exp_config in benchmark:
                         #therefore increasing the max batch cost to finally get enough candidates
                         INCREMENTED_MAX_BATCH_COST  += 1
 
-                    indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE,sequential=False, maximize=True)
+                    indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE)
                     suggested_costs = costs_BO[indices].flatten()
 
 
@@ -206,7 +162,8 @@ for exp_config in benchmark:
                 costs_RANDOM = np.delete(costs_RANDOM, indices_random, axis=0)
 
             print("--------------------")
-            print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(i+1,NITER ,y_best_BO, y_best_RANDOM,running_costs_BO[-1],running_costs_RANDOM[-1],len(X)))
+            print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(i+1,
+                  NITER, BO_data["y_best_BO"], y_best_RANDOM, BO_data["running_costs_BO"][-1], running_costs_RANDOM[-1],BO_data["N_train"]))
 
         y_better_BO_ALL.append(y_better_BO)
         y_better_RANDOM_ALL.append(y_better_RANDOM)

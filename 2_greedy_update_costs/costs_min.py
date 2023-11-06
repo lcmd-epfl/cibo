@@ -30,6 +30,7 @@ for exp_config in benchmark:
         torch.manual_seed(SEED)
 
         X_init, y_init, costs_init, X_candidate, y_candidate, costs_candidate, LIGANDS_init, LIGANDS_candidate, price_dict =  DATASET.get_init_holdout_data(SEED)
+        print(create_aligned_transposed_price_table(price_dict))
         X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
         y_best = float(torch.max(y))
         model, scaler_y = update_model(X, y, bounds_norm)
@@ -64,7 +65,7 @@ for exp_config in benchmark:
 
         for i in range(NITER):
             if COST_AWARE_BO == False:
-                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
+                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE)
                 X, y = update_X_y(X, y, candidates,y_candidate_BO, indices)
                 NEW_LIGANDS = LIGANDS_candidate_BO[indices]
                 suggested_costs_all,_ = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
@@ -78,7 +79,7 @@ for exp_config in benchmark:
                 price_dict_BO        = update_price_dict(price_dict_BO, NEW_LIGANDS)
             else:    
                 SUCCESS_1 = False
-                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE,sequential=False, maximize=True)
+                indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE)
                 NEW_LIGANDS = LIGANDS_candidate_BO[indices]
                 suggested_costs_all, price_per_ligand = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
                 cheap_indices_1   = select_batch(price_per_ligand, MAX_BATCH_COST, BATCH_SIZE)
@@ -104,7 +105,7 @@ for exp_config in benchmark:
                         INCREMENTED_MAX_BATCH_COST  += 1
 
 
-                    indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE,sequential=False, maximize=True)
+                    indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE)
                     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
                     suggested_costs_all, price_per_ligand = compute_price_acquisition(NEW_LIGANDS, price_dict_BO)
                     
