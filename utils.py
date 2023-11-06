@@ -138,6 +138,8 @@ class Evaluation_data:
 
             self.y = data["yield"].to_numpy()  
             self.all_ligands     = data["Ligand_SMILES"].to_numpy()
+            self.all_bases       = data["Base_SMILES"].to_numpy()
+            self.all_solvents    = data["Solvent_SMILES"].to_numpy()
             unique_bases = np.unique(data["Base_SMILES"])
             unique_ligands = np.unique(data["Ligand_SMILES"])
             unique_solvents = np.unique(data["Solvent_SMILES"])
@@ -249,18 +251,13 @@ class Evaluation_data:
         if self.prices == "random":
             self.costs = np.random.randint(2, size=(len(self.X), 1))
 
-        elif self.prices == "update_when_used":
+        elif self.prices == "update_ligand_when_used":
             if self.dataset == "freesolv":
                 print("Not implemented.")
                 exit()
             elif self.dataset == "ebdo_direct_arylation":
                 self.ligand_prices = {}
-
-
-                
                 for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
-                    #self.ligand_prices[unique_ligand] =   
-
                     self.ligand_prices[unique_ligand] =   np.random.randint(2)
                 
                 self.ligand_prices[self.worst_ligand] = 0
@@ -271,6 +268,8 @@ class Evaluation_data:
                 for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
                     all_ligand_prices.append(self.ligand_prices[ligand])
                 self.costs = np.array(all_ligand_prices).reshape(-1,1)
+
+
 
 
 
@@ -286,7 +285,33 @@ class Evaluation_data:
                     all_ligand_prices.append(self.ligand_prices[ligand])
                 self.costs = np.array(all_ligand_prices).reshape(-1,1)
 
-                pdb.set_trace()
+                exit()
+
+        elif self.prices == "update_all_when_bought":
+            if self.dataset == "ebdo_direct_arylation":
+                self.ligand_prices = {}
+                for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
+                    self.ligand_prices[unique_ligand] =   np.random.randint(2)
+                
+                self.ligand_prices[self.worst_ligand] = 0
+                self.ligand_prices[self.best_ligand]  = 1
+
+                self.bases_prices = {}
+                for ind, unique_base in enumerate(self.feauture_labels["names"]["bases"]):
+                    self.bases_prices[unique_base] =   np.random.randint(2)
+
+                self.solvents_prices = {}
+                for ind, unique_solvent in enumerate(self.feauture_labels["names"]["solvents"]):
+                    self.solvents_prices[unique_solvent] =   np.random.randint(2)
+                
+
+                all_prices = []
+                for base, ligand, solvent in zip(self.feauture_labels["ordered_smiles"]["bases"], self.feauture_labels["ordered_smiles"]["ligands"], self.feauture_labels["ordered_smiles"]["solvents"]):
+                    all_prices.append(self.ligand_prices[ligand] + self.bases_prices[base] + self.solvents_prices[solvent])
+                self.costs = np.array(all_prices).reshape(-1,1)
+
+                self.all_prices_dict = {"ligands": self.ligand_prices, "bases": self.bases_prices, "solvents": self.solvents_prices}
+
 
         else:
             print("Price model not implemented.")
@@ -389,9 +414,7 @@ class Evaluation_data:
             X_init, y_init = self.X[indices_init], self.y[indices_init]
             X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
 
-
             price_dict_init = self.ligand_prices
-
             LIGANDS_INIT = self.all_ligands[indices_init]
             LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
 
@@ -402,10 +425,18 @@ class Evaluation_data:
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
 
-
-
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout, LIGANDS_INIT, LIGANDS_HOLDOUT, price_dict_init
 
+
+        elif self.init_strategy == "worst_ligand_base_solvent":
+            assert self.dataset == "ebdo_direct_arylation", "This init strategy is only implemented for the ebdo_direct_arylation dataset."
+            #need to implement this
+            #indices_init = self.where_worst[:self.init_size]
+
+
+            #elif self.prices == "update_all_when_bought":
+            #    price_dict_init = self.all_prices_dict
+            pass
 
         else:
             print("Init strategy not implemented.")
