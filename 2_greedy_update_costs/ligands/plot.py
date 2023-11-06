@@ -15,6 +15,9 @@ def generate_color_scale(iterations, cmap_name='coolwarm'):
 #running_costs_RANDOM_ALL
 #running_costs_BO_ALL
 
+
+ITERATIONS = np.arange(1, 22)
+
 REACTTION_1 = "ebdo_direct_arylation"
 RESULTS = load_pkl("results_5_11.pkl")
 
@@ -42,12 +45,12 @@ plt.style.use('seaborn-poster')  # Apply a global aesthetic style.
 fig, ax = plt.subplots(2, 1, figsize=(7, 7))
 
 # EBDO Direct Arylation
-ax[0].plot(random_results_ebdo, label="Random", color="black", ls="--")
-ax[1].plot(random_costs_ebdo, label="Random", color="black", ls="--")
+ax[0].plot(ITERATIONS, random_results_ebdo, label="Random", color="black", ls="--")
+ax[1].plot(ITERATIONS, random_costs_ebdo, label="Random", color="black", ls="--")
 for i in range(6):
-    ax[0].plot(all_bo_results_ebdo[i],
+    ax[0].plot(ITERATIONS, all_bo_results_ebdo[i],
                label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
-    ax[1].plot(all_bo_costs_ebdo[i],
+    ax[1].plot(ITERATIONS, all_bo_costs_ebdo[i],
                label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
     
 
@@ -65,10 +68,16 @@ ax[1].set_ylabel("Sum(Costs) [$]")
 
 
 
+
 # Adjusting spines for a cleaner look, keep bottom and left spines visible
 for position in ['top', 'right']:
     ax[0].spines[position].set_visible(False)
     ax[1].spines[position].set_visible(False)
+
+
+#MAKE X LIM (1,13) everywhere
+ax[0].set_xlim(0.5, 13)
+ax[1].set_xlim(0.5, 13)
 
 plt.tight_layout()
 plt.savefig("results_5_11.png")
