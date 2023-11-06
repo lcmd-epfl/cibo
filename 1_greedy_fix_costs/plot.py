@@ -15,58 +15,100 @@ REACTTION_1 = "ebdo_direct_arylation"
 REACTTION_2 = "buchwald"
 RESULTS = load_pkl("results_4_11.pkl")
 
+#running_costs_RANDOM_ALL
+#running_costs_BO_ALL
 
 random_results_ebdo = np.mean(np.array(RESULTS[0]["y_better_RANDOM_ALL"]), axis=0)
+random_costs_ebdo   = np.mean(np.array(RESULTS[0]["running_costs_RANDOM_ALL"]), axis=0)
+
 all_bo_results_ebdo = []
+all_bo_costs_ebdo   = []
 for i in range(6):
     bo_results = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)
+    bo_costs   = np.mean(np.array(RESULTS[i]["running_costs_BO_ALL"]), axis=0)
     all_bo_results_ebdo.append(bo_results)
+    all_bo_costs_ebdo.append(bo_costs)
 
 all_bo_results_ebdo = np.array(all_bo_results_ebdo)
+all_bo_costs_ebdo   = np.array(all_bo_costs_ebdo)
 
 random_results_buchwald = np.mean(np.array(RESULTS[6]["y_better_RANDOM_ALL"]), axis=0)
+random_costs_buchwald   = np.mean(np.array(RESULTS[6]["running_costs_RANDOM_ALL"]), axis=0)
 all_bo_results_buchwald = []
+all_bo_costs_buchwald   = []
 for i in range(6, 12):
     bo_results = np.mean(np.array(RESULTS[i]["y_better_BO_ALL"]), axis=0)
+    bo_costs   = np.mean(np.array(RESULTS[i]["running_costs_BO_ALL"]), axis=0)
     all_bo_results_buchwald.append(bo_results)
+    all_bo_costs_buchwald.append(bo_costs)
 
 all_bo_results_buchwald = np.array(all_bo_results_buchwald)
+all_bo_costs_buchwald   = np.array(all_bo_costs_buchwald)
 plt.style.use('seaborn-poster')  # Apply a global aesthetic style.
-# Plot
-# Increased figure size for clarity.
-fig, ax = plt.subplots(1, 2, figsize=(14, 7))
+
+
+
+fig, ax = plt.subplots(2, 2, figsize=(14, 7))
 
 # EBDO Direct Arylation
-ax[0].plot(random_results_ebdo, label="Random", color="black", ls="--")
+ax[0][0].plot(random_results_ebdo, label="Random", color="black", ls="--")
 for i in range(6):
-    ax[0].plot(all_bo_results_ebdo[i],
+    ax[0][0].plot(all_bo_results_ebdo[i],
                label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
 # Force integer x-axis labels.
-ax[0].xaxis.set_major_locator(MaxNLocator(integer=True))
-ax[0].set_xlabel("Iteration")
-ax[0].set_ylabel("Yield (%)")  # Assuming yield is in percentage.
-ax[0].set_title("EBDO Direct Arylation")
-ax[0].legend()
+ax[0][0].xaxis.set_major_locator(MaxNLocator(integer=True))
+
+ax[0][0].set_ylabel("Yield (%)")  # Assuming yield is in percentage.
+ax[0][0].set_title("EBDO Direct Arylation")
+ax[0][0].legend(loc="lower right", fontsize=13)
 
 # Adjusting spines for a cleaner look, keep bottom and left spines visible
 for position in ['top', 'right']:
-    ax[0].spines[position].set_visible(False)
+    ax[0][0].spines[position].set_visible(False)
 
 # Buchwald-Hartwig Amination (assuming this is the reaction)
-ax[1].plot(random_results_buchwald, label="Random", color="black", ls="--")
+ax[0][1].plot(random_results_buchwald, label="Random", color="black", ls="--")
 for i in range(6):
-    ax[1].plot(all_bo_results_buchwald[i],
+    ax[0][1].plot(all_bo_results_buchwald[i],
                label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
 # Force integer x-axis labels.
-ax[1].xaxis.set_major_locator(MaxNLocator(integer=True))
-ax[1].set_xlabel("Iteration")
-ax[1].set_ylabel("Yield (%)")  # Assuming yield is in percentage.
-ax[1].set_title("Buchwald-Hartwig Amination")
-ax[1].legend()
+ax[0][1].xaxis.set_major_locator(MaxNLocator(integer=True))
+
+ax[0][1].set_ylabel("Yield [%]")  # Assuming yield is in percentage.
+ax[0][1].set_title("Buchwald-Hartwig Amination")
+
 
 # Adjusting spines for a cleaner look, keep bottom and left spines visible
 for position in ['top', 'right']:
-    ax[1].spines[position].set_visible(False)
+    ax[0][1].spines[position].set_visible(False)
+
+
+ax[1][0].plot(random_costs_ebdo, label="Random", color="black", ls="--")
+
+for i in range(6):
+    ax[1][0].plot(all_bo_costs_ebdo[i],
+               label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
+    
+# Force integer x-axis labels.
+ax[1][0].xaxis.set_major_locator(MaxNLocator(integer=True))
+ax[1][0].set_xlabel("Iteration")
+ax[1][0].set_ylabel("Sum(Cost) [$]")
+
+# Adjusting spines for a cleaner look, keep bottom and left spines visible
+for position in ['top', 'right']:
+    ax[1][0].spines[position].set_visible(False)
+
+ax[1][1].plot(random_costs_buchwald, label="Random", color="black", ls="--")
+
+for i in range(6):
+    ax[1][1].plot(all_bo_costs_buchwald[i],
+               label=f"Max $ per Batch: {i}", color=generate_color_scale(6)[i])
+
+# Force integer x-axis labels.
+ax[1][1].xaxis.set_major_locator(MaxNLocator(integer=True))
+ax[1][1].set_xlabel("Iteration")
+ax[1][1].set_ylabel("Sum(Cost) [$]")
+
 
 plt.tight_layout()
 plt.savefig("results_4_11.png")
