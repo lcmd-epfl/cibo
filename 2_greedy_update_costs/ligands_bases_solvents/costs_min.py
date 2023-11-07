@@ -85,7 +85,7 @@ for exp_config in benchmark:
                 LIGANDS_candidate_BO  = np.delete(LIGANDS_candidate_BO, indices, axis=0)
                 BASES_candidate_BO    = np.delete(BASES_candidate_BO, indices, axis=0)
                 SOLVENTS_candidate_BO = np.delete(SOLVENTS_candidate_BO, indices, axis=0)
-                price_dict_BO        = update_price_dict_all(price_dict_BO,  NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS)
+                price_dict_BO         = update_price_dict_all(price_dict_BO,  NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS)
             else:    
                 SUCCESS_1 = False
                 indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE)
@@ -175,13 +175,11 @@ for exp_config in benchmark:
                 y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0] 
             y_better_RANDOM.append(y_best_RANDOM)
             running_costs_RANDOM.append(running_costs_RANDOM[-1] + suggested_costs_all)
-            y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
+            y_candidate_RANDOM         = np.delete(y_candidate_RANDOM, indices_random, axis=0)
             LIGANDS_candidate_RANDOM   = np.delete(LIGANDS_candidate_RANDOM, indices_random, axis=0)
             BASES_candidate_RANDOM     = np.delete(BASES_candidate_RANDOM, indices_random, axis=0)
             SOLVENTS_candidate_RANDOM  = np.delete(SOLVENTS_candidate_RANDOM, indices_random, axis=0)
             price_dict_RANDOM          = update_price_dict_all(price_dict_RANDOM, NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS)
-
-
 
             print("--------------------")
             print("# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(i+1,NITER ,y_best_BO, y_best_RANDOM,running_costs_BO[-1],running_costs_RANDOM[-1],len(X)))
