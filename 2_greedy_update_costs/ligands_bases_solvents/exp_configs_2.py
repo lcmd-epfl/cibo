@@ -1,7 +1,7 @@
 benchmark=[
     {"dataset":"ebdo_direct_arylation",
-    "init_strategy":"worst_ligand",
-    "cost_aware":True,
+    "init_strategy":"worst_ligand_base_solvent",
+    "cost_aware":False,
     "n_runs":10,
     "n_iter":20,
     "batch_size":5,

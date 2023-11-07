@@ -119,14 +119,14 @@ class Evaluation_data:
         elif self.dataset == "ebdo_direct_arylation":
             
             dataset_url = "https://raw.githubusercontent.com/b-shields/edbo/master/experiments/data/direct_arylation/experiment_index.csv"
-            data = pd.read_csv(dataset_url)
-            data = data.dropna()
-            data = data.sample(frac=1).reset_index(drop=True)
-            col_0_base = self.ftzr(data["Base_SMILES"])
-            col_1_ligand = self.ftzr(data["Ligand_SMILES"])
-            col_2_solvent = self.ftzr(data["Solvent_SMILES"])
-            col_3_concentration = data["Concentration"].to_numpy().reshape(-1,1)
-            col_4_temperature = data["Temp_C"].to_numpy().reshape(-1,1)
+            self.data = pd.read_csv(dataset_url)
+            self.data = self.data.dropna()
+            self.data = self.data.sample(frac=1).reset_index(drop=True)
+            col_0_base = self.ftzr(self.data["Base_SMILES"])
+            col_1_ligand = self.ftzr(self.data["Ligand_SMILES"])
+            col_2_solvent = self.ftzr(self.data["Solvent_SMILES"])
+            col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1,1)
+            col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1,1)
 
             self.X = np.concatenate([col_0_base,
                                     col_1_ligand,
@@ -136,22 +136,23 @@ class Evaluation_data:
                                     ],axis=1)
 
 
-            self.y = data["yield"].to_numpy()  
-            self.all_ligands     = data["Ligand_SMILES"].to_numpy()
-            self.all_bases       = data["Base_SMILES"].to_numpy()
-            self.all_solvents    = data["Solvent_SMILES"].to_numpy()
-            unique_bases = np.unique(data["Base_SMILES"])
-            unique_ligands = np.unique(data["Ligand_SMILES"])
-            unique_solvents = np.unique(data["Solvent_SMILES"])
-            unique_concentrations = np.unique(data["Concentration"])
-            unique_temperatures = np.unique(data["Temp_C"])
+            self.y = self.data["yield"].to_numpy()  
+            self.all_ligands     = self.data["Ligand_SMILES"].to_numpy()
+            self.all_bases       = self.data["Base_SMILES"].to_numpy()
+            self.all_solvents    = self.data["Solvent_SMILES"].to_numpy()
+            unique_bases = np.unique(self.data["Base_SMILES"])
+            unique_ligands = np.unique(self.data["Ligand_SMILES"])
+            unique_solvents = np.unique(self.data["Solvent_SMILES"])
+            unique_concentrations = np.unique(self.data["Concentration"])
+            unique_temperatures = np.unique(self.data["Temp_C"])
 
 
-            max_yield_per_ligand = np.array([max(data[data['Ligand_SMILES'] == unique_ligand]["yield"]) for unique_ligand in unique_ligands])
+            max_yield_per_ligand = np.array([max(self.data[self.data['Ligand_SMILES'] == unique_ligand]["yield"]) for unique_ligand in unique_ligands])
             self.worst_ligand         = unique_ligands[np.argmin(max_yield_per_ligand)]
             self.best_ligand          = unique_ligands[np.argmax(max_yield_per_ligand)]
 
-            self.where_worst = np.array(data.index[data['Ligand_SMILES'] == self.worst_ligand].tolist())
+            self.where_worst = np.array(self.data.index[self.data['Ligand_SMILES'] == self.worst_ligand].tolist())
+            
             self.feauture_labels = {"names": {
                                             "bases":unique_bases,
                                             "ligands":unique_ligands,
@@ -161,11 +162,11 @@ class Evaluation_data:
                                             }
                                     ,
                                     "ordered_smiles": 
-                                     {"bases": data["Base_SMILES"],
-                                      "ligands": data["Ligand_SMILES"],
-                                       "solvents": data["Solvent_SMILES"],
-                                       "concentrations": data["Concentration"],
-                                       "temperatures": data["Temp_C"]
+                                     {"bases": self.data["Base_SMILES"],
+                                      "ligands": self.data["Ligand_SMILES"],
+                                       "solvents": self.data["Solvent_SMILES"],
+                                       "concentrations": self.data["Concentration"],
+                                       "temperatures": self.data["Temp_C"]
                                      }
                                     }
 
@@ -270,10 +271,6 @@ class Evaluation_data:
                 self.costs = np.array(all_ligand_prices).reshape(-1,1)
 
 
-
-
-
-
             elif self.dataset == "buchwald":
                 self.ligand_prices = {}
                 for ind, unique_ligand in enumerate(self.feauture_labels["names"]["ligands"]):
@@ -310,7 +307,9 @@ class Evaluation_data:
                     all_prices.append(self.ligand_prices[ligand] + self.bases_prices[base] + self.solvents_prices[solvent])
                 self.costs = np.array(all_prices).reshape(-1,1)
 
-                self.all_prices_dict = {"ligands": self.ligand_prices, "bases": self.bases_prices, "solvents": self.solvents_prices}
+                self.all_prices_dict = {"ligands": self.ligand_prices, 
+                                        "bases": self.bases_prices, 
+                                        "solvents": self.solvents_prices}
 
 
         else:
@@ -430,13 +429,49 @@ class Evaluation_data:
 
         elif self.init_strategy == "worst_ligand_base_solvent":
             assert self.dataset == "ebdo_direct_arylation", "This init strategy is only implemented for the ebdo_direct_arylation dataset."
-            #need to implement this
-            #indices_init = self.where_worst[:self.init_size]
+            
+            
+            unique_bases = self.feauture_labels["names"]["bases"]
+            unique_solvents = self.feauture_labels["names"]["solvents"]
+            #start with 2 solvents, 2 bases
+            #select two random bases and two random solvents
+            self.bases_init = np.random.choice(unique_bases, size=2, replace=False)
+            self.solvents_init = np.random.choice(unique_solvents, size=2, replace=False)
 
+            #update the price dict
+            
+            for base in self.bases_init:
+                self.all_prices_dict["bases"][base] = 0
+            for solvent in self.solvents_init:
+                self.all_prices_dict["solvents"][solvent] = 0
+            self.all_prices_dict["ligands"][self.worst_ligand] = 0
+            
+            
+            #select the indices of the worst ligand with the two bases and two solvents
+            indices_init = np.where((self.all_ligands == self.worst_ligand) & np.isin(self.all_bases, self.bases_init) & np.isin(self.all_solvents, self.solvents_init))[0]
+            indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+            #selected_data = self.data.iloc[indices_init]
+            np.random.shuffle(indices_init)
+            np.random.shuffle(indices_holdout)
 
-            #elif self.prices == "update_all_when_bought":
-            #    price_dict_init = self.all_prices_dict
-            pass
+            X_init, y_init = self.X[indices_init], self.y[indices_init]
+            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+            X_init, y_init       = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)            
+            price_dict_init = self.all_prices_dict
+
+            LIGANDS_INIT = self.all_ligands[indices_init]
+            LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
+            
+            BASES_INIT = self.all_bases[indices_init]
+            BASES_HOLDOUT = self.all_bases[indices_holdout]
+
+            SOLVENTS_INIT = self.all_solvents[indices_init]
+            SOLVENTS_HOLDOUT = self.all_solvents[indices_holdout]
+            
+            return X_init, y_init, X_holdout, y_holdout, LIGANDS_INIT, LIGANDS_HOLDOUT,BASES_INIT,BASES_HOLDOUT, SOLVENTS_INIT, SOLVENTS_HOLDOUT, price_dict_init
+        
+
 
         else:
             print("Init strategy not implemented.")
@@ -762,26 +797,64 @@ def load_pkl(name):
     
 
 
-def compute_price_acquisition(NEW_LIGANDS, price_dict):
+def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
     """
-    This function is for 2_greedy_update_costs
+    This function is for 2_greedy_update_costs:
+    Computes the price for the batch. When a ligand 
+    was first seen its price is added to the price_acquisition.
+    If it is seen again in the same batch its price is 0.
     """
     
     price_acquisition = 0
-    for ind,ligand in enumerate(np.unique(NEW_LIGANDS)):
-        price_acquisition += price_dict[ligand]
 
+    check_dict = cp.deepcopy(price_dict)
+    for ind,ligand in enumerate(NEW_LIGANDS):
+        price_acquisition += check_dict[ligand]
+        check_dict[ligand] = 0
 
+    check_dict = cp.deepcopy(price_dict)
     price_per_ligand = []
     for ligand in NEW_LIGANDS:
-        price_per_ligand.append(price_dict[ligand])
+        price_per_ligand.append(check_dict[ligand])
+        check_dict[ligand] = 0
 
     price_per_ligand = np.array(price_per_ligand)
     
     return price_acquisition, price_per_ligand
 
+def compute_price_acquisition_all(NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS, price_dict):
+    """
+    This function is for 2_greedy_update_costs where all prices are updated: ligand, base and solvent
+    """
+    
+    price_acquisition = 0
+    check_dict = cp.deepcopy(price_dict)
+    for ind,ligand in enumerate(np.unique(NEW_LIGANDS)):
+        price_acquisition += check_dict["ligands"][ligand]
+        check_dict["ligands"][ligand] = 0
+    
+    for ind,base in enumerate(np.unique(NEW_BASES)):
+        price_acquisition += check_dict["bases"][base]
+        check_dict["bases"][base] = 0
+        
+    for ind,solvent in enumerate(np.unique(NEW_SOLVENTS)):
+        price_acquisition += check_dict["solvents"][solvent]
+        check_dict["solvents"][solvent] = 0
 
-def update_price_dict(price_dict, NEW_LIGANDS):
+    price_per_all = []
+    check_dict = cp.deepcopy(price_dict)
+    for ligand, base, solvent in zip(NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS):
+        price_per_all.append(price_dict["ligands"][ligand] + price_dict["bases"][base] + price_dict["solvents"][solvent])
+        check_dict["ligands"][ligand] = 0
+        check_dict["bases"][base] = 0
+        check_dict["solvents"][solvent] = 0
+
+    price_per_all = np.array(price_per_all)
+    
+    return price_acquisition, price_per_all
+
+
+def update_price_dict_ligands(price_dict, NEW_LIGANDS):
     """
     This function is for 2_greedy_update_costs
     """
@@ -790,6 +863,19 @@ def update_price_dict(price_dict, NEW_LIGANDS):
         price_dict[ligand] = 0
     return price_dict
 
+
+def update_price_dict_all(price_dict, NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS):
+
+    NEW_LIGANDS = np.unique(NEW_LIGANDS)
+    NEW_BASES = np.unique(NEW_BASES)
+    NEW_SOLVENTS = np.unique(NEW_SOLVENTS)
+    for ligand in NEW_LIGANDS:
+        price_dict["ligands"][ligand] = 0
+    for base in NEW_BASES:
+        price_dict["bases"][base] = 0
+    for solvent in NEW_SOLVENTS:
+        price_dict["solvents"][solvent] = 0
+    return price_dict
 
 def update_X_y(X, y, cands,y_cands_BO, inds):
     X, y = np.concatenate((X,cands)), np.concatenate((y, y_cands_BO[inds, :]))    

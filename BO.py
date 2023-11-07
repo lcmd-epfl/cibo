@@ -39,8 +39,8 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     """
     Selects a batch of molecules from a list of suggested molecules that have the lowest indices
     while meeting the constraints of the maximum cost and batch size.
-
     """
+    
     n = len(suggested_costs)
     # Check if BATCH_SIZE is larger than the length of the array, if so return None
     if BATCH_SIZE > n:
