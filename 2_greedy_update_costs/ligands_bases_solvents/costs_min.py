@@ -75,8 +75,6 @@ for exp_config in benchmark:
                 NEW_LIGANDS = LIGANDS_candidate_BO[indices]
                 NEW_SOLVENTS = SOLVENTS_candidate_BO[indices]
                 NEW_BASES = BASES_candidate_BO[indices]
-
-                
                 suggested_costs_all,_ = compute_price_acquisition_all(NEW_LIGANDS,NEW_BASES,NEW_SOLVENTS, price_dict_BO)
                 y_best_BO = check_better(y, y_best_BO)
                 y_better_BO.append(y_best_BO)
@@ -92,8 +90,10 @@ for exp_config in benchmark:
                 SUCCESS_1 = False
                 indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=BATCH_SIZE)
                 NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-                suggested_costs_all, price_per_ligand = compute_price_acquisition_all(NEW_LIGANDS, price_dict_BO)
-                cheap_indices_1   = select_batch(price_per_ligand, MAX_BATCH_COST, BATCH_SIZE)
+                NEW_BASES   = BASES_candidate_BO[indices]
+                NEW_SOLVENTS = SOLVENTS_candidate_BO[indices]
+                suggested_costs_all, price_per_ligand = compute_price_acquisition_all(NEW_LIGANDS,NEW_BASES,NEW_SOLVENTS, price_dict_BO)
+                cheap_indices_1                  = select_batch(price_per_ligand, MAX_BATCH_COST, BATCH_SIZE)
                 cheap_indices, SUCCESS_1         = check_success(cheap_indices_1, indices)
 
                 if SUCCESS_1:
@@ -118,7 +118,9 @@ for exp_config in benchmark:
 
                     indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE)
                     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-                    suggested_costs_all, price_per_ligand = compute_price_acquisition_all(NEW_LIGANDS, price_dict_BO)
+                    NEW_BASES   = BASES_candidate_BO[indices]
+                    NEW_SOLVENTS = SOLVENTS_candidate_BO[indices]
+                    suggested_costs_all, price_per_ligand = compute_price_acquisition_all(NEW_LIGANDS,NEW_BASES,NEW_SOLVENTS, price_dict_BO)
                     
                     cheap_indices_1   = select_batch(price_per_ligand, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
                     cheap_indices, SUCCESS_2         = check_success(cheap_indices_1, indices)
@@ -141,7 +143,9 @@ for exp_config in benchmark:
                         X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
                         y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
                         LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, cheap_indices, axis=0)
-                        price_dict_BO        = update_price_dict_all(price_dict_BO, NEW_LIGANDS[cheap_indices_1])
+                        BASES_candidate_BO    = np.delete(BASES_candidate_BO, cheap_indices, axis=0)
+                        SOLVENTS_candidate_BO = np.delete(SOLVENTS_candidate_BO, cheap_indices, axis=0)
+                        price_dict_BO        = update_price_dict_all(price_dict_BO, NEW_LIGANDS[cheap_indices_1], NEW_BASES[cheap_indices_1], NEW_SOLVENTS[cheap_indices_1])
                     
                     ITERATION +=1
 
@@ -156,7 +160,9 @@ for exp_config in benchmark:
                     X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
                     y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
                     LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, cheap_indices, axis=0)
-                    price_dict_BO        = update_price_dict_all(price_dict_BO, NEW_LIGANDS[cheap_indices_1])
+                    BASES_candidate_BO    = np.delete(BASES_candidate_BO, cheap_indices, axis=0)
+                    SOLVENTS_candidate_BO = np.delete(SOLVENTS_candidate_BO, cheap_indices, axis=0)
+                    price_dict_BO         = update_price_dict_all(price_dict_BO, NEW_LIGANDS[cheap_indices_1], NEW_BASES[cheap_indices_1], NEW_SOLVENTS[cheap_indices_1])
 
 
             indices_random = np.random.choice(np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False)
@@ -170,8 +176,10 @@ for exp_config in benchmark:
             y_better_RANDOM.append(y_best_RANDOM)
             running_costs_RANDOM.append(running_costs_RANDOM[-1] + suggested_costs_all)
             y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
-            LIGANDS_candidate_RANDOM = np.delete(LIGANDS_candidate_RANDOM, indices_random, axis=0)
-            price_dict_RANDOM = update_price_dict_all(price_dict_RANDOM, NEW_LIGANDS)
+            LIGANDS_candidate_RANDOM   = np.delete(LIGANDS_candidate_RANDOM, indices_random, axis=0)
+            BASES_candidate_RANDOM     = np.delete(BASES_candidate_RANDOM, indices_random, axis=0)
+            SOLVENTS_candidate_RANDOM  = np.delete(SOLVENTS_candidate_RANDOM, indices_random, axis=0)
+            price_dict_RANDOM          = update_price_dict_all(price_dict_RANDOM, NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS)
 
 
 
