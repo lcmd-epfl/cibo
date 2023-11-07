@@ -137,6 +137,7 @@ class Evaluation_data:
 
 
             self.y = self.data["yield"].to_numpy()  
+
             self.all_ligands     = self.data["Ligand_SMILES"].to_numpy()
             self.all_bases       = self.data["Base_SMILES"].to_numpy()
             self.all_solvents    = self.data["Solvent_SMILES"].to_numpy()
@@ -499,7 +500,6 @@ def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/
     fig1, ax1 = plt.subplots()
 
     
-
     ax1.plot(np.arange(NITER), y_RANDOM_MEAN, label='Random')
     ax1.fill_between(np.arange(NITER), lower_rnd, upper_rnd, alpha=0.2)
     ax1.plot(np.arange(NITER), y_BO_MEAN, label='Acquisition Function')
@@ -540,9 +540,6 @@ def plot_costs_BO_vs_RS(running_costs_BO_ALL, running_costs_RANDOM_ALL, name="./
     plt.savefig(name)
 
     plt.clf()
-
-
-
 
 
 def canonicalize_smiles(smiles):
@@ -682,7 +679,6 @@ def generate_fingerprints(smiles_list, nBits=512):
     return np.array(fingerprints)
 
 
-
 def get_solv_en(smiles):
     try:
         value = leruli.graph_to_solvation_energy(smiles, solventname="water", temperatures=[300])["solvation_energies"]["300.0"]
@@ -706,8 +702,6 @@ def get_solv_en_list(smiles_list):
             solv_energies.append(None)
     
     return solv_energies, non_none_indices
-
-
 
 
 def get_MolLogP_list(smiles_list):

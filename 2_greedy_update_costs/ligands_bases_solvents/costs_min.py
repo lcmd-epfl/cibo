@@ -117,8 +117,8 @@ for exp_config in benchmark:
 
 
                     indices, candidates = gibbon_search(model, X_candidate_BO,bounds_norm, q=INCREMENTED_BATCH_SIZE)
-                    NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-                    NEW_BASES   = BASES_candidate_BO[indices]
+                    NEW_LIGANDS  = LIGANDS_candidate_BO[indices]
+                    NEW_BASES    = BASES_candidate_BO[indices]
                     NEW_SOLVENTS = SOLVENTS_candidate_BO[indices]
                     suggested_costs_all, price_per_ligand = compute_price_acquisition_all(NEW_LIGANDS,NEW_BASES,NEW_SOLVENTS, price_dict_BO)
                     
@@ -129,11 +129,6 @@ for exp_config in benchmark:
                     if (cheap_indices !=[]) and len(cheap_indices) == BATCH_SIZE:
                         X, y = update_X_y(X, y, X_candidate_BO[cheap_indices], y_candidate_BO, cheap_indices)
                         y_best_BO = check_better(y, y_best_BO)
-                        if abs(y_best_BO-100.0) < 1e-5:
-                            print("Found a perfect ligand but should not have")
-                            pdb.set_trace()
-
-
                         y_better_BO.append(y_best_BO)
                         
                         print("Batch cost1: ", BATCH_COST)
