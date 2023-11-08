@@ -324,8 +324,6 @@ class Evaluation_data:
         self.get_prices()
 
 
-
-
         if self.init_strategy == "values":
 
             """
@@ -367,6 +365,49 @@ class Evaluation_data:
             X_init, y_init       = convert2pytorch(X_init, y_init)
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
         
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+        
+        elif self.init_strategy == "half":
+            idx_max_y = np.argmax(self.y)
+    
+            # Step 2: Retrieve the corresponding vector in X
+            X_max_y = self.X[idx_max_y]
+
+            # Step 3: Compute the distance between each row in X and X_max_y
+            # Using Euclidean distance as an example
+            distances = np.linalg.norm(self.X - X_max_y, axis=1)
+            self.init_size  = int(len(distances)/2)
+            indices_init = np.argsort(distances)[::-1][:self.init_size]
+
+            # Step 5: Get the 100 entries corresponding to these indices from X and y
+            X_init = self.X[indices_init]
+            y_init = self.y[indices_init]
+
+            # Step 6: Get the remaining entries
+            indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
+            fig, ax = plt.subplots()
+            import umap
+            pca = umap.UMAP(n_components=2)
+            X_pca = pca.fit_transform(self.X)
+            ax.scatter(X_pca[indices_init][:,0], X_pca[indices_init][:,1], label="init", c=self.y[indices_init], marker="+")
+            ax.scatter(X_pca[indices_holdout][:,0], X_pca[indices_holdout][:,1], label="holdout", c=self.y[indices_holdout], marker="o")
+            ax.scatter(X_pca[idx_max_y][0], X_pca[idx_max_y][1], label="best", c=self.y[idx_max_y], marker="x")
+            ax.legend()
+            plt.savefig("init_holdout.png")
+
+            np.random.shuffle(indices_holdout)
+            X_holdout = self.X[indices_holdout]
+            y_holdout = self.y[indices_holdout]
+
+            self.costs = 0
+            costs_init = np.zeros_like(y_init).reshape(-1,1)
+            #create an array of len y_holdout with 50 percent 0 and 50 percent 1
+            costs_holdout = np.random.randint(2, size=len(y_holdout)).reshape(-1,1)
+            costs_holdout[np.argmax(y_holdout)] = np.array([1])
+
+            X_init, y_init       = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
         elif self.init_strategy == "furthest":

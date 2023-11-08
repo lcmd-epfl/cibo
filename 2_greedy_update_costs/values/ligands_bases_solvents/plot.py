@@ -11,11 +11,6 @@ def generate_color_scale(iterations, cmap_name='coolwarm'):
     return [mcolors.rgb2hex(cmap(i)) for i in np.linspace(0, 1, iterations)]
 
 
-
-#running_costs_RANDOM_ALL
-#running_costs_BO_ALL
-
-
 ITERATIONS = np.arange(1, 22)
 
 REACTTION_1 = "ebdo_direct_arylation"
