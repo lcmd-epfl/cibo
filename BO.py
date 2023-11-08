@@ -233,7 +233,7 @@ class CustomGPModel:
             if type(X_train) == np.ndarray:
                 X_train = torch.tensor(X_train, dtype=torch.float32)
 
-            X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32) 
+            #X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32) 
     
         y_train = self.scaler_y.fit_transform(y_train)
         

@@ -492,7 +492,6 @@ class Evaluation_data:
             #select the indices of the worst ligand with the two bases and two solvents
             indices_init = np.where((self.all_ligands == self.worst_ligand) & np.isin(self.all_bases, self.bases_init) & np.isin(self.all_solvents, self.solvents_init))[0]
             indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
-            #selected_data = self.data.iloc[indices_init]
             np.random.shuffle(indices_init)
             np.random.shuffle(indices_holdout)
 
