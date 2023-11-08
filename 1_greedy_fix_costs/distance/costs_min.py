@@ -50,9 +50,6 @@ for exp_config in benchmark:
             y_candidate
         )
 
-        pred = model.posterior(X_candidate_FULL).mean.detach().flatten().numpy()
-        validate_model = False
-
         costs_FULL = cp.deepcopy(costs_candidate)
         X_candidate_BO = cp.deepcopy(X_candidate)
         y_candidate_BO = cp.deepcopy(y_candidate)
@@ -102,25 +99,6 @@ for exp_config in benchmark:
             if COST_AWARE_BO == False:
                 BO_data = BO_CASE_1_STEP(BO_data)
 
-                if validate_model:
-                    pred = (
-                        scaler_y.inverse_transform(
-                            BO_data["model"]
-                            .posterior(BO_data["X_candidate_BO"])
-                            .mean.detach()
-                        )
-                        .flatten()
-                        .numpy()
-                    )
-                    # var = np.sqrt(model.posterior(X_candidate_FULL).variance.detach().flatten().numpy())
-                    # scaler_y.inverse_transform(model.posterior(X_candidate_FULL).mean.detach()).flatten().numpy()
-                    y_test = BO_data[
-                        "y_candidate_BO"
-                    ].flatten()  # y_candidate_FULL.numpy().flatten()
-                    plt.clf()
-                    plt.close()
-                    plt.scatter(pred, y_test, marker="o")
-                    plt.savefig("shit.png")
             else:
                 SUCCESS = False
                 indices, candidates = gibbon_search(
