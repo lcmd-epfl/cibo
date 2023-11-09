@@ -2,12 +2,18 @@ import copy as cp
 import numpy as np
 import torch
 from botorch.models import SingleTaskGP
-from gpytorch.mlls import ExactMarginalLogLikelihood,LeaveOneOutPseudoLikelihood
-from botorch.fit import fit_gpytorch_model,fit_gpytorch_mll
-from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel,PolynomialKernel
+from gpytorch.mlls import ExactMarginalLogLikelihood, LeaveOneOutPseudoLikelihood
+from botorch.fit import fit_gpytorch_model, fit_gpytorch_mll
+from gpytorch.kernels import (
+    RBFKernel,
+    MaternKernel,
+    ScaleKernel,
+    LinearKernel,
+    PolynomialKernel,
+)
 from gpytorch.means import ConstantMean
 from gpytorch.priors import NormalPrior
-from gpytorch.constraints import Positive, LessThan,Interval
+from gpytorch.constraints import Positive, LessThan, Interval
 from sklearn.preprocessing import MinMaxScaler
 from torch.optim import Adam
 from scipy.spatial import distance
@@ -20,6 +26,7 @@ from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntr
 from gpytorch.priors import GammaPrior
 from gpytorch.constraints import GreaterThan
 import warnings
+
 warnings.filterwarnings("ignore")
 
 random.seed(45577)
@@ -40,7 +47,7 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     Selects a batch of molecules from a list of suggested molecules that have the lowest indices
     while meeting the constraints of the maximum cost and batch size.
     """
-    
+
     n = len(suggested_costs)
     # Check if BATCH_SIZE is larger than the length of the array, if so return None
     if BATCH_SIZE > n:
@@ -54,9 +61,10 @@ def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
     if not valid_combinations:
         return []
     # Select the combination with the lowest indices
-    best_indices = min(valid_combinations, key=lambda x: tuple(suggested_costs[i] for i in x))
+    best_indices = min(
+        valid_combinations, key=lambda x: tuple(suggested_costs[i] for i in x)
+    )
     return list(best_indices)
-
 
 
 def find_indices(X_candidate_BO, candidates):
@@ -72,11 +80,12 @@ def find_indices(X_candidate_BO, candidates):
 
     indices = []
     for candidate in candidates:
-        indices.append(np.argwhere((X_candidate_BO==candidate).all(1)).flatten()[0])
+        indices.append(np.argwhere((X_candidate_BO == candidate).all(1)).flatten()[0])
     indices = np.array(indices)
     return indices
 
-def update_model(X, y, bounds_norm):
+
+def update_model(X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True):
     """
     Function that updates the GP model with new data with good presettings
     Parameters:
@@ -87,8 +96,13 @@ def update_model(X, y, bounds_norm):
         model (botorch.models.gpytorch.GP): The updated GP model.
         scaler_y (TensorStandardScaler): The scaler for the labels.
     """
-    GP_class = CustomGPModel(kernel_type="Tanimoto", scale_type_X="botorch", bounds_norm=bounds_norm)
-    model    = GP_class.fit(X, y)
+    GP_class = CustomGPModel(
+        kernel_type=kernel_type,
+        scale_type_X="botorch",
+        bounds_norm=bounds_norm,
+        fit_y=fit_y,
+    )
+    model = GP_class.fit(X, y)
 
     return model, GP_class.scaler_y
 
@@ -111,13 +125,13 @@ def find_min_max_distance_and_ratio_scipy(x, vectors):
 
     \[
     d(a, b) = \sqrt{\sum_{j=1}^{n} (a[j] - b[j])^2}
-    \]    
+    \]
     """
     # Calculate the minimum distance between x and vectors using cdist
-    dist_1 = distance.cdist([x], vectors, 'euclidean')
+    dist_1 = distance.cdist([x], vectors, "euclidean")
     min_distance = np.min(dist_1)
     # Calculate the maximum distance among all vectors and x using cdist
-    pairwise_distances = distance.cdist(vectors, vectors, 'euclidean')
+    pairwise_distances = distance.cdist(vectors, vectors, "euclidean")
     max_distance_vectors = np.max(pairwise_distances)
     max_distance_x = np.max(dist_1)
     max_distance = max(max_distance_vectors, max_distance_x)
@@ -125,11 +139,12 @@ def find_min_max_distance_and_ratio_scipy(x, vectors):
     p = min_distance / max_distance
     return p
 
+
 def get_batch_price(X_train, costy_mols):
     """
     #FUNCTION concerns subfolder 3_similarity_based_costs
     Computes the total price of a batch of molecules.
-    to update the price dynamically as the batch is being constructed 
+    to update the price dynamically as the batch is being constructed
     for BO with synthesis at each iteration
 
     Parameters:
@@ -146,7 +161,7 @@ def get_batch_price(X_train, costy_mols):
 
     X_train_cp = cp.deepcopy(X_train)
     batch_price = 0
-    
+
     for mol in costy_mols:
         costs = find_min_max_distance_and_ratio_scipy(mol, X_train_cp)
         batch_price += costs  # Update the batch price
@@ -154,11 +169,13 @@ def get_batch_price(X_train, costy_mols):
 
     return batch_price
 
+
 class TensorStandardScaler:
     """
     Standardize features by removing the mean and scaling to unit variance
     as defined in BoTorch
     """
+
     def __init__(self, dim: int = -2, epsilon: float = 1e-9):
         self.dim = dim
         self.epsilon = epsilon
@@ -170,11 +187,15 @@ class TensorStandardScaler:
             Y = torch.from_numpy(Y).float()
         self.mean = Y.mean(dim=self.dim, keepdim=True)
         self.std = Y.std(dim=self.dim, keepdim=True)
-        self.std = self.std.where(self.std >= self.epsilon, torch.full_like(self.std, 1.0))
+        self.std = self.std.where(
+            self.std >= self.epsilon, torch.full_like(self.std, 1.0)
+        )
 
     def transform(self, Y):
         if self.mean is None or self.std is None:
-            raise ValueError("Mean and standard deviation not initialized, run `fit` method first.")
+            raise ValueError(
+                "Mean and standard deviation not initialized, run `fit` method first."
+            )
         original_type = None
         if isinstance(Y, np.ndarray):
             original_type = np.ndarray
@@ -191,7 +212,9 @@ class TensorStandardScaler:
 
     def inverse_transform(self, Y):
         if self.mean is None or self.std is None:
-            raise ValueError("Mean and standard deviation not initialized, run `fit` method first.")
+            raise ValueError(
+                "Mean and standard deviation not initialized, run `fit` method first."
+            )
         original_type = None
         if isinstance(Y, np.ndarray):
             original_type = np.ndarray
@@ -204,10 +227,13 @@ class TensorStandardScaler:
 
 
 class CustomGPModel:
-    def __init__(self, kernel_type="Matern", scale_type_X="sklearn", bounds_norm=None):
-        self.kernel_type  = kernel_type
+    def __init__(
+        self, kernel_type="Matern", scale_type_X="sklearn", bounds_norm=None, fit_y=True
+    ):
+        self.kernel_type = kernel_type
         self.scale_type_X = scale_type_X
-        self.bounds_norm  = bounds_norm
+        self.bounds_norm = bounds_norm
+        self.fit_y = fit_y
 
         self.FIT_METHOD = True
         if not self.FIT_METHOD:
@@ -223,7 +249,6 @@ class CustomGPModel:
         else:
             raise ValueError("Invalid scaler type")
 
-
         self.scaler_y = TensorStandardScaler()
 
     def fit(self, X_train, y_train):
@@ -233,13 +258,16 @@ class CustomGPModel:
             if type(X_train) == np.ndarray:
                 X_train = torch.tensor(X_train, dtype=torch.float32)
 
-            #X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32) 
-    
-        y_train = self.scaler_y.fit_transform(y_train)
-        
+            # X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32)
+
+        if self.fit_y:
+            y_train = self.scaler_y.fit_transform(y_train)
+        else:
+            y_train = y_train
+
         self.X_train_tensor = torch.tensor(X_train, dtype=torch.float64)
         self.y_train_tensor = torch.tensor(y_train, dtype=torch.float64).view(-1, 1)
-        
+
         if self.kernel_type == "RBF":
             kernel = RBFKernel()
         elif self.kernel_type == "Matern":
@@ -249,7 +277,11 @@ class CustomGPModel:
         elif self.kernel_type == "Polynomial":
             kernel = PolynomialKernel(power=2, offset=0.0)
         elif self.kernel_type == "Product":
-            kernel = MaternKernel(nu=2.5,active_dims=torch.tensor(np.arange(216).tolist()))*RBFKernel(active_dims=torch.tensor([216]))*RBFKernel(active_dims=torch.tensor([217]))
+            kernel = (
+                MaternKernel(nu=2.5, active_dims=torch.tensor(np.arange(216).tolist()))
+                * RBFKernel(active_dims=torch.tensor([216]))
+                * RBFKernel(active_dims=torch.tensor([217]))
+            )
         elif self.kernel_type == "Tanimoto":
             kernel = TanimotoKernel()
 
@@ -264,15 +296,15 @@ class CustomGPModel:
         class InternalGP(SingleTaskGP):
             def __init__(self, train_X, train_Y, kernel):
                 super().__init__(train_X, train_Y)
-                self.mean_module  = ConstantMean()
+                self.mean_module = ConstantMean()
                 self.covar_module = ScaleKernel(kernel)
 
-        #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
-        
+        # https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
+
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
-            #Found that these kernels can be numerically instable if not enough jitter is added
-            #self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+            # Found that these kernels can be numerically instable if not enough jitter is added
+            # self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
             self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(1e-3)
 
         if self.FIT_METHOD:
@@ -284,10 +316,10 @@ class CustomGPModel:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             fit_gpytorch_model(self.mll, max_retries=50000)
-            #fit_gpytorch_mll(self.mll, num_retries=50000)
+            # fit_gpytorch_mll(self.mll, num_retries=50000)
         else:
             """
-            Use gradient descent to fit the hyperparameters of the GP with initial run 
+            Use gradient descent to fit the hyperparameters of the GP with initial run
             to get reasonable hyperparameters and then a second run to get the best hyperparameters and model weights
             """
 
@@ -295,21 +327,25 @@ class CustomGPModel:
             self.mll.to(self.X_train_tensor)
             optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
             self.gp.train()
-            
+
             if self.gp.covar_module.base_kernel.lengthscale != None:
-                LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(np.logspace(-3, 3, 10), np.logspace(-5, 1, 10))
+                LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(
+                    np.logspace(-3, 3, 10), np.logspace(-5, 1, 10)
+                )
             else:
                 NOISE_GRID = np.logspace(-5, 1, 10)
                 LENGTHSCALE_GRID = np.zeros_like(NOISE_GRID)
 
             NUM_EPOCHS_INIT = 50
 
-            best_loss = float('inf')
+            best_loss = float("inf")
             best_lengthscale = None
             best_noise = None
-            
+
             # Loop over each grid point
-            for lengthscale, noise in zip(LENGTHSCALE_GRID.flatten(), NOISE_GRID.flatten()):
+            for lengthscale, noise in zip(
+                LENGTHSCALE_GRID.flatten(), NOISE_GRID.flatten()
+            ):
                 # Manually set the hyperparameters
                 if self.gp.covar_module.base_kernel.lengthscale != None:
                     self.gp.covar_module.base_kernel.lengthscale = lengthscale
@@ -325,24 +361,26 @@ class CustomGPModel:
                     # back prop gradients
                     loss.backward()
                     optimizer.step()
-                
+
                 # If this loss is the best so far, update best_loss and best hyperparameters
                 if loss.item() < best_loss:
                     best_loss = loss.item()
                     if self.gp.covar_module.base_kernel.lengthscale != None:
                         best_lengthscale = lengthscale
                     best_noise = noise
-                #print(f"Finished grid point with lengthscale {lengthscale}, noise {noise}, loss {loss.item()}")
-            
+                # print(f"Finished grid point with lengthscale {lengthscale}, noise {noise}, loss {loss.item()}")
+
             # Set the best found hyperparameters
             if self.gp.covar_module.base_kernel.lengthscale != None:
                 self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
             self.gp.likelihood.noise = best_noise
             if self.gp.covar_module.base_kernel.lengthscale != None:
-                print(f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}")
+                print(
+                    f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}"
+                )
             else:
                 print(f"Best initial noise: {best_noise}")
-            
+
             for epoch in range(self.NUM_EPOCHS_GD):
                 # clear gradients
                 optimizer.zero_grad()
@@ -369,19 +407,13 @@ class CustomGPModel:
 
         self.gp.eval()
         self.mll.eval()
-    
+
         return self.gp
 
 
-
-
-
-
-
-
-
-
-def gibbon_search(model, X_candidate_BO,bounds_norm, q,sequential=False, maximize=True):
+def gibbon_search(
+    model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True
+):
     """
     #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
     returns index of the q best candidates in X_candidate_BO
@@ -399,13 +431,20 @@ def gibbon_search(model, X_candidate_BO,bounds_norm, q,sequential=False, maximiz
         nump.ndarray: The selected molecules.
     """
 
+    NUM_RESTARTS = 20
+    RAW_SAMPLES = 512
+    qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
+    candidates, _ = optimize_acqf_discrete(
+        acq_function=qGIBBON,
+        bounds=bounds_norm,
+        q=q,
+        choices=X_candidate_BO,
+        num_restarts=NUM_RESTARTS,
+        raw_samples=RAW_SAMPLES,
+        sequential=sequential,
+    )
 
-    NUM_RESTARTS  = 20
-    RAW_SAMPLES   = 512
-    qGIBBON       = qLowerBoundMaxValueEntropy(model,X_candidate_BO, maximize=maximize)
-    candidates, _ = optimize_acqf_discrete(acq_function=qGIBBON,bounds=bounds_norm,q=q,choices=X_candidate_BO, num_restarts=NUM_RESTARTS,raw_samples=RAW_SAMPLES,sequential=sequential)
-    
-    indices       = find_indices(X_candidate_BO, candidates)
+    indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
 
@@ -420,18 +459,18 @@ def check_better(y, y_best_BO):
         return max(y)[0]
     else:
         return y_best_BO
-    
+
 
 def check_success(cheap_indices, indices):
     if cheap_indices == []:
         return cheap_indices, False
     else:
-        cheap_indices   = indices[cheap_indices]
-        return cheap_indices,True
+        cheap_indices = indices[cheap_indices]
+        return cheap_indices, True
 
 
 def BO_CASE_1_STEP(BO_data):
-    #Get current BO data from last iteration
+    # Get current BO data from last iteration
     model = BO_data["model"]
     X, y = BO_data["X"], BO_data["y"]
     N_train = BO_data["N_train"]
@@ -445,21 +484,22 @@ def BO_CASE_1_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
 
-    #Get new candidates
+    # Get new candidates
     indices, candidates = gibbon_search(
-        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
+        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+    )
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     y_best_BO = check_better(y, y_best_BO)
     y_better_BO.append(y_best_BO)
     running_costs_BO.append((running_costs_BO[-1] + sum(costs_BO[indices]))[0])
-    #Update model
+    # Update model
     model, scaler_y = update_model(X, y, bounds_norm)
-    #Delete candidates from pool of candidates since added to training data
+    # Delete candidates from pool of candidates since added to training data
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
     costs_BO = np.delete(costs_BO, indices, axis=0)
 
-    #Update BO data for next iteration
+    # Update BO data for next iteration
     BO_data["model"] = model
     BO_data["X"], BO_data["y"] = X, y
     BO_data["N_train"] = len(X)
