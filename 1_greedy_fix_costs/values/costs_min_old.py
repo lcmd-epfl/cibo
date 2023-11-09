@@ -99,7 +99,84 @@ for exp_config in benchmark:
             if COST_AWARE_BO == False:
                 BO_data = BO_CASE_1_STEP(BO_data)
             else:
-                BO_data = BO_AWARE_CASE_1_STEP(BO_data)
+                SUCCESS = False
+                indices, candidates = gibbon_search(
+                    model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+                )
+                suggested_costs = costs_BO[indices].flatten()
+                cheap_indices = select_batch(
+                    suggested_costs, MAX_BATCH_COST, BATCH_SIZE
+                )
+                cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
+                ITERATION = 1
+
+                while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
+                    INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
+                    SUCCESS_1 = False
+
+                    INCREMENTED_BATCH_SIZE = BATCH_SIZE + ITERATION
+                    print(
+                        "Incrementing canditates for batch to: ", INCREMENTED_BATCH_SIZE
+                    )
+                    if INCREMENTED_BATCH_SIZE > len(X_candidate_BO):
+                        print("Not enough candidates left to account for the costs")
+                        # therefore increasing the max batch cost to finally get enough candidates
+                        INCREMENTED_MAX_BATCH_COST += 1
+
+                    indices, candidates = gibbon_search(
+                        model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
+                    )
+                    suggested_costs = costs_BO[indices].flatten()
+
+                    cheap_indices = select_batch(
+                        suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE
+                    )
+                    cheap_indices, SUCCESS_2 = check_success(cheap_indices, indices)
+
+                    if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
+                        X, y = update_X_y(
+                            X,
+                            y,
+                            X_candidate_BO[cheap_indices],
+                            y_candidate_BO,
+                            cheap_indices,
+                        )
+                        y_best_BO = check_better(y, y_best_BO)
+
+                        y_better_BO.append(y_best_BO)
+                        BATCH_COST = sum(costs_BO[cheap_indices])[0]
+                        print("Batch cost1: ", BATCH_COST)
+                        running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+                        model, scaler_y = update_model(X, y, bounds_norm)
+
+                        X_candidate_BO = np.delete(
+                            X_candidate_BO, cheap_indices, axis=0
+                        )
+                        y_candidate_BO = np.delete(
+                            y_candidate_BO, cheap_indices, axis=0
+                        )
+                        costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
+                        break
+
+                    ITERATION += 1
+
+                if SUCCESS_1:
+                    X, y = update_X_y(
+                        X,
+                        y,
+                        X_candidate_BO[cheap_indices],
+                        y_candidate_BO,
+                        cheap_indices,
+                    )
+                    y_best_BO = check_better(y, y_best_BO)
+                    y_better_BO.append(y_best_BO)
+                    BATCH_COST = sum(costs_BO[cheap_indices])[0]
+                    print("Batch cost2: ", BATCH_COST)
+                    running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+                    model, scaler_y = update_model(X, y, bounds_norm)
+                    X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
+                    y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
+                    costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
 
             if COST_AWARE_RANDOM == False:
                 indices_random = np.random.choice(
@@ -138,11 +215,11 @@ for exp_config in benchmark:
                 "# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
                     i + 1,
                     NITER,
-                    BO_data["y_best_BO"],
+                    y_best_BO,
                     y_best_RANDOM,
-                    BO_data["running_costs_BO"][-1],
+                    running_costs_BO[-1],
                     running_costs_RANDOM[-1],
-                    BO_data["N_train"],
+                    len(X),
                 )
             )
 

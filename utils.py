@@ -75,7 +75,7 @@ class Evaluation_data:
         self.prices = prices
 
         self.ECFP_size = 512  # 64
-        self.radius = 2 #2  # 4
+        self.radius = 2  # 2  # 4
 
         self.ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
 
@@ -1140,3 +1140,62 @@ def create_aligned_transposed_price_table(price_dict):
     # Combine header and row into a single string with a divider line
     divider = "-" * len(header)
     return "\n".join([header, divider, row])
+
+
+def create_data_dict_BO(
+    model,
+    y_best_BO,
+    scaler_y,
+    X,
+    y,
+    X_candidate_BO,
+    y_candidate_BO,
+    y_better_BO,
+    costs_BO,
+    running_costs_BO,
+    bounds_norm,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+):
+    BO_data = {
+        "model": model,
+        "y_best_BO": y_best_BO,
+        "scaler_y": scaler_y,
+        "X": X,
+        "y": y,
+        "N_train": len(X),
+        "X_candidate_BO": X_candidate_BO,
+        "y_candidate_BO": y_candidate_BO,
+        "y_better_BO": y_better_BO,
+        "costs_BO": costs_BO,
+        "running_costs_BO": running_costs_BO,
+        "bounds_norm": bounds_norm,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+    }
+    return BO_data
+
+
+def create_data_dict_RS(
+    y_candidate_RANDOM,
+    y_best_RANDOM,
+    costs_RANDOM,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+    y_better_RANDOM,
+    running_costs_RANDOM,
+):
+    RANDOM_data = {
+        "y_candidate_RANDOM": y_candidate_RANDOM,
+        "y_best_RANDOM": y_best_RANDOM,
+        "costs_RANDOM": costs_RANDOM,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+        "y_better_RANDOM": y_better_RANDOM,
+        "running_costs_RANDOM": running_costs_RANDOM,
+    }
+
+    return RANDOM_data
+
+
+

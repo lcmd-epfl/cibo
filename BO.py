@@ -513,3 +513,105 @@ def BO_CASE_1_STEP(BO_data):
     BO_data["scaler_y"] = scaler_y
 
     return BO_data
+
+
+def BO_AWARE_CASE_1_STEP(BO_data):
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    costs_BO = BO_data["costs_BO"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    scaler_y = BO_data["scaler_y"]
+    MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+
+    SUCCESS = False
+    indices, candidates = gibbon_search(
+        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+    )
+    suggested_costs = costs_BO[indices].flatten()
+    cheap_indices = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
+    cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
+    ITERATION = 1
+
+    while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
+        INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
+        SUCCESS_1 = False
+
+        INCREMENTED_BATCH_SIZE = BATCH_SIZE + ITERATION
+        print("Incrementing canditates for batch to: ", INCREMENTED_BATCH_SIZE)
+        if INCREMENTED_BATCH_SIZE > len(X_candidate_BO):
+            print("Not enough candidates left to account for the costs")
+            # therefore increasing the max batch cost to finally get enough candidates
+            INCREMENTED_MAX_BATCH_COST += 1
+
+        indices, candidates = gibbon_search(
+            model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
+        )
+        suggested_costs = costs_BO[indices].flatten()
+
+        cheap_indices = select_batch(
+            suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE
+        )
+        cheap_indices, SUCCESS_2 = check_success(cheap_indices, indices)
+
+        if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
+            X, y = update_X_y(
+                X,
+                y,
+                X_candidate_BO[cheap_indices],
+                y_candidate_BO,
+                cheap_indices,
+            )
+            y_best_BO = check_better(y, y_best_BO)
+
+            y_better_BO.append(y_best_BO)
+            BATCH_COST = sum(costs_BO[cheap_indices])[0]
+            print("Batch cost1: ", BATCH_COST)
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+            model, scaler_y = update_model(X, y, bounds_norm)
+
+            X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
+            y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
+            costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
+            break
+
+        ITERATION += 1
+
+    if SUCCESS_1:
+        X, y = update_X_y(
+            X,
+            y,
+            X_candidate_BO[cheap_indices],
+            y_candidate_BO,
+            cheap_indices,
+        )
+        y_best_BO = check_better(y, y_best_BO)
+        y_better_BO.append(y_best_BO)
+        BATCH_COST = sum(costs_BO[cheap_indices])[0]
+        print("Batch cost2: ", BATCH_COST)
+        running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+        model, scaler_y = update_model(X, y, bounds_norm)
+        X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
+        y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
+        costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
+
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"], BO_data["y"] = X, y
+    BO_data["N_train"] = len(X)
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["bounds_norm"] = bounds_norm
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["costs_BO"] = costs_BO
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data
