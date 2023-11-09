@@ -6,7 +6,7 @@ We will follow the 3rd rule of aquisition "Never spend more for an acquisition t
 
 Structure of the folders:
 
-- `1_greedy_fix_costs``: Greedy algorithm with fixed costs:
+- `1_greedy_fix_costs`: Greedy algorithm with fixed costs:
   We assume that the price of each sample is fixed:
   For instance if a sample was acquired previously and we want to re-use it at a different temperature we still pay the same price.
 
