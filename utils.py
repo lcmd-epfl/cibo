@@ -75,7 +75,7 @@ class Evaluation_data:
         self.prices = prices
 
         self.ECFP_size = 512  # 64
-        self.radius = 2  # 2  # 4
+        self.radius    = 2  # 2  # 4
 
         self.ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
 
