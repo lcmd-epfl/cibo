@@ -469,6 +469,41 @@ def check_success(cheap_indices, indices):
         return cheap_indices, True
 
 
+def RS_STEP(RANDOM_data):
+    # Extract the data from the dictionary
+    y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
+    y_best_RANDOM = RANDOM_data["y_best_RANDOM"]
+    costs_RANDOM = RANDOM_data["costs_RANDOM"]
+    BATCH_SIZE = RANDOM_data["BATCH_SIZE"]
+    y_better_RANDOM = RANDOM_data["y_better_RANDOM"]
+    running_costs_RANDOM = RANDOM_data["running_costs_RANDOM"]
+
+    indices_random = np.random.choice(
+        np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False
+    )
+    if max(y_candidate_RANDOM[indices_random])[0] > y_best_RANDOM:
+        y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0]
+
+    y_better_RANDOM.append(y_best_RANDOM)
+    BATCH_COST = sum(costs_RANDOM[indices_random])[0]
+    running_costs_RANDOM.append(running_costs_RANDOM[-1] + BATCH_COST)
+    y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
+    costs_RANDOM = np.delete(costs_RANDOM, indices_random, axis=0)
+
+    # Update the dictionary with the new values
+
+    RANDOM_data["y_candidate_RANDOM"] = y_candidate_RANDOM
+    RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
+    RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
+    RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
+    RANDOM_data["costs_RANDOM"] = costs_RANDOM
+
+    # There is no need to update BATCH_SIZE and MAX_BATCH_COST as they are constants and do not change
+
+    # Return the updated dictionary
+    return RANDOM_data
+
+
 def BO_CASE_1_STEP(BO_data):
     # Get current BO data from last iteration
     model = BO_data["model"]
