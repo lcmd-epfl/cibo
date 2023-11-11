@@ -12,6 +12,7 @@ if __name__ == "__main__":
     RESULTS = []
 
     for exp_config in benchmark:
+        print("Starting experiment: ", exp_config)
         y_better_BO_ALL, y_better_RANDOM_ALL = [], []
         running_costs_BO_ALL, running_costs_RANDOM_ALL = [], []
 
@@ -22,14 +23,12 @@ if __name__ == "__main__":
             init_strategy=exp_config["init_strategy"],
         )
         bounds_norm = DATASET.bounds_norm
-
-        N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
         BATCH_SIZE = exp_config["batch_size"]
         MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
 
-        for run in range(N_RUNS):
+        for run in range(exp_config["n_runs"]):
             SEED = 111 + run
             random.seed(SEED)
             np.random.seed(SEED)
@@ -117,7 +116,7 @@ if __name__ == "__main__":
                 )
 
             y_better_BO_ALL.append(BO_data["y_better_BO"])
-            y_better_RANDOM_ALL.append(BO_data["y_better_RANDOM"])
+            y_better_RANDOM_ALL.append(RANDOM_data["y_better_RANDOM"])
             running_costs_BO_ALL.append(BO_data["running_costs_BO"])
             running_costs_RANDOM_ALL.append(RANDOM_data["running_costs_RANDOM"])
 
