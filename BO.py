@@ -85,7 +85,7 @@ def find_indices(X_candidate_BO, candidates):
     return indices
 
 
-def update_model(X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True):
+def update_model(X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True, FIT_METHOD=True):
     """
     Function that updates the GP model with new data with good presettings
     Parameters:
@@ -100,7 +100,7 @@ def update_model(X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True):
         kernel_type=kernel_type,
         scale_type_X="botorch",
         bounds_norm=bounds_norm,
-        fit_y=fit_y,
+        fit_y=fit_y, FIT_METHOD=FIT_METHOD
     )
     model = GP_class.fit(X, y)
 
@@ -228,14 +228,14 @@ class TensorStandardScaler:
 
 class CustomGPModel:
     def __init__(
-        self, kernel_type="Matern", scale_type_X="sklearn", bounds_norm=None, fit_y=True
+        self, kernel_type="Matern", scale_type_X="sklearn", bounds_norm=None, fit_y=True, FIT_METHOD=True
     ):
         self.kernel_type = kernel_type
         self.scale_type_X = scale_type_X
         self.bounds_norm = bounds_norm
         self.fit_y = fit_y
 
-        self.FIT_METHOD = True
+        self.FIT_METHOD = FIT_METHOD
         if not self.FIT_METHOD:
             if self.kernel_type == "RBF" or self.kernel_type == "Matern":
                 self.NUM_EPOCHS_GD = 5000
@@ -304,7 +304,7 @@ class CustomGPModel:
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
             # Found that these kernels can be numerically instable if not enough jitter is added
-            # self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+            #self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
             self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(1e-3)
 
         if self.FIT_METHOD:
@@ -316,14 +316,15 @@ class CustomGPModel:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             fit_gpytorch_model(self.mll, max_retries=50000)
-            # fit_gpytorch_mll(self.mll, num_retries=50000)
+            #fit_gpytorch_mll(self.mll, num_retries=50000)
         else:
             """
             Use gradient descent to fit the hyperparameters of the GP with initial run
             to get reasonable hyperparameters and then a second run to get the best hyperparameters and model weights
             """
 
-            self.mll = LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
+            self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
+            #LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
             self.gp.train()

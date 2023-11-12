@@ -26,7 +26,7 @@ fit_y = True
     costs_candidate,
 ) = DATASET.get_init_holdout_data(777)
 model, scaler_y = update_model(
-    X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y
+    X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y, FIT_METHOD=False
 )
 
 
