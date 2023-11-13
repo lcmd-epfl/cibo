@@ -23,4 +23,4 @@ Structure of the folders:
 
 - misc: there you can put stuff to experiment or outdated things
 
-<img src="rules.png" width="50%" height="50%" />
+<img src="rules_ferengi_png" width="80%" height="80%" />
