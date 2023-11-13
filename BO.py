@@ -85,7 +85,9 @@ def find_indices(X_candidate_BO, candidates):
     return indices
 
 
-def update_model(X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True, FIT_METHOD=True):
+def update_model(
+    X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True, FIT_METHOD=True
+):
     """
     Function that updates the GP model with new data with good presettings
     Parameters:
@@ -100,7 +102,8 @@ def update_model(X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True, FIT_METH
         kernel_type=kernel_type,
         scale_type_X="botorch",
         bounds_norm=bounds_norm,
-        fit_y=fit_y, FIT_METHOD=FIT_METHOD
+        fit_y=fit_y,
+        FIT_METHOD=FIT_METHOD,
     )
     model = GP_class.fit(X, y)
 
@@ -228,7 +231,12 @@ class TensorStandardScaler:
 
 class CustomGPModel:
     def __init__(
-        self, kernel_type="Matern", scale_type_X="sklearn", bounds_norm=None, fit_y=True, FIT_METHOD=True
+        self,
+        kernel_type="Matern",
+        scale_type_X="sklearn",
+        bounds_norm=None,
+        fit_y=True,
+        FIT_METHOD=True,
     ):
         self.kernel_type = kernel_type
         self.scale_type_X = scale_type_X
@@ -304,7 +312,7 @@ class CustomGPModel:
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
             # Found that these kernels can be numerically instable if not enough jitter is added
-            #self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
+            # self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
             self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(1e-3)
 
         if self.FIT_METHOD:
@@ -316,7 +324,7 @@ class CustomGPModel:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             fit_gpytorch_model(self.mll, max_retries=50000)
-            #fit_gpytorch_mll(self.mll, num_retries=50000)
+            # fit_gpytorch_mll(self.mll, num_retries=50000)
         else:
             """
             Use gradient descent to fit the hyperparameters of the GP with initial run
@@ -324,7 +332,7 @@ class CustomGPModel:
             """
 
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
-            #LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
+            # LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
             self.gp.train()
@@ -506,6 +514,9 @@ def RS_STEP(RANDOM_data):
 
 
 def BO_CASE_1_STEP(BO_data):
+    """
+    Simple BO step without any cost constraints but keep track of the costs
+    """
     # Get current BO data from last iteration
     model = BO_data["model"]
     X, y = BO_data["X"], BO_data["y"]
@@ -552,6 +563,9 @@ def BO_CASE_1_STEP(BO_data):
 
 
 def BO_AWARE_CASE_1_STEP(BO_data):
+    """
+    BO with cost constraints on the costs per batch
+    """
     model = BO_data["model"]
     X, y = BO_data["X"], BO_data["y"]
     N_train = BO_data["N_train"]
@@ -651,3 +665,97 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     BO_data["scaler_y"] = scaler_y
 
     return BO_data
+
+
+def BO_CASE_2_STEP(BO_data):
+    """
+    Normal BO with no cost constraints but keep track of the costs per batch for ca
+    """
+    # Get current BO data from last iteration
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
+    price_dict_BO = BO_data["price_dict_BO"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    scaler_y = BO_data["scaler_y"]
+
+    # Assuming gibbon_search, update_X_y, compute_price_acquisition_ligands, check_better, update_model, and update_price_dict_ligands are defined elsewhere
+    indices, candidates = gibbon_search(
+        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+    )
+    X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
+    NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+    suggested_costs_all, _ = compute_price_acquisition_ligands(
+        NEW_LIGANDS, price_dict_BO
+    )
+    y_best_BO = check_better(y, y_best_BO)
+    y_better_BO.append(y_best_BO)
+    running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
+    model, scaler_y = update_model(X, y, bounds_norm)
+    X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+    y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+    LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+    price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
+
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"] = X
+    BO_data["y"] = y
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
+    BO_data["price_dict_BO"] = price_dict_BO
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["N_train"] = len(X)
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data
+
+
+def RS_STEP_2(RANDOM_data):
+    y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
+    BATCH_SIZE = RANDOM_data["BATCH_SIZE"]
+    LIGANDS_candidate_RANDOM = RANDOM_data["LIGANDS_candidate_RANDOM"]
+    price_dict_RANDOM = RANDOM_data["price_dict_RANDOM"]
+    y_best_RANDOM = RANDOM_data["y_best_RANDOM"]
+    y_better_RANDOM = RANDOM_data["y_better_RANDOM"]
+    running_costs_RANDOM = RANDOM_data["running_costs_RANDOM"]
+
+    indices_random = np.random.choice(
+        np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False
+    )
+    NEW_LIGANDS = LIGANDS_candidate_RANDOM[indices_random]
+    suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+        NEW_LIGANDS, price_dict_RANDOM
+    )
+
+    if max(y_candidate_RANDOM[indices_random])[0] > y_best_RANDOM:
+        y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0]
+
+    y_better_RANDOM.append(y_best_RANDOM)
+    running_costs_RANDOM.append(running_costs_RANDOM[-1] + suggested_costs_all)
+
+    y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
+    LIGANDS_candidate_RANDOM = np.delete(
+        LIGANDS_candidate_RANDOM, indices_random, axis=0
+    )
+    price_dict_RANDOM = update_price_dict_ligands(price_dict_RANDOM, NEW_LIGANDS)
+
+    # Update all modified quantities and return RANDOM_data
+    RANDOM_data["y_candidate_RANDOM"] = y_candidate_RANDOM
+    RANDOM_data["LIGANDS_candidate_RANDOM"] = LIGANDS_candidate_RANDOM
+    RANDOM_data["price_dict_RANDOM"] = price_dict_RANDOM
+    RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
+    RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
+    RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
+
+    return RANDOM_data

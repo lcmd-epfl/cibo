@@ -67,7 +67,7 @@ if __name__ == "__main__":
             y_better_RANDOM.append(y_best)
             y_best_BO, y_best_RANDOM = y_best, y_best
 
-            BO_data = create_data_dict_BO(
+            BO_data = create_data_dict_BO_1(
                 model,
                 y_best_BO,
                 scaler_y,

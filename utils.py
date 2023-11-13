@@ -1142,7 +1142,48 @@ def create_aligned_transposed_price_table(price_dict):
     return "\n".join([header, divider, row])
 
 
-def create_data_dict_BO(
+def create_data_dict_BO_2(
+    model,
+    y_best_BO,
+    scaler_y,
+    X,
+    y,
+    X_candidate_BO,
+    y_candidate_BO,
+    LIGANDS_candidate_BO,
+    y_better_BO,
+    price_dict_BO,
+    running_costs_BO,
+    bounds_norm,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+):
+    """
+    Create a dictionary with all the data needed for the BO in scenario 2.
+    """
+
+    BO_data = {
+        "model": model,
+        "y_best_BO": y_best_BO,
+        "scaler_y": scaler_y,
+        "X": X,
+        "y": y,
+        "N_train": len(X),
+        "X_candidate_BO": X_candidate_BO,
+        "y_candidate_BO": y_candidate_BO,
+        "LIGANDS_candidate_BO": LIGANDS_candidate_BO,
+        "y_better_BO": y_better_BO,
+        "price_dict_BO": price_dict_BO,
+        "running_costs_BO": running_costs_BO,
+        "bounds_norm": bounds_norm,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+    }
+
+    return BO_data
+
+
+def create_data_dict_BO_1(
     model,
     y_best_BO,
     scaler_y,
@@ -1157,6 +1198,9 @@ def create_data_dict_BO(
     BATCH_SIZE,
     MAX_BATCH_COST,
 ):
+    """
+    For scenario 1
+    """
     BO_data = {
         "model": model,
         "y_best_BO": y_best_BO,
@@ -1196,3 +1240,25 @@ def create_data_dict_RS(
     }
 
     return RANDOM_data
+
+
+
+def create_data_dict_RS_2(y_candidate_RANDOM,
+                y_best_RANDOM,
+                LIGANDS_candidate_RANDOM,
+                price_dict_RANDOM,
+                BATCH_SIZE,
+                MAX_BATCH_COST,
+                y_better_RANDOM,
+                running_costs_RANDOM):
+    
+    RANDOM_data = {"y_candidate_RANDOM" : y_candidate_RANDOM,
+                   "y_best_RANDOM" : y_best_RANDOM,
+                    "LIGANDS_candidate_RANDOM" : LIGANDS_candidate_RANDOM,
+                    "price_dict_RANDOM" : price_dict_RANDOM,
+                    "BATCH_SIZE" : BATCH_SIZE,
+                    "MAX_BATCH_COST" : MAX_BATCH_COST,
+                    "y_better_RANDOM" : y_better_RANDOM,
+                    "running_costs_RANDOM" : running_costs_RANDOM}
+    return RANDOM_data
+                    
