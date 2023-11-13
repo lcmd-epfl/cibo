@@ -49,7 +49,7 @@ for exp_config in benchmark:
         costs_BO        = cp.deepcopy(costs_candidate)
         costs_RANDOM    = cp.deepcopy(costs_candidate)
 
-        price_dict_BO = cp.deepcopy(price_dict)
+        price_dict_BO     = cp.deepcopy(price_dict)
         price_dict_RANDOM = cp.deepcopy(price_dict)
 
 

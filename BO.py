@@ -240,7 +240,7 @@ class CustomGPModel:
             if self.kernel_type == "RBF" or self.kernel_type == "Matern":
                 self.NUM_EPOCHS_GD = 5000
             elif self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
-                self.NUM_EPOCHS_GD = 500
+                self.NUM_EPOCHS_GD = 1000
 
         if scale_type_X == "sklearn":
             self.scaler_X = MinMaxScaler()

@@ -75,7 +75,7 @@ class Evaluation_data:
         self.prices = prices
 
         self.ECFP_size = 512  # 64
-        self.radius    = 2  # 2  # 4
+        self.radius = 2  # 2  # 4
 
         self.ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
 
@@ -624,7 +624,7 @@ class Evaluation_data:
 
 
 def plot_utility_BO_vs_RS(
-    y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/costs.png"
+    y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/utility.png"
 ):
     """
     Plot the utility of the BO vs RS (Random Search) for each iteration.
@@ -640,8 +640,8 @@ def plot_utility_BO_vs_RS(
         y_better_RANDOM_ALL, axis=0
     )
 
-    lower_rnd = y_RANDOM_MEAN - y_BO_STD
-    upper_rnd = y_RANDOM_MEAN + y_BO_STD
+    lower_rnd = y_RANDOM_MEAN - y_RANDOM_STD
+    upper_rnd = y_RANDOM_MEAN + y_RANDOM_STD
     lower_bo = y_BO_MEAN - y_BO_STD
     upper_bo = y_BO_MEAN + y_BO_STD
 
@@ -1196,6 +1196,3 @@ def create_data_dict_RS(
     }
 
     return RANDOM_data
-
-
-
