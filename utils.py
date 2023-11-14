@@ -1142,7 +1142,7 @@ def create_aligned_transposed_price_table(price_dict):
     return "\n".join([header, divider, row])
 
 
-def create_data_dict_BO_2(
+def create_data_dict_BO_2A(
     model,
     y_best_BO,
     scaler_y,
@@ -1243,7 +1243,7 @@ def create_data_dict_RS(
 
 
 
-def create_data_dict_RS_2(y_candidate_RANDOM,
+def create_data_dict_RS_2A(y_candidate_RANDOM,
                 y_best_RANDOM,
                 LIGANDS_candidate_RANDOM,
                 price_dict_RANDOM,
