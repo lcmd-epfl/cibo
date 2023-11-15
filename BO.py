@@ -465,7 +465,6 @@ def gibbon_search_modified(
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-    pdb.set_trace()
     candidates = candidates.view(n_best, q, candidates.shape[2])
     acq_values = acq_values.view(n_best, q)
     
