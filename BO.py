@@ -21,7 +21,7 @@ from itertools import combinations
 from utils import *
 from kernels import *
 from botorch.utils.transforms import normalize
-from botorch.optim import optimize_acqf_discrete
+from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from gpytorch.priors import GammaPrior
 from gpytorch.constraints import GreaterThan
@@ -420,6 +420,60 @@ class CustomGPModel:
         return self.gp
 
 
+def gibbon_search_modified(
+    model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=3
+):
+    """
+    #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
+    returns index of the q best candidates in X_candidate_BO
+    as well as their feature vectors
+
+    Parameters:
+        model (botorch.models.gpytorch.GP): The GP model.
+        X_candidate_BO (numpy.ndarray): The holdout set.
+        bounds_norm (numpy.ndarray): The bounds for normalization.
+        q (int): The batch size.
+        sequential (bool): Whether to use sequential optimization.
+        maximize (bool): Whether to maximize or minimize the acquisition function.
+    Returns:
+        nump.ndarray: The indices of the selected molecules.
+        nump.ndarray: The selected molecules.
+    """
+
+    NUM_RESTARTS = 20
+    RAW_SAMPLES = 512
+    qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
+
+    # source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
+
+    """
+    # TODO 
+    At bottom of script: 
+    best_idx = torch.argmax(acq_values)
+    return choices_batched[best_idx], acq_values[best_idx]
+    Modify to return 2nd, 3rd best etc. set of candidates to check if we can afford these
+    """
+    # optimize_acqf_discrete_modified
+    candidates, acq_values = optimize_acqf_discrete_modified(
+        acq_function=qGIBBON,
+        bounds=bounds_norm,
+        q=q,
+        choices=X_candidate_BO,
+        n_best=3,
+        unique=True,  ###<- changed to unique=True
+        num_restarts=NUM_RESTARTS,
+        raw_samples=RAW_SAMPLES,
+        sequential=sequential,
+    )
+    pdb.set_trace()
+    candidates = candidates.view(n_best, q, candidates.shape[2])
+    acq_values = acq_values.view(n_best, q)
+    
+    indices = find_indices(X_candidate_BO, candidates)
+
+    return indices, candidates
+
+
 def gibbon_search(
     model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True
 ):
@@ -443,16 +497,29 @@ def gibbon_search(
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
-    candidates, _ = optimize_acqf_discrete(
+
+    # source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
+
+    """
+    # TODO 
+    At bottom of script: 
+    best_idx = torch.argmax(acq_values)
+    return choices_batched[best_idx], acq_values[best_idx]
+    Modify to return 2nd, 3rd best etc. set of candidates to check if we can afford these
+    """
+    # optimize_acqf_discrete_modified
+    candidates, best_acq_values = optimize_acqf_discrete(
         acq_function=qGIBBON,
         bounds=bounds_norm,
         q=q,
         choices=X_candidate_BO,
+        n_best=3,
+        unique=True,  ###<- changed to unique=True
         num_restarts=NUM_RESTARTS,
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-
+    pdb.set_trace()
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
@@ -581,9 +648,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
     SUCCESS = False
-    indices, candidates = gibbon_search(
-        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
-    )
+    indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
     suggested_costs = costs_BO[indices].flatten()
     cheap_indices = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
     cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
@@ -841,10 +906,6 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
                 cheap_indices,
             )
             y_best_BO = check_better(y, y_best_BO)
-            if abs(y_best_BO - 100.0) < 1e-5:
-                print("Found a perfect ligand but should not have")
-                pdb.set_trace()
-
             y_better_BO.append(y_best_BO)
 
             print("Batch cost1: ", BATCH_COST)

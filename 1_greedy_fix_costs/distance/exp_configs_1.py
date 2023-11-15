@@ -59,4 +59,5 @@ benchmark = [
         "max_batch_cost": 5,
         "ntrain": 200,
     },
+    
 ]
