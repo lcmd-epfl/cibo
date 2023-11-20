@@ -512,13 +512,12 @@ def gibbon_search(
         bounds=bounds_norm,
         q=q,
         choices=X_candidate_BO,
-        n_best=3,
         unique=True,  ###<- changed to unique=True
         num_restarts=NUM_RESTARTS,
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-    pdb.set_trace()
+    #n_best=3, if use the modified version add this back in
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
