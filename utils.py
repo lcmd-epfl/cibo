@@ -11,6 +11,7 @@ from collections import Counter
 import leruli
 from time import sleep
 import matplotlib as mpl
+from rdkit import Chem
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
@@ -23,6 +24,27 @@ from morfeus import SASA, Dispersion
 import deepchem as dc
 import pandas as pd
 import pickle
+
+
+def inchi_to_smiles(inchi_list):
+    """
+    Convert a list of InChI strings to a list of canonical SMILES strings.
+
+    Args:
+    inchi_list (list): A list of InChI strings.
+
+    Returns:
+    list: A list of canonical SMILES strings.
+    """
+    smiles_list = []
+    for inchi in inchi_list:
+        mol = Chem.MolFromInchi(inchi)
+        if mol:
+            smiles = Chem.MolToSmiles(mol)
+            smiles_list.append(smiles)
+        else:
+            smiles_list.append(None)  # Append None for invalid InChI strings
+    return smiles_list
 
 
 def check_entries(array_of_arrays):
@@ -124,6 +146,84 @@ class Evaluation_data:
             random_inds = np.random.permutation(len(self.X))
             self.X = self.X[random_inds]
             self.y = self.y[random_inds]
+
+        # TODO: include this dataset with more reastic prices
+        # https://github.com/doyle-lab-ucla/edboplus/blob/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full_update.csv
+        # https://chemrxiv.org/engage/chemrxiv/article-details/62f6966269f3a5df46b5584b
+        elif self.dataset == "BMS":
+            dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
+            # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
+            self.data = pd.read_csv(dataset_url)
+            self.data = self.data.dropna()
+            self.data = self.data.sample(frac=1).reset_index(drop=True)
+
+            self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
+            self.data["Ligand_SMILES"] = inchi_to_smiles(
+                self.data["Ligand_inchi"].values
+            )
+            self.data["Solvent_SMILES"] = inchi_to_smiles(
+                self.data["Solvent_inchi"].values
+            )
+
+            col_0_base = self.ftzr(self.data["Base_SMILES"])
+            col_1_ligand = self.ftzr(self.data["Ligand_SMILES"])
+            col_2_solvent = self.ftzr(self.data["Solvent_SMILES"])
+            col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1, 1)
+            col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1, 1)
+
+            self.X = np.concatenate(
+                [
+                    col_0_base,
+                    col_1_ligand,
+                    col_2_solvent,
+                    col_3_concentration,
+                    col_4_temperature,
+                ],
+                axis=1,
+            )
+
+            self.y = self.data["Yield"].to_numpy()
+            self.all_ligands = self.data["Ligand_SMILES"].to_numpy()
+            self.all_bases = self.data["Base_SMILES"].to_numpy()
+            self.all_solvents = self.data["Solvent_SMILES"].to_numpy()
+            unique_bases = np.unique(self.data["Base_SMILES"])
+            unique_ligands = np.unique(self.data["Ligand_SMILES"])
+            unique_solvents = np.unique(self.data["Solvent_SMILES"])
+            unique_concentrations = np.unique(self.data["Concentration"])
+            unique_temperatures = np.unique(self.data["Temp_C"])
+
+            max_yield_per_ligand = np.array(
+                [
+                    max(self.data[self.data["Ligand_SMILES"] == unique_ligand]["Yield"])
+                    for unique_ligand in unique_ligands
+                ]
+            )
+
+            self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
+            self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
+
+            self.where_worst = np.array(
+                self.data.index[
+                    self.data["Ligand_SMILES"] == self.worst_ligand
+                ].tolist()
+            )
+
+            self.feauture_labels = {
+                "names": {
+                    "bases": unique_bases,
+                    "ligands": unique_ligands,
+                    "solvents": unique_solvents,
+                    "concentrations": unique_concentrations,
+                    "temperatures": unique_temperatures,
+                },
+                "ordered_smiles": {
+                    "bases": self.data["Base_SMILES"],
+                    "ligands": self.data["Ligand_SMILES"],
+                    "solvents": self.data["Solvent_SMILES"],
+                    "concentrations": self.data["Concentration"],
+                    "temperatures": self.data["Temp_C"],
+                },
+            }
 
         elif self.dataset == "ebdo_direct_arylation":
             dataset_url = "https://raw.githubusercontent.com/b-shields/edbo/master/experiments/data/direct_arylation/experiment_index.csv"
@@ -309,6 +409,24 @@ class Evaluation_data:
             if self.dataset == "freesolv":
                 print("Not implemented.")
                 exit()
+
+            elif self.dataset == "BMS":
+                ligand_price_dict = {}
+
+                # Iterate through the dataframe rows
+                for index, row in self.data.iterrows():
+                    ligand_smiles = row["Ligand_SMILES"]
+                    ligand_price = row["Ligand_Cost"]
+                    ligand_price_dict[ligand_smiles] = ligand_price
+
+                # Print the dictionary
+                self.ligand_prices = ligand_price_dict
+
+                all_ligand_prices = []
+                for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
+                    all_ligand_prices.append(self.ligand_prices[ligand])
+                self.costs = np.array(all_ligand_prices).reshape(-1, 1)
+
             elif self.dataset == "ebdo_direct_arylation":
                 self.ligand_prices = {}
                 for ind, unique_ligand in enumerate(
@@ -335,8 +453,6 @@ class Evaluation_data:
                 for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
                     all_ligand_prices.append(self.ligand_prices[ligand])
                 self.costs = np.array(all_ligand_prices).reshape(-1, 1)
-
-                exit()
 
         elif self.prices == "update_all_when_bought":
             if self.dataset == "ebdo_direct_arylation":
@@ -524,9 +640,9 @@ class Evaluation_data:
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
         elif self.init_strategy == "worst_ligand":
-            assert (
-                self.dataset == "ebdo_direct_arylation"
-            ), "This init strategy is only implemented for the ebdo_direct_arylation dataset."
+            #assert (
+            #    self.dataset == "ebdo_direct_arylation"
+            #), "This init strategy is only implemented for the ebdo_direct_arylation dataset."
             indices_init = self.where_worst[: self.init_size]
             indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
             np.random.shuffle(indices_init)
@@ -1242,23 +1358,72 @@ def create_data_dict_RS(
     return RANDOM_data
 
 
-
-def create_data_dict_RS_2A(y_candidate_RANDOM,
-                y_best_RANDOM,
-                LIGANDS_candidate_RANDOM,
-                price_dict_RANDOM,
-                BATCH_SIZE,
-                MAX_BATCH_COST,
-                y_better_RANDOM,
-                running_costs_RANDOM):
-    
-    RANDOM_data = {"y_candidate_RANDOM" : y_candidate_RANDOM,
-                   "y_best_RANDOM" : y_best_RANDOM,
-                    "LIGANDS_candidate_RANDOM" : LIGANDS_candidate_RANDOM,
-                    "price_dict_RANDOM" : price_dict_RANDOM,
-                    "BATCH_SIZE" : BATCH_SIZE,
-                    "MAX_BATCH_COST" : MAX_BATCH_COST,
-                    "y_better_RANDOM" : y_better_RANDOM,
-                    "running_costs_RANDOM" : running_costs_RANDOM}
+def create_data_dict_RS_2A(
+    y_candidate_RANDOM,
+    y_best_RANDOM,
+    LIGANDS_candidate_RANDOM,
+    price_dict_RANDOM,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+    y_better_RANDOM,
+    running_costs_RANDOM,
+):
+    RANDOM_data = {
+        "y_candidate_RANDOM": y_candidate_RANDOM,
+        "y_best_RANDOM": y_best_RANDOM,
+        "LIGANDS_candidate_RANDOM": LIGANDS_candidate_RANDOM,
+        "price_dict_RANDOM": price_dict_RANDOM,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+        "y_better_RANDOM": y_better_RANDOM,
+        "running_costs_RANDOM": running_costs_RANDOM,
+    }
     return RANDOM_data
-                    
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    benchmark = {
+        "dataset": "BMS",
+        "init_strategy": "worst_ligand",
+        "cost_aware": False,
+        "n_runs": 5,
+        "n_iter": 15,
+        "batch_size": 5,
+        "max_batch_cost": 0,
+        "ntrain": 200,
+    }
+
+    DATASET = Evaluation_data(
+        benchmark["dataset"],
+        benchmark["ntrain"],
+        "update_ligand_when_used",
+        init_strategy=benchmark["init_strategy"],
+    )
+
+    """
+    #for prices random
+    
+    (
+        X_init,
+        y_init,
+        costs_init,
+        X_candidate,
+        y_candidate,
+        costs_candidate,
+    ) = DATASET.get_init_holdout_data(77)
+    """
+    (
+        X_init,
+        y_init,
+        costs_init,
+        X_candidate,
+        y_candidate,
+        costs_candidate,
+        LIGANDS_init,
+        LIGANDS_candidate,
+        price_dict,
+    ) = DATASET.get_init_holdout_data(77)
+
+    #pdb.set_trace()

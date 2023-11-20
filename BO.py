@@ -21,8 +21,12 @@ from itertools import combinations
 from utils import *
 from kernels import *
 from botorch.utils.transforms import normalize
-from botorch.optim import optimize_acqf_discrete #, optimize_acqf_discrete_modified
+from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
+
+
+from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
+from botorch.sampling import SobolQMCNormalSampler
 from gpytorch.priors import GammaPrior
 from gpytorch.constraints import GreaterThan
 import warnings
@@ -459,7 +463,7 @@ def gibbon_search_modified(
         bounds=bounds_norm,
         q=q,
         choices=X_candidate_BO,
-        n_best=3,
+        n_best=n_best,
         unique=True,  ###<- changed to unique=True
         num_restarts=NUM_RESTARTS,
         raw_samples=RAW_SAMPLES,
@@ -467,10 +471,9 @@ def gibbon_search_modified(
     )
     candidates = candidates.view(n_best, q, candidates.shape[2])
     acq_values = acq_values.view(n_best, q)
-    
-    indices = find_indices(X_candidate_BO, candidates)
+    indices = find_indices(X_candidate_BO, candidates[2])
 
-    return indices, candidates
+    return indices, candidates[2]
 
 
 def gibbon_search(
@@ -517,7 +520,35 @@ def gibbon_search(
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-    #n_best=3, if use the modified version add this back in
+    # n_best=3, if use the modified version add this back in
+    indices = find_indices(X_candidate_BO, candidates)
+
+    return indices, candidates
+
+
+def qNoisyEI_search(
+    model, X_candidate_BO, bounds_norm, X_train, q, sequential=False, maximize=True
+):
+    """
+    Noisy expected improvement with batches
+    """
+
+    NUM_RESTARTS = 20
+    RAW_SAMPLES = 512
+    sampler = SobolQMCNormalSampler(1024)
+
+    qLogNEI = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)  # , q=q)
+    candidates, best_acq_values = optimize_acqf_discrete(
+        acq_function=qLogNEI,
+        bounds=bounds_norm,
+        q=q,
+        choices=X_candidate_BO,
+        unique=True,  ###<- changed to unique=True
+        num_restarts=NUM_RESTARTS,
+        raw_samples=RAW_SAMPLES,
+        sequential=sequential,
+    )
+
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
@@ -597,9 +628,11 @@ def BO_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
 
     # Get new candidates
-    indices, candidates = gibbon_search(
-        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
-    )
+    indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
+    # gibbon_search_modified(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, n_best=20)
+    # gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
+    # qNoisyEI_search(model, X_candidate_BO, bounds_norm, X, q=BATCH_SIZE)
+
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     y_best_BO = check_better(y, y_best_BO)
     y_better_BO.append(y_best_BO)
@@ -646,7 +679,9 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
     SUCCESS = False
-    indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
+    indices, candidates = gibbon_search(
+        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+    )
     suggested_costs = costs_BO[indices].flatten()
     cheap_indices = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
     cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
