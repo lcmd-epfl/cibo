@@ -21,7 +21,7 @@ from itertools import combinations
 from utils import *
 from kernels import *
 from botorch.utils.transforms import normalize
-from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
+from botorch.optim import optimize_acqf_discrete #, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from gpytorch.priors import GammaPrior
 from gpytorch.constraints import GreaterThan
