@@ -637,12 +637,12 @@ class Evaluation_data:
             X_init, y_init = convert2pytorch(X_init, y_init)
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
-            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+            return X_init,y_init,costs_init,X_holdout,y_holdout,costs_holdout
 
         elif self.init_strategy == "worst_ligand":
-            #assert (
+            # assert (
             #    self.dataset == "ebdo_direct_arylation"
-            #), "This init strategy is only implemented for the ebdo_direct_arylation dataset."
+            # ), "This init strategy is only implemented for the ebdo_direct_arylation dataset."
             indices_init = self.where_worst[: self.init_size]
             indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
             np.random.shuffle(indices_init)
@@ -1426,4 +1426,4 @@ if __name__ == "__main__":
         price_dict,
     ) = DATASET.get_init_holdout_data(77)
 
-    #pdb.set_trace()
+    # pdb.set_trace()
