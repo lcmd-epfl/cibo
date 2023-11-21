@@ -21,7 +21,7 @@ from itertools import combinations
 from utils import *
 from kernels import *
 from botorch.utils.transforms import normalize
-from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
+from botorch.optim import optimize_acqf_discrete #, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 
 
@@ -423,40 +423,29 @@ class CustomGPModel:
 
         return self.gp
 
-
-def gibbon_search_modified(
-    model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=3
-):
-    """
+"""
+def gibbon_search_modified(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=3):
     #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
-    returns index of the q best candidates in X_candidate_BO
-    as well as their feature vectors
+    #returns index of the q best candidates in X_candidate_BO
+    #as well as their feature vectors
 
-    Parameters:
-        model (botorch.models.gpytorch.GP): The GP model.
-        X_candidate_BO (numpy.ndarray): The holdout set.
-        bounds_norm (numpy.ndarray): The bounds for normalization.
-        q (int): The batch size.
-        sequential (bool): Whether to use sequential optimization.
-        maximize (bool): Whether to maximize or minimize the acquisition function.
-    Returns:
-        nump.ndarray: The indices of the selected molecules.
-        nump.ndarray: The selected molecules.
-    """
-
+    #Parameters:
+    #    model (botorch.models.gpytorch.GP): The GP model.
+    ##    X_candidate_BO (numpy.ndarray): The holdout set.
+    #    bounds_norm (numpy.ndarray): The bounds for normalization.
+    #    q (int): The batch size.
+    #    sequential (bool): Whether to use sequential optimization.
+    #    maximize (bool): Whether to maximize or minimize the acquisition function.
+    #Returns:
+    #    nump.ndarray: The indices of the selected molecules.
+    #    nump.ndarray: The selected molecules.
+    #
+    
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
 
     # source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
-
-    """
-    # TODO 
-    At bottom of script: 
-    best_idx = torch.argmax(acq_values)
-    return choices_batched[best_idx], acq_values[best_idx]
-    Modify to return 2nd, 3rd best etc. set of candidates to check if we can afford these
-    """
     # optimize_acqf_discrete_modified
     candidates, acq_values = optimize_acqf_discrete_modified(
         acq_function=qGIBBON,
@@ -474,7 +463,7 @@ def gibbon_search_modified(
     indices = find_indices(X_candidate_BO, candidates[2])
 
     return indices, candidates[2]
-
+"""
 
 def gibbon_search(
     model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True
