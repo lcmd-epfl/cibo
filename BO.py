@@ -2,8 +2,8 @@ import copy as cp
 import numpy as np
 import torch
 from botorch.models import SingleTaskGP
-from gpytorch.mlls import ExactMarginalLogLikelihood, LeaveOneOutPseudoLikelihood
-from botorch.fit import fit_gpytorch_model, fit_gpytorch_mll
+from gpytorch.mlls import ExactMarginalLogLikelihood
+from botorch.fit import fit_gpytorch_model
 from gpytorch.kernels import (
     RBFKernel,
     MaternKernel,
@@ -12,23 +12,15 @@ from gpytorch.kernels import (
     PolynomialKernel,
 )
 from gpytorch.means import ConstantMean
-from gpytorch.priors import NormalPrior
-from gpytorch.constraints import Positive, LessThan, Interval
 from sklearn.preprocessing import MinMaxScaler
 from torch.optim import Adam
-from scipy.spatial import distance
 from itertools import combinations
 from utils import *
 from kernels import *
-from botorch.utils.transforms import normalize
 from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
-
-
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 from botorch.sampling import SobolQMCNormalSampler
-from gpytorch.priors import GammaPrior
-from gpytorch.constraints import GreaterThan
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -114,67 +106,7 @@ def update_model(
     return model, GP_class.scaler_y
 
 
-def find_min_max_distance_and_ratio_scipy(x, vectors):
-    """
-    #FUNCTION concerns subfolder 3_similarity_based_costs
-    (helper function for get_batch_price function)
-    Calculate the minimum and maximum distance between a vector x and a set of vectors vectors.
-    Parameters:
-        x (numpy.ndarray): The vector x.
-        vectors (numpy.ndarray): The set of vectors.
-    Returns:
-        tuple: The ratio between the minimum and maximum distance, the minimum distance, and the maximum distance.
 
-    Equation for computation of the ratio:
-    \[
-    p(x, \text{vectors}) = \frac{\min_{i} d(x, \text{vectors}[i])}{\max \left( \max_{i,k} d(\text{vectors}[i], \text{vectors}[k]), \max_{i} d(x, \text{vectors}[i]) \right)}
-    \]
-
-    \[
-    d(a, b) = \sqrt{\sum_{j=1}^{n} (a[j] - b[j])^2}
-    \]
-    """
-    # Calculate the minimum distance between x and vectors using cdist
-    dist_1 = distance.cdist([x], vectors, "euclidean")
-    min_distance = np.min(dist_1)
-    # Calculate the maximum distance among all vectors and x using cdist
-    pairwise_distances = distance.cdist(vectors, vectors, "euclidean")
-    max_distance_vectors = np.max(pairwise_distances)
-    max_distance_x = np.max(dist_1)
-    max_distance = max(max_distance_vectors, max_distance_x)
-    # Calculate the ratio p = min_distance / max_distance
-    p = min_distance / max_distance
-    return p
-
-
-def get_batch_price(X_train, costy_mols):
-    """
-    #FUNCTION concerns subfolder 3_similarity_based_costs
-    Computes the total price of a batch of molecules.
-    to update the price dynamically as the batch is being constructed
-    for BO with synthesis at each iteration
-
-    Parameters:
-        X_train (numpy.ndarray): The training data.
-        costy_mols (numpy.ndarray): The batch of molecules.
-    Returns:
-        float: The total price of the batch.
-
-    e.g. if a molecule was included in the training set its price will be 0
-    if a similar molecule was not included in the training set its price will be 1
-    for cases in between the price will be between 0 and 1
-    this is done for all costly molecules in the batch and the total price is returned
-    """
-
-    X_train_cp = cp.deepcopy(X_train)
-    batch_price = 0
-
-    for mol in costy_mols:
-        costs = find_min_max_distance_and_ratio_scipy(mol, X_train_cp)
-        batch_price += costs  # Update the batch price
-        X_train_cp = np.vstack((X_train_cp, mol))
-
-    return batch_price
 
 
 class TensorStandardScaler:
@@ -270,8 +202,6 @@ class CustomGPModel:
             if type(X_train) == np.ndarray:
                 X_train = torch.tensor(X_train, dtype=torch.float32)
 
-            # X_train = normalize(X_train, bounds=self.bounds_norm).to(dtype=torch.float32)
-
         if self.fit_y:
             y_train = self.scaler_y.fit_transform(y_train)
         else:
@@ -315,8 +245,6 @@ class CustomGPModel:
 
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
-            # Found that these kernels can be numerically instable if not enough jitter is added
-            # self.gp.likelihood.noise_covar.register_constraint("raw_noise", gpytorch.constraints.GreaterThan(1e-5))
             self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(1e-3)
 
         if self.FIT_METHOD:
@@ -328,7 +256,7 @@ class CustomGPModel:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             fit_gpytorch_model(self.mll, max_retries=50000)
-            # fit_gpytorch_mll(self.mll, num_retries=50000)
+            
         else:
             """
             Use gradient descent to fit the hyperparameters of the GP with initial run
@@ -336,7 +264,6 @@ class CustomGPModel:
             """
 
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
-            # LeaveOneOutPseudoLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
             self.gp.train()
@@ -434,27 +361,32 @@ def gibbon_search_modified(
     n_best=100,
     return_nr=0,
 ):
-    # https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
-    # returns index of the q best candidates in X_candidate_BO
-    # as well as their feature vectors
-    # Parameters:
-    #    model (botorch.models.gpytorch.GP): The GP model.
-    ##    X_candidate_BO (numpy.ndarray): The holdout set.
-    #    bounds_norm (numpy.ndarray): The bounds for normalization.
-    #    q (int): The batch size.
-    #    sequential (bool): Whether to use sequential optimization.
-    #    maximize (bool): Whether to maximize or minimize the acquisition function.
-    # Returns:
-    #    nump.ndarray: The indices of the selected molecules.
-    #    nump.ndarray: The selected molecules.
-    #
+    """
+     https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
+     returns index of the q best candidates in X_candidate_BO
+     as well as their feature vectors using a modified version of the GIBBON function
+     implemented in BoTorch: it returns the n_best best candidates and then selects the
+     return_nr-th best candidate as the batch of molecules to be selected instead of only the 
+     best candidate
+     source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
+     but using here optimize_acqf_discrete_modified
 
+     Parameters:
+        model (botorch.models.gpytorch.GP): The GP model.
+        X_candidate_BO (numpy.ndarray): The holdout set.
+        bounds_norm (numpy.ndarray): The bounds for normalization.
+        q (int): The batch size.
+        sequential (bool): Whether to use sequential optimization.
+        maximize (bool): Whether to maximize or minimize the acquisition function.
+     Returns:
+        nump.ndarray: The indices of the selected molecules.
+        nump.ndarray: The selected molecules.
+    """
+    
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
 
-    # source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
-    # optimize_acqf_discrete_modified
 
     candidates, acq_values = optimize_acqf_discrete_modified(
         acq_function=qGIBBON,
@@ -462,7 +394,7 @@ def gibbon_search_modified(
         q=q,
         choices=X_candidate_BO,
         n_best=n_best,
-        unique=True,  ###<- changed to unique=True
+        unique=True,
         num_restarts=NUM_RESTARTS,
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
@@ -483,7 +415,7 @@ def gibbon_search(
     #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
     returns index of the q best candidates in X_candidate_BO
     as well as their feature vectors
-
+    source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
     Parameters:
         model (botorch.models.gpytorch.GP): The GP model.
         X_candidate_BO (numpy.ndarray): The holdout set.
@@ -500,27 +432,18 @@ def gibbon_search(
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
 
-    # source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
 
-    """
-    # TODO 
-    At bottom of script: 
-    best_idx = torch.argmax(acq_values)
-    return choices_batched[best_idx], acq_values[best_idx]
-    Modify to return 2nd, 3rd best etc. set of candidates to check if we can afford these
-    """
-    # optimize_acqf_discrete_modified
     candidates, best_acq_values = optimize_acqf_discrete(
         acq_function=qGIBBON,
         bounds=bounds_norm,
         q=q,
         choices=X_candidate_BO,
-        unique=True,  ###<- changed to unique=True
+        unique=True,
         num_restarts=NUM_RESTARTS,
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-    # n_best=3, if use the modified version add this back in
+    
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
@@ -543,7 +466,7 @@ def qNoisyEI_search(
         bounds=bounds_norm,
         q=q,
         choices=X_candidate_BO,
-        unique=True,  ###<- changed to unique=True
+        unique=True,
         num_restarts=NUM_RESTARTS,
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
@@ -552,26 +475,6 @@ def qNoisyEI_search(
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
-
-
-def check_better(y, y_best_BO):
-    """
-    Check if one of the molecuels in the new batch
-    is better than the current best one.
-    """
-
-    if max(y)[0] > y_best_BO:
-        return max(y)[0]
-    else:
-        return y_best_BO
-
-
-def check_success(cheap_indices, indices):
-    if cheap_indices == []:
-        return cheap_indices, False
-    else:
-        cheap_indices = indices[cheap_indices]
-        return cheap_indices, True
 
 
 def RS_STEP(RANDOM_data):
@@ -693,7 +596,7 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
             q=BATCH_SIZE,
             sequential=False,
             maximize=True,
-            n_best=200,
+            n_best=100,
             return_nr=ITERATION
         )
         suggested_costs = costs_BO[indices].flatten()
