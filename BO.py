@@ -345,7 +345,7 @@ def gibbon_search_modified(
     q,
     sequential=False,
     maximize=True,
-    n_best=100,
+    n_best=300,
     return_nr=0,
 ):
     """
@@ -583,7 +583,7 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
             q=BATCH_SIZE,
             sequential=False,
             maximize=True,
-            n_best=100,
+            n_best=300,
             return_nr=ITERATION
         )
         suggested_costs = costs_BO[indices].flatten()
