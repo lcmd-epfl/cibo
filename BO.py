@@ -8,8 +8,7 @@ from gpytorch.kernels import (
     RBFKernel,
     MaternKernel,
     ScaleKernel,
-    LinearKernel,
-    PolynomialKernel,
+    LinearKernel
 )
 from gpytorch.means import ConstantMean
 from sklearn.preprocessing import MinMaxScaler
@@ -104,10 +103,6 @@ def update_model(
     model = GP_class.fit(X, y)
 
     return model, GP_class.scaler_y
-
-
-
-
 
 class TensorStandardScaler:
     """
@@ -216,14 +211,6 @@ class CustomGPModel:
             kernel = MaternKernel(nu=2.5)
         elif self.kernel_type == "Linear":
             kernel = LinearKernel()
-        elif self.kernel_type == "Polynomial":
-            kernel = PolynomialKernel(power=2, offset=0.0)
-        elif self.kernel_type == "Product":
-            kernel = (
-                MaternKernel(nu=2.5, active_dims=torch.tensor(np.arange(216).tolist()))
-                * RBFKernel(active_dims=torch.tensor([216]))
-                * RBFKernel(active_dims=torch.tensor([217]))
-            )
         elif self.kernel_type == "Tanimoto":
             kernel = TanimotoKernel()
 
@@ -241,7 +228,7 @@ class CustomGPModel:
                 self.mean_module = ConstantMean()
                 self.covar_module = ScaleKernel(kernel)
 
-        # https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
+        #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
 
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
