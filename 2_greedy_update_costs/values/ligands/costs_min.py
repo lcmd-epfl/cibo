@@ -56,7 +56,6 @@ if __name__ == "__main__":
             X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(
                 y_candidate
             )
-            costs_FULL = cp.deepcopy(costs_candidate)
             X_candidate_BO = cp.deepcopy(X_candidate)
             y_candidate_BO = cp.deepcopy(y_candidate)
             y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
