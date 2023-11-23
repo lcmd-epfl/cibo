@@ -127,14 +127,14 @@ if __name__ == "__main__":
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
-            name="./figures/utility_{}_{}.png".format(
+            name="./figures_fast/utility_{}_{}.png".format(
                 exp_config["dataset"], exp_config["max_batch_cost"]
             ),
         )
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
-            name="./figures/optimization_{}_{}.png".format(
+            name="./figures_fast/optimization_{}_{}.png".format(
                 exp_config["dataset"], exp_config["max_batch_cost"]
             ),
         )
