@@ -25,6 +25,7 @@ import deepchem as dc
 import pandas as pd
 import pickle
 from scipy.spatial import distance
+from sklearn.preprocessing import MinMaxScaler
 
 
 def inchi_to_smiles(inchi_list):
@@ -122,7 +123,6 @@ class Evaluation_data:
                 "Entries of X are not between 0 and 1. Adding MinMaxScaler to the pipeline."
             )
             print("###############################################")
-            from sklearn.preprocessing import MinMaxScaler
 
             self.scaler_X = MinMaxScaler()
             self.X = self.scaler_X.fit_transform(self.X)
@@ -1481,7 +1481,6 @@ if __name__ == "__main__":
         "update_ligand_when_used",
         init_strategy=benchmark["init_strategy"],
     )
-
 
     (
         X_init,

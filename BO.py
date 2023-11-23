@@ -1,4 +1,3 @@
-import copy as cp
 import numpy as np
 import torch
 from botorch.models import SingleTaskGP
@@ -9,12 +8,12 @@ from gpytorch.means import ConstantMean
 from sklearn.preprocessing import MinMaxScaler
 from torch.optim import Adam
 from itertools import combinations
-from utils import *
-from kernels import *
 from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 from botorch.sampling import SobolQMCNormalSampler
+from utils import *
+from kernels import *
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -340,15 +339,7 @@ def gibbon_search_modified_all(
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
-
-    #if len(X_candidate_BO) < n_best:
-    #    pdb.set_trace()
-    n_best = len(X_candidate_BO) // q 
-    #pdb.set_trace()
-    #(len(X_candidate_BO) // q) * q
-    ###  this number needs to be divisible by q
-    #len(X_candidate_BO)
-
+    n_best = len(X_candidate_BO) // q
 
     candidates, acq_values = optimize_acqf_discrete_modified(
         acq_function=qGIBBON,
@@ -361,7 +352,6 @@ def gibbon_search_modified_all(
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-
 
     candidates = candidates.view(n_best, q, candidates.shape[2])
     acq_values = acq_values.view(n_best, q)
@@ -411,6 +401,7 @@ def gibbon_search_modified(
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
+    n_best = len(X_candidate_BO) // q
 
     candidates, acq_values = optimize_acqf_discrete_modified(
         acq_function=qGIBBON,
@@ -557,9 +548,6 @@ def BO_CASE_1_STEP(BO_data):
     indices, candidates = gibbon_search(
         model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
     )
-    # gibbon_search_modified(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, n_best=20)
-    # gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
-    # qNoisyEI_search(model, X_candidate_BO, bounds_norm, X, q=BATCH_SIZE)
 
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     y_best_BO = check_better(y, y_best_BO)
@@ -617,13 +605,8 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
         maximize=True,
     )
 
-    for ind, indices in enumerate(index_set):
-        print(ind)
-        
-        try:
-            suggested_costs = costs_BO[indices].flatten()
-        except:
-            pdb.set_trace()
+    for indices in index_set:
+        suggested_costs = costs_BO[indices].flatten()
 
         if suggested_costs.sum() <= MAX_BATCH_COST:
             X, y = update_X_y(
