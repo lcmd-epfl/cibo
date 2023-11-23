@@ -3,7 +3,6 @@ from utils import *
 from exp_configs_1 import benchmark
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
-import deepchem as dc
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
@@ -20,7 +19,6 @@ if TEST_OPTION == 1:
     )
     bounds_norm = DATASET.bounds_norm
 
-
     (
         X_init,
         y_init,
@@ -31,6 +29,11 @@ if TEST_OPTION == 1:
     ) = DATASET.get_init_holdout_data(777)
 
 else:
+    try:
+        import deepchem as dc
+    except ImportError:
+        print("Deepchem not installed. Please install deepchem to run this test.")
+        raise
 
     featurizer = dc.feat.CircularFingerprint(size=512)
 
