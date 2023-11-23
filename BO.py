@@ -4,12 +4,7 @@ import torch
 from botorch.models import SingleTaskGP
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from botorch.fit import fit_gpytorch_model
-from gpytorch.kernels import (
-    RBFKernel,
-    MaternKernel,
-    ScaleKernel,
-    LinearKernel
-)
+from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
 from gpytorch.means import ConstantMean
 from sklearn.preprocessing import MinMaxScaler
 from torch.optim import Adam
@@ -103,6 +98,7 @@ def update_model(
     model = GP_class.fit(X, y)
 
     return model, GP_class.scaler_y
+
 
 class TensorStandardScaler:
     """
@@ -228,7 +224,7 @@ class CustomGPModel:
                 self.mean_module = ConstantMean()
                 self.covar_module = ScaleKernel(kernel)
 
-        #https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
+        # https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
 
         self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
         if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
@@ -243,7 +239,7 @@ class CustomGPModel:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             fit_gpytorch_model(self.mll, max_retries=50000)
-            
+
         else:
             """
             Use gradient descent to fit the hyperparameters of the GP with initial run
@@ -338,6 +334,48 @@ class CustomGPModel:
         return self.gp
 
 
+def gibbon_search_modified_all(
+    model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300
+):
+    NUM_RESTARTS = 20
+    RAW_SAMPLES = 512
+    qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
+
+    #if len(X_candidate_BO) < n_best:
+    #    pdb.set_trace()
+    n_best = len(X_candidate_BO) // q 
+    #pdb.set_trace()
+    #(len(X_candidate_BO) // q) * q
+    ###  this number needs to be divisible by q
+    #len(X_candidate_BO)
+
+
+    candidates, acq_values = optimize_acqf_discrete_modified(
+        acq_function=qGIBBON,
+        bounds=bounds_norm,
+        q=q,
+        choices=X_candidate_BO,
+        n_best=n_best,
+        unique=True,
+        num_restarts=NUM_RESTARTS,
+        raw_samples=RAW_SAMPLES,
+        sequential=sequential,
+    )
+
+
+    candidates = candidates.view(n_best, q, candidates.shape[2])
+    acq_values = acq_values.view(n_best, q)
+
+    index_set = []
+    for return_nr in range(n_best):
+        indices = find_indices(X_candidate_BO, candidates[return_nr])
+        index_set.append(indices)
+
+    index_set = np.array(index_set)
+
+    return index_set, candidates
+
+
 def gibbon_search_modified(
     model,
     X_candidate_BO,
@@ -349,31 +387,30 @@ def gibbon_search_modified(
     return_nr=0,
 ):
     """
-     https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
-     returns index of the q best candidates in X_candidate_BO
-     as well as their feature vectors using a modified version of the GIBBON function
-     implemented in BoTorch: it returns the n_best best candidates and then selects the
-     return_nr-th best candidate as the batch of molecules to be selected instead of only the 
-     best candidate
-     source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
-     but using here optimize_acqf_discrete_modified
+    https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
+    returns index of the q best candidates in X_candidate_BO
+    as well as their feature vectors using a modified version of the GIBBON function
+    implemented in BoTorch: it returns the n_best best candidates and then selects the
+    return_nr-th best candidate as the batch of molecules to be selected instead of only the
+    best candidate
+    source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
+    but using here optimize_acqf_discrete_modified
 
-     Parameters:
-        model (botorch.models.gpytorch.GP): The GP model.
-        X_candidate_BO (numpy.ndarray): The holdout set.
-        bounds_norm (numpy.ndarray): The bounds for normalization.
-        q (int): The batch size.
-        sequential (bool): Whether to use sequential optimization.
-        maximize (bool): Whether to maximize or minimize the acquisition function.
-     Returns:
-        nump.ndarray: The indices of the selected molecules.
-        nump.ndarray: The selected molecules.
+    Parameters:
+       model (botorch.models.gpytorch.GP): The GP model.
+       X_candidate_BO (numpy.ndarray): The holdout set.
+       bounds_norm (numpy.ndarray): The bounds for normalization.
+       q (int): The batch size.
+       sequential (bool): Whether to use sequential optimization.
+       maximize (bool): Whether to maximize or minimize the acquisition function.
+    Returns:
+       nump.ndarray: The indices of the selected molecules.
+       nump.ndarray: The selected molecules.
     """
-    
+
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
-
 
     candidates, acq_values = optimize_acqf_discrete_modified(
         acq_function=qGIBBON,
@@ -419,7 +456,6 @@ def gibbon_search(
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
 
-
     candidates, best_acq_values = optimize_acqf_discrete(
         acq_function=qGIBBON,
         bounds=bounds_norm,
@@ -430,7 +466,7 @@ def gibbon_search(
         raw_samples=RAW_SAMPLES,
         sequential=sequential,
     )
-    
+
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
@@ -552,6 +588,81 @@ def BO_CASE_1_STEP(BO_data):
     return BO_data
 
 
+def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
+    """
+    BO with cost constraints on the costs per batch
+    """
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    costs_BO = BO_data["costs_BO"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    scaler_y = BO_data["scaler_y"]
+    MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+
+    SUCCESS = False
+
+    index_set, candidates = gibbon_search_modified_all(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q=BATCH_SIZE,
+        sequential=False,
+        maximize=True,
+    )
+
+    for ind, indices in enumerate(index_set):
+        print(ind)
+        
+        try:
+            suggested_costs = costs_BO[indices].flatten()
+        except:
+            pdb.set_trace()
+
+        if suggested_costs.sum() <= MAX_BATCH_COST:
+            X, y = update_X_y(
+                X,
+                y,
+                X_candidate_BO[indices],
+                y_candidate_BO,
+                indices,
+            )
+            y_best_BO = check_better(y, y_best_BO)
+
+            y_better_BO.append(y_best_BO)
+            BATCH_COST = sum(costs_BO[indices])[0]
+            print("Batch cost1: ", BATCH_COST)
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+            model, scaler_y = update_model(X, y, bounds_norm)
+
+            X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+            y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+            costs_BO = np.delete(costs_BO, indices, axis=0)
+            SUCCESS = True
+            break
+
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"], BO_data["y"] = X, y
+    BO_data["N_train"] = len(X)
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["bounds_norm"] = bounds_norm
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["costs_BO"] = costs_BO
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data
+
+
 def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
     """
     BO with cost constraints on the costs per batch
@@ -584,10 +695,10 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
             sequential=False,
             maximize=True,
             n_best=300,
-            return_nr=ITERATION
+            return_nr=ITERATION,
         )
         suggested_costs = costs_BO[indices].flatten()
-        
+
         if suggested_costs.sum() <= MAX_BATCH_COST:
             X, y = update_X_y(
                 X,
@@ -606,7 +717,7 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
 
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
-            costs_BO       = np.delete(costs_BO, indices, axis=0)
+            costs_BO = np.delete(costs_BO, indices, axis=0)
             break
 
         ITERATION += 1

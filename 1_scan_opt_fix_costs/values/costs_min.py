@@ -123,7 +123,6 @@ if __name__ == "__main__":
         y_better_BO_ALL = np.array(y_better_BO_ALL)
         y_better_RANDOM_ALL = np.array(y_better_RANDOM_ALL)
 
-        max_n = reaching_max_n(y_better_BO_ALL)
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
@@ -142,7 +141,6 @@ if __name__ == "__main__":
         RESULTS.append(
             {
                 "settings": exp_config,
-                "max_n": max_n,
                 "y_better_BO_ALL": y_better_BO_ALL,
                 "y_better_RANDOM_ALL": y_better_RANDOM_ALL,
                 "running_costs_BO_ALL": running_costs_BO_ALL,

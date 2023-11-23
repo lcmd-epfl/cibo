@@ -97,7 +97,7 @@ if __name__ == "__main__":
                 if COST_AWARE_BO == False:
                     BO_data = BO_CASE_1_STEP(BO_data)
                 else:
-                    BO_data = BO_AWARE_CASE_1_STEP(BO_data)
+                    BO_data = BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data)
 
                 RANDOM_data = RS_STEP(RANDOM_data)
 
