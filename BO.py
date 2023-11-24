@@ -1069,7 +1069,6 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     scaler_y = BO_data["scaler_y"]
 
-    # copied from BO_AWARE_SCAN_FAST_CASE_1_STEP
     index_set, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
@@ -1081,25 +1080,37 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
 
     price_list = np.array(list(price_dict_BO.values()))
     non_zero_prices = price_list[price_list > 0]
-    index_of_smallest_nonzero = np.where(price_list == non_zero_prices.min())[0][0]
-    sorted_non_zero_prices = np.sort(non_zero_prices)
-    second_smallest_value = sorted_non_zero_prices[1]
-    index_of_second_cheapest = np.where(price_list == second_smallest_value)[0][0]
+    try:
+        index_of_smallest_nonzero = np.where(price_list == non_zero_prices.min())[0][0]
 
-    cheapest_ligand_price = price_list[index_of_smallest_nonzero]
-    cheapest_ligand = list(price_dict_BO.keys())[index_of_smallest_nonzero]
+        cheapest_ligand_price = price_list[index_of_smallest_nonzero]
+        cheapest_ligand = list(price_dict_BO.keys())[index_of_smallest_nonzero]
 
-    second_cheapest_ligand_price = price_list[index_of_second_cheapest]
-    second_cheapest_ligand = list(price_dict_BO.keys())[index_of_second_cheapest]
+        try:
+            sorted_non_zero_prices = np.sort(non_zero_prices)
+            second_smallest_value = sorted_non_zero_prices[1]
+            index_of_second_cheapest = np.where(price_list == second_smallest_value)[0][0]
+            second_cheapest_ligand_price = price_list[index_of_second_cheapest]
+            second_cheapest_ligand = list(price_dict_BO.keys())[index_of_second_cheapest]
+        except:
+            print("Only one ligand left")
+            second_cheapest_ligand_price  = cheapest_ligand_price
 
-    if cheapest_ligand_price > MAX_BATCH_COST:
-        print("No ligand can be bought with the current budget")
-        print("Ask your boss for more $$$")
-    elif (
-        MAX_BATCH_COST > cheapest_ligand_price
-        and MAX_BATCH_COST < second_cheapest_ligand_price
-    ):
-        print("Only one ligand can be bought with the current budget")
+        if cheapest_ligand_price > MAX_BATCH_COST:
+            print("No ligand can be bought with the current budget")
+            print("Ask your boss for more $$$")
+        elif (
+            MAX_BATCH_COST > cheapest_ligand_price
+            and MAX_BATCH_COST < second_cheapest_ligand_price
+        ):
+            print("Only one ligand can be bought with the current budget")
+
+    except Exception as e:
+       # print(e)
+        #pdb.set_trace()
+        pass
+
+
     # select cheapest one that is not already 0 (correct that in the initialization)
     SUCCESS = False
     for indices in index_set:
@@ -1107,7 +1118,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
         suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
             NEW_LIGANDS, price_dict_BO
         )
-        # pdb.set_trace()
+
         BATCH_COST = suggested_costs_all
         if suggested_costs_all <= MAX_BATCH_COST:
             X, y = update_X_y(
@@ -1138,7 +1149,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             NEW_LIGANDS = [cheapest_ligand]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
 
-            index,_ = gibbon_search(
+            index, _ = gibbon_search(
                 model, X_candidate_BO[indices_cheap], bounds_norm, q=5
             )
 
@@ -1151,7 +1162,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             )
             y_best_BO = check_better(y, y_best_BO)
             y_better_BO.append(y_best_BO)
-            
+
             BATCH_COST = cheapest_ligand_price
             print("Batch cost2: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
