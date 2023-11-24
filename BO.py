@@ -594,9 +594,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
-    SUCCESS = False
-
-    index_set, candidates = gibbon_search_modified_all(
+    index_set, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -627,7 +625,6 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             costs_BO = np.delete(costs_BO, indices, axis=0)
-            SUCCESS = True
             break
 
     # Update BO data for next iteration
@@ -1037,6 +1034,134 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
         price_dict_BO = update_price_dict_ligands(
             price_dict_BO, NEW_LIGANDS[cheap_indices_1]
         )
+
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"] = X
+    BO_data["y"] = y
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
+    BO_data["price_dict_BO"] = price_dict_BO
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["N_train"] = len(X)
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data
+
+
+def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
+    # Get current BO data from last iteration
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
+    price_dict_BO = BO_data["price_dict_BO"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+    scaler_y = BO_data["scaler_y"]
+
+    # copied from BO_AWARE_SCAN_FAST_CASE_1_STEP
+    index_set, _ = gibbon_search_modified_all(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q=BATCH_SIZE,
+        sequential=False,
+        maximize=True,
+    )
+
+    price_list = np.array(list(price_dict_BO.values()))
+    non_zero_prices = price_list[price_list > 0]
+    index_of_smallest_nonzero = np.where(price_list == non_zero_prices.min())[0][0]
+    sorted_non_zero_prices = np.sort(non_zero_prices)
+    second_smallest_value = sorted_non_zero_prices[1]
+    index_of_second_cheapest = np.where(price_list == second_smallest_value)[0][0]
+
+    cheapest_ligand_price = price_list[index_of_smallest_nonzero]
+    cheapest_ligand = list(price_dict_BO.keys())[index_of_smallest_nonzero]
+
+    second_cheapest_ligand_price = price_list[index_of_second_cheapest]
+    second_cheapest_ligand = list(price_dict_BO.keys())[index_of_second_cheapest]
+
+    if cheapest_ligand_price > MAX_BATCH_COST:
+        print("No ligand can be bought with the current budget")
+        print("Ask your boss for more $$$")
+    elif (
+        MAX_BATCH_COST > cheapest_ligand_price
+        and MAX_BATCH_COST < second_cheapest_ligand_price
+    ):
+        print("Only one ligand can be bought with the current budget")
+    # select cheapest one that is not already 0 (correct that in the initialization)
+    SUCCESS = False
+    for indices in index_set:
+        NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+        suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+            NEW_LIGANDS, price_dict_BO
+        )
+        # pdb.set_trace()
+        BATCH_COST = suggested_costs_all
+        if suggested_costs_all <= MAX_BATCH_COST:
+            X, y = update_X_y(
+                X,
+                y,
+                X_candidate_BO[indices],
+                y_candidate_BO,
+                indices,
+            )
+            y_best_BO = check_better(y, y_best_BO)
+            y_better_BO.append(y_best_BO)
+
+            print("Batch cost1: ", BATCH_COST)
+
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+            model, scaler_y = update_model(X, y, bounds_norm)
+            X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+            y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+            LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+            price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
+            SUCCESS = True
+            break
+
+    if not SUCCESS:
+        # means that only mixed ligand batches are suggested which we cannot afford, thus take points from the cheapest ligand
+        if cheapest_ligand_price < MAX_BATCH_COST:
+            # find indices where LIGANDS_candidate_BO == cheapest_ligand
+            NEW_LIGANDS = [cheapest_ligand]
+            indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
+
+            index,_ = gibbon_search(
+                model, X_candidate_BO[indices_cheap], bounds_norm, q=5
+            )
+
+            X, y = update_X_y(
+                X,
+                y,
+                X_candidate_BO[indices_cheap][index],
+                y_candidate_BO,
+                indices_cheap[index],
+            )
+            y_best_BO = check_better(y, y_best_BO)
+            y_better_BO.append(y_best_BO)
+            
+            BATCH_COST = cheapest_ligand_price
+            print("Batch cost2: ", BATCH_COST)
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+            model, scaler_y = update_model(X, y, bounds_norm)
+            X_candidate_BO = np.delete(X_candidate_BO, indices_cheap[index], axis=0)
+            y_candidate_BO = np.delete(y_candidate_BO, indices_cheap[index], axis=0)
+            LIGANDS_candidate_BO = np.delete(
+                LIGANDS_candidate_BO, indices_cheap[index], axis=0
+            )
+            price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
 
     # Update BO data for next iteration
     BO_data["model"] = model

@@ -201,6 +201,9 @@ class Evaluation_data:
             )
 
             self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
+
+            # make price of worst ligand 0 because already in the inventory
+            # TAG
             self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
 
             self.where_worst = np.array(
@@ -653,6 +656,7 @@ class Evaluation_data:
             X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
 
             price_dict_init = self.ligand_prices
+            price_dict_init[self.worst_ligand] = 0
             LIGANDS_INIT = self.all_ligands[indices_init]
             LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
 
