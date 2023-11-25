@@ -110,7 +110,6 @@ if __name__ == "__main__":
                     BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data)
-                    # BO_AWARE_CASE_2A_STEP(BO_data)
 
                 RANDOM_data = RS_STEP_2A(RANDOM_data)
 
