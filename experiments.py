@@ -700,6 +700,14 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
                 price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
             else: 
                 print("All affordable ligands have been bought and no more free measurements possible. BO will stagnate now.")
+                y_better_BO.append(y_best_BO)
+                BATCH_COST = 0
+                print("Batch cost3: ", BATCH_COST)
+                running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+                #model, scaler_y = update_model(X, y, bounds_norm)
+                #break
+
+
     # Update BO data for next iteration
     BO_data["model"] = model
     BO_data["X"] = X
