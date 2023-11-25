@@ -5,6 +5,7 @@ import copy as cp
 from exp_configs_1 import *
 from BO import *
 from utils import *
+from experiments import *
 
 
 if __name__ == "__main__":
