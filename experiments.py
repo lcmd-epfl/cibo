@@ -457,19 +457,14 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
         model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
     )
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-    (
-        suggested_costs_all,
-        price_per_ligand,
-    ) = compute_price_acquisition_ligands(NEW_LIGANDS, price_dict_BO)
-    cheap_indices_1 = select_batch(price_per_ligand, MAX_BATCH_COST, BATCH_SIZE)
-    cheap_indices, SUCCESS_1 = check_success(cheap_indices_1, indices)
 
-    if SUCCESS_1:
-        BATCH_COST = np.array(price_per_ligand)[cheap_indices_1].sum()
+    indices, SUCCESS_1, BATCH_COST,NEW_LIGANDS = find_optimal_batch(price_dict_BO, NEW_LIGANDS,indices, BATCH_SIZE, MAX_BATCH_COST)
+
+
 
     ITERATION = 1
 
-    while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
+    while SUCCESS_1==False:
         INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
         SUCCESS_1 = False
 
@@ -487,28 +482,19 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
             )
             INCREMENTED_MAX_BATCH_COST += 1
 
-        indices, candidates = gibbon_search(
-            model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
-        )
+        indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE)
         NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-        (
-            suggested_costs_all,
-            price_per_ligand,
-        ) = compute_price_acquisition_ligands(NEW_LIGANDS, price_dict_BO)
+        print(indices )
+        indices, SUCCESS_2, BATCH_COST,NEW_LIGANDS = find_optimal_batch(price_dict_BO, NEW_LIGANDS,indices, BATCH_SIZE, INCREMENTED_MAX_BATCH_COST)
+        
 
-        cheap_indices_1 = select_batch(
-            price_per_ligand, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE
-        )
-        cheap_indices, SUCCESS_2 = check_success(cheap_indices_1, indices)
-        BATCH_COST = np.array(price_per_ligand)[cheap_indices_1].sum()
-
-        if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
+        if SUCCESS_2:
             X, y = update_X_y(
                 X,
                 y,
-                X_candidate_BO[cheap_indices],
+                X_candidate_BO[indices],
                 y_candidate_BO,
-                cheap_indices,
+                indices,
             )
             y_best_BO = check_better(y, y_best_BO)
             y_better_BO.append(y_best_BO)
@@ -517,14 +503,15 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
 
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
             model, scaler_y = update_model(X, y, bounds_norm)
-            X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
-            y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
+            X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+            y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             LIGANDS_candidate_BO = np.delete(
-                LIGANDS_candidate_BO, cheap_indices, axis=0
+                LIGANDS_candidate_BO, indices, axis=0
             )
             price_dict_BO = update_price_dict_ligands(
-                price_dict_BO, NEW_LIGANDS[cheap_indices_1]
+                price_dict_BO, NEW_LIGANDS
             )
+            break
 
         ITERATION += 1
 
@@ -532,9 +519,9 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
         X, y = update_X_y(
             X,
             y,
-            X_candidate_BO[cheap_indices],
+            X_candidate_BO[indices],
             y_candidate_BO,
-            cheap_indices,
+            indices,
         )
         y_best_BO = check_better(y, y_best_BO)
         y_better_BO.append(y_best_BO)
@@ -542,11 +529,11 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
         print("Batch cost2: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
         model, scaler_y = update_model(X, y, bounds_norm)
-        X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
-        y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
-        LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, cheap_indices, axis=0)
+        X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+        y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+        LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
         price_dict_BO = update_price_dict_ligands(
-            price_dict_BO, NEW_LIGANDS[cheap_indices_1]
+            price_dict_BO, NEW_LIGANDS
         )
 
     # Update BO data for next iteration

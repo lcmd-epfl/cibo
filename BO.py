@@ -7,7 +7,6 @@ from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
 from gpytorch.means import ConstantMean
 from sklearn.preprocessing import MinMaxScaler
 from torch.optim import Adam
-from itertools import combinations
 from botorch.optim import optimize_acqf_discrete, optimize_acqf_discrete_modified
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -29,31 +28,6 @@ tkwargs = {
     "dtype": torch.double,
     "device": torch.device("cpu"),
 }
-
-
-def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
-    """
-    Selects a batch of molecules from a list of suggested molecules that have the lowest indices
-    while meeting the constraints of the maximum cost and batch size.
-    """
-
-    n = len(suggested_costs)
-    # Check if BATCH_SIZE is larger than the length of the array, if so return None
-    if BATCH_SIZE > n:
-        return []
-    valid_combinations = []
-    # Find all valid combinations that meet the cost condition
-    for indices in combinations(range(n), BATCH_SIZE):
-        if sum(suggested_costs[i] for i in indices) <= MAX_BATCH_COST:
-            valid_combinations.append(indices)
-    # If there are no valid combinations, return None
-    if not valid_combinations:
-        return []
-    # Select the combination with the lowest indices
-    best_indices = min(
-        valid_combinations, key=lambda x: tuple(suggested_costs[i] for i in x)
-    )
-    return list(best_indices)
 
 
 def find_indices(X_candidate_BO, candidates):

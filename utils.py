@@ -12,7 +12,7 @@ import leruli
 from time import sleep
 import matplotlib as mpl
 from rdkit import Chem
-
+from itertools import combinations
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import random
@@ -1178,6 +1178,57 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
     price_per_ligand = np.array(price_per_ligand)
 
     return price_acquisition, price_per_ligand
+
+import itertools
+
+def find_optimal_batch(price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE, MAX_BATCH_COST):
+    """
+    Find the optimal batch of ligands that fulfills the price requirements.
+
+    :param price_dict_BO: Dictionary of ligand prices.
+    :param NEW_LIGANDS: Array of ligands.
+    :param original_indices: The original indices of the ligands.
+    :param BATCH_SIZE: Size of each batch.
+    :param MAX_BATCH_COST: Maximum allowed cost for a batch.
+    :return: Indices of the optimal batch of ligands.
+    """
+    # Generate 1000 unique permutations
+    new_range = np.arange(len(NEW_LIGANDS))
+    permutations = list(itertools.permutations(new_range, BATCH_SIZE))
+    #list(itertools.permutations(NEW_LIGANDS, BATCH_SIZE))
+    if len(permutations) > 1000:
+        permutations = permutations[:1000]
+    permutations =  [list(perm) for perm in permutations]
+
+    BATCH_LIGANDS = [NEW_LIGANDS[perm] for perm in permutations]
+    BATCH_INDICES = [original_indices[perm] for perm in permutations]
+    BATCH_PRICE = []
+    for batch in BATCH_LIGANDS:
+        curr_price = 0
+        check_dict = cp.deepcopy(price_dict_BO)
+        for lig in batch:
+            curr_price += check_dict[lig]
+            check_dict[lig] = 0
+
+        BATCH_PRICE.append(curr_price)
+    
+    BATCH_PRICE = np.array(BATCH_PRICE)
+    
+    #find where BATCH_PRICE is smaller than MAX_BATCH_COST
+    good_batches = np.where(BATCH_PRICE <= MAX_BATCH_COST)[0]
+    
+    if len(good_batches) == 0:
+        return [], False, 0, []
+    else:
+        best_batch = good_batches[0]
+        best_batch_indices = BATCH_INDICES[best_batch]
+        best_price = BATCH_PRICE[best_batch]
+        best_LIGANDS = BATCH_LIGANDS[best_batch]
+        return best_batch_indices, True, best_price, best_LIGANDS
+            
+
+        
+
 
 
 def compute_price_acquisition_all(NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS, price_dict):
