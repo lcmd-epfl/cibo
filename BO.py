@@ -491,6 +491,9 @@ def qNoisyEI_search(
     return indices, candidates
 
 
+
+
+
 def RS_STEP(RANDOM_data):
     # Extract the data from the dictionary
     y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
