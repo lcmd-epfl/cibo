@@ -476,11 +476,12 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
         if INCREMENTED_BATCH_SIZE > len(X_candidate_BO):
             print("Not enough candidates left to account for the costs")
             INCREMENTED_MAX_BATCH_COST += 1
-        if INCREMENTED_BATCH_SIZE > 50:
+        if INCREMENTED_BATCH_SIZE > 25:
             print(
-                "After 50 iterations, still cost conditions not met. Increasing cost by 1 and trying again"
+                "After 25 iterations, still cost conditions not met. Increasing cost by 1 and trying again"
             )
             INCREMENTED_MAX_BATCH_COST += 1
+            break
 
         indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE)
         NEW_LIGANDS = LIGANDS_candidate_BO[indices]
