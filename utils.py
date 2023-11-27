@@ -13,6 +13,7 @@ from time import sleep
 import matplotlib as mpl
 from rdkit import Chem
 from itertools import combinations
+import math
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import random
@@ -1179,9 +1180,13 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
 
     return price_acquisition, price_per_ligand
 
+
 import itertools
 
-def find_optimal_batch(price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE, MAX_BATCH_COST):
+
+def find_optimal_batch(
+    price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE, MAX_BATCH_COST
+):
     """
     Find the optimal batch of ligands that fulfills the price requirements.
 
@@ -1195,10 +1200,10 @@ def find_optimal_batch(price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE,
     # Generate 1000 unique permutations
     new_range = np.arange(len(NEW_LIGANDS))
     permutations = list(itertools.permutations(new_range, BATCH_SIZE))
-    #list(itertools.permutations(NEW_LIGANDS, BATCH_SIZE))
+    # list(itertools.permutations(NEW_LIGANDS, BATCH_SIZE))
     if len(permutations) > 1000:
         permutations = permutations[:1000]
-    permutations =  [list(perm) for perm in permutations]
+    permutations = [list(perm) for perm in permutations]
 
     BATCH_LIGANDS = [NEW_LIGANDS[perm] for perm in permutations]
     BATCH_INDICES = [original_indices[perm] for perm in permutations]
@@ -1211,10 +1216,10 @@ def find_optimal_batch(price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE,
             check_dict[lig] = 0
 
         BATCH_PRICE.append(curr_price)
-    
+
     BATCH_PRICE = np.array(BATCH_PRICE)
-    
-    #find where BATCH_PRICE is smaller than MAX_BATCH_COST
+
+    # find where BATCH_PRICE is smaller than MAX_BATCH_COST
     good_batches = np.where(BATCH_PRICE <= MAX_BATCH_COST)[0]
     # Todo select the batch where originally most indices where from left of original indices
     if len(good_batches) == 0:
@@ -1225,10 +1230,6 @@ def find_optimal_batch(price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE,
         best_price = BATCH_PRICE[best_batch]
         best_LIGANDS = BATCH_LIGANDS[best_batch]
         return best_batch_indices, True, best_price, best_LIGANDS
-            
-
-        
-
 
 
 def compute_price_acquisition_all(NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS, price_dict):
@@ -1548,3 +1549,8 @@ if __name__ == "__main__":
         LIGANDS_candidate,
         price_dict,
     ) = DATASET.get_init_holdout_data(77)
+
+
+
+def round_up_to_next_ten(n):
+    return math.ceil(n / 10) * 10
