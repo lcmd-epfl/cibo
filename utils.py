@@ -1216,7 +1216,7 @@ def find_optimal_batch(price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE,
     
     #find where BATCH_PRICE is smaller than MAX_BATCH_COST
     good_batches = np.where(BATCH_PRICE <= MAX_BATCH_COST)[0]
-    
+    # Todo select the batch where originally most indices where from left of original indices
     if len(good_batches) == 0:
         return [], False, 0, []
     else:

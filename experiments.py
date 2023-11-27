@@ -2,9 +2,6 @@ from BO import *
 from utils import *
 
 
-
-
-
 def RS_STEP(RANDOM_data):
     # Extract the data from the dictionary
     y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
@@ -458,13 +455,13 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
     )
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
 
-    indices, SUCCESS_1, BATCH_COST,NEW_LIGANDS = find_optimal_batch(price_dict_BO, NEW_LIGANDS,indices, BATCH_SIZE, MAX_BATCH_COST)
-
-
+    indices, SUCCESS_1, BATCH_COST, NEW_LIGANDS = find_optimal_batch(
+        price_dict_BO, NEW_LIGANDS, indices, BATCH_SIZE, MAX_BATCH_COST
+    )
 
     ITERATION = 1
 
-    while SUCCESS_1==False:
+    while SUCCESS_1 == False:
         INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
         SUCCESS_1 = False
 
@@ -478,16 +475,19 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
             INCREMENTED_MAX_BATCH_COST += 1
         if INCREMENTED_BATCH_SIZE > 25:
             print(
-                "After 25 iterations, still cost conditions not met. Increasing cost by 1 and trying again"
+                "After 25 iterations, still cost conditions not met. Breaking..."
             )
             INCREMENTED_MAX_BATCH_COST += 1
             break
 
-        indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE)
+        indices, candidates = gibbon_search(
+            model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
+        )
         NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-        print(indices )
-        indices, SUCCESS_2, BATCH_COST,NEW_LIGANDS = find_optimal_batch(price_dict_BO, NEW_LIGANDS,indices, BATCH_SIZE, INCREMENTED_MAX_BATCH_COST)
-        
+        print(indices)
+        indices, SUCCESS_2, BATCH_COST, NEW_LIGANDS = find_optimal_batch(
+            price_dict_BO, NEW_LIGANDS, indices, BATCH_SIZE, INCREMENTED_MAX_BATCH_COST
+        )
 
         if SUCCESS_2:
             X, y = update_X_y(
@@ -498,7 +498,6 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
                 indices,
             )
             y_best_BO = check_better(y, y_best_BO)
-            y_better_BO.append(y_best_BO)
 
             print("Batch cost1: ", BATCH_COST)
 
@@ -506,12 +505,8 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
             model, scaler_y = update_model(X, y, bounds_norm)
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
-            LIGANDS_candidate_BO = np.delete(
-                LIGANDS_candidate_BO, indices, axis=0
-            )
-            price_dict_BO = update_price_dict_ligands(
-                price_dict_BO, NEW_LIGANDS
-            )
+            LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+            price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
             break
 
         ITERATION += 1
@@ -525,7 +520,6 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
             indices,
         )
         y_best_BO = check_better(y, y_best_BO)
-        y_better_BO.append(y_best_BO)
 
         print("Batch cost2: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
@@ -533,11 +527,13 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
         X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
         y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
         LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
-        price_dict_BO = update_price_dict_ligands(
-            price_dict_BO, NEW_LIGANDS
-        )
+        price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
 
     # Update BO data for next iteration
+    y_better_BO.append(y_best_BO)
+    if not SUCCESS_1 and not SUCCESS_2:
+        running_costs_BO.append(running_costs_BO[-1])
+
     BO_data["model"] = model
     BO_data["X"] = X
     BO_data["y"] = y
@@ -629,7 +625,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             break
 
     if not SUCCESS:
-        # means that only mixed ligand batches are suggested by the acqfct which we cannot afford, 
+        # means that only mixed ligand batches are suggested by the acqfct which we cannot afford,
         # thus take points from the cheapest ligand
         if cheapest_ligand_price < MAX_BATCH_COST:
             # find indices where LIGANDS_candidate_BO == cheapest_ligand
@@ -637,7 +633,8 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
 
             index, _ = gibbon_search(
-                model, X_candidate_BO[indices_cheap], bounds_norm, q=5)
+                model, X_candidate_BO[indices_cheap], bounds_norm, q=5
+            )
 
             X, y = update_X_y(
                 X,
@@ -665,7 +662,9 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             cheapest_ligand = list(price_dict_BO.keys())[index_of_zero]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
             if indices_cheap > 0:
-                index, _ = gibbon_search(model, X_candidate_BO[indices_cheap], bounds_norm, q=5)
+                index, _ = gibbon_search(
+                    model, X_candidate_BO[indices_cheap], bounds_norm, q=5
+                )
                 X, y = update_X_y(
                     X,
                     y,
@@ -686,15 +685,16 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
                     LIGANDS_candidate_BO, indices_cheap[index], axis=0
                 )
                 price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
-            else: 
-                print("All affordable ligands have been bought and no more free measurements possible. BO will stagnate now.")
+            else:
+                print(
+                    "All affordable ligands have been bought and no more free measurements possible. BO will stagnate now."
+                )
                 y_better_BO.append(y_best_BO)
                 BATCH_COST = 0
                 print("Batch cost3: ", BATCH_COST)
                 running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-                #model, scaler_y = update_model(X, y, bounds_norm)
-                #break
-
+                # model, scaler_y = update_model(X, y, bounds_norm)
+                # break
 
     # Update BO data for next iteration
     BO_data["model"] = model
