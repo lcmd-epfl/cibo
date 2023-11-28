@@ -6,6 +6,185 @@ import numpy as np
 import pdb
 import tqdm
 
+
+def compute_descriptors_from_smiles(
+    smiles, normalize=False, missingVal=None, silent=True
+):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return None
+
+    # List of descriptors to exclude
+    exclude_descriptors = [
+        "BCUT2D_MWHI",
+        "BCUT2D_MWLOW",
+        "BCUT2D_CHGHI",
+        "BCUT2D_CHGLO",
+        "BCUT2D_LOGPHI",
+        "BCUT2D_LOGPLOW",
+        "BCUT2D_MRHI",
+        "BCUT2D_MRLOW",
+    ]
+
+    # Get a list of all descriptor calculation functions
+    descriptor_names = [
+        x[0] for x in Descriptors._descList if x[0] not in exclude_descriptors
+    ]
+
+    descriptor_values = []
+    nan_descriptors = []
+
+    for name in descriptor_names:
+        try:
+            descriptor_func = getattr(Descriptors, name)
+            value = descriptor_func(mol)
+
+            if math.isnan(value):
+                nan_descriptors.append(name)
+
+            descriptor_values.append(value)
+        except Exception as e:
+            if not silent:
+                print(f"Failed to compute descriptor {name}: {e}")
+            descriptor_values.append(missingVal)
+
+    if nan_descriptors:
+        print(f"Descriptors that returned nan: {nan_descriptors}")
+
+    # Count elements in the molecule
+    atoms = [atom.GetSymbol() for atom in mol.GetAtoms()]
+    element_counts = Counter(atoms)
+
+    # Convert list to a numpy array (vector)
+    descriptor_vector = np.array(descriptor_values)
+
+    # Convert element counts to a numpy array and append to the descriptor vector
+    element_vector = np.array(
+        [
+            element_counts.get(element, 0)
+            for element in [
+                "C",
+                "O",
+                "N",
+                "H",
+                "S",
+                "F",
+                "Cl",
+                "Br",
+                "I",
+                "K",
+                "P",
+                "Cs",
+            ]
+        ]
+    )
+    descriptor_vector = np.concatenate([descriptor_vector, element_vector])
+
+    if normalize:
+        # Normalize the vector
+        norm = np.linalg.norm(descriptor_vector)
+        if norm == 0:
+            return descriptor_vector
+        return descriptor_vector / norm
+
+    return descriptor_vector
+
+
+def compute_descriptors_from_smiles_list(
+    smiles_list, normalize=False, missingVal=None, silent=True
+):
+    descriptor_vectors = []
+
+    for smiles in smiles_list:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            descriptor_vectors.append(None)
+            continue
+
+        # List of descriptors to exclude
+        exclude_descriptors = [
+            "BCUT2D_MWHI",
+            "BCUT2D_MWLOW",
+            "BCUT2D_CHGHI",
+            "BCUT2D_CHGLO",
+            "BCUT2D_LOGPHI",
+            "BCUT2D_LOGPLOW",
+            "BCUT2D_MRHI",
+            "BCUT2D_MRLOW",
+            "MaxPartialCharge",
+            "MinPartialCharge",
+            "MaxAbsPartialCharge",
+            "MinAbsPartialCharge",
+        ]
+
+        # Get a list of all descriptor calculation functions
+        descriptor_names = [
+            x[0] for x in Descriptors._descList if x[0] not in exclude_descriptors
+        ]
+
+        descriptor_values = []
+        nan_descriptors = []
+
+        for name in descriptor_names:
+            try:
+                descriptor_func = getattr(Descriptors, name)
+                value = descriptor_func(mol)
+
+                if math.isnan(value):
+                    nan_descriptors.append(name)
+
+                descriptor_values.append(value)
+            except Exception as e:
+                if not silent:
+                    print(f"Failed to compute descriptor {name}: {e}")
+                descriptor_values.append(missingVal)
+
+        if nan_descriptors:
+            print(
+                f"Descriptors that returned nan for SMILES {smiles}: {nan_descriptors}"
+            )
+
+        # Count elements in the molecule
+        atoms = [atom.GetSymbol() for atom in mol.GetAtoms()]
+        element_counts = Counter(atoms)
+
+        # Convert list to a numpy array (vector)
+        descriptor_vector = np.array(descriptor_values)
+
+        # Convert element counts to a numpy array and append to the descriptor vector
+        element_vector = np.array(
+            [
+                element_counts.get(element, 0)
+                for element in [
+                    "C",
+                    "O",
+                    "N",
+                    "H",
+                    "S",
+                    "F",
+                    "Cl",
+                    "Br",
+                    "I",
+                    "K",
+                    "P",
+                    "Cs",
+                ]
+            ]
+        )
+        descriptor_vector = np.concatenate([descriptor_vector, element_vector])
+
+        if normalize:
+            # Normalize the vector
+            norm = np.linalg.norm(descriptor_vector)
+            if norm == 0:
+                descriptor_vector = descriptor_vector
+            else:
+                descriptor_vector = descriptor_vector / norm
+
+        descriptor_vectors.append(descriptor_vector)
+
+    return np.array(descriptor_vectors)
+
 """
 import leruli
 

@@ -5,7 +5,6 @@ from rdkit.Chem import Descriptors
 from rdkit.Chem import AllChem
 import numpy as np
 import math
-from collections import Counter
 import matplotlib as mpl
 from rdkit import Chem
 from itertools import combinations
@@ -15,7 +14,6 @@ import matplotlib.pyplot as plt
 import random
 import torch
 import copy as cp
-import deepchem as dc
 import pandas as pd
 import pickle
 from scipy.spatial import distance
@@ -43,6 +41,12 @@ def inchi_to_smiles(inchi_list):
     return smiles_list
 
 
+def convert2pytorch(X, y):
+    X = torch.from_numpy(X).float()
+    y = torch.from_numpy(y).float().reshape(-1, 1)
+    return X, y
+
+
 def check_entries(array_of_arrays):
     for array in array_of_arrays:
         for item in array:
@@ -51,12 +55,27 @@ def check_entries(array_of_arrays):
     return True
 
 
-def convert2pytorch(X, y):
-    X = torch.from_numpy(X).float()
-    y = torch.from_numpy(y).float().reshape(-1, 1)
-    return X, y
+class FingerprintGenerator:
+    def __init__(self, nBits=512, radius=2):
+        self.nBits = nBits
+        self.radius = radius
 
-
+    def featurize(self, smiles_list):
+        fingerprints = []
+        for smiles in smiles_list:
+            mol = Chem.MolFromSmiles(smiles)
+            if mol is not None:
+                fp = AllChem.GetMorganFingerprintAsBitVect(
+                    mol, self.radius, nBits=self.nBits
+                )
+                fp_array = np.array(
+                    list(fp.ToBitString()), dtype=int
+                )  # Convert to NumPy array
+                fingerprints.append(fp_array)
+            else:
+                print(f"Could not generate a molecule from SMILES: {smiles}")
+                fingerprints.append(np.array([None]))
+        return np.array(fingerprints)
 
 
 class Evaluation_data:
@@ -69,7 +88,7 @@ class Evaluation_data:
         self.ECFP_size = 512
         self.radius = 2
 
-        self.ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
+        self.ftzr = FingerprintGenerator(nBits=self.ECFP_size, radius=self.radius)
         self.get_raw_dataset()
 
         rep_size = self.X.shape[1]
@@ -88,6 +107,11 @@ class Evaluation_data:
 
     def get_raw_dataset(self):
         if self.dataset == "freesolv":
+            try: 
+                import deepchem as dc
+            except:
+                print("DeepChem not installed.")
+                exit()
             _, datasets, _ = dc.molnet.load_sampl(
                 featurizer=self.ftzr, splitter="random", transformers=[]
             )
@@ -125,9 +149,9 @@ class Evaluation_data:
                 self.data["Solvent_inchi"].values
             )
 
-            col_0_base = self.ftzr(self.data["Base_SMILES"])
-            col_1_ligand = self.ftzr(self.data["Ligand_SMILES"])
-            col_2_solvent = self.ftzr(self.data["Solvent_SMILES"])
+            col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
+            col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
+            col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
             col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1, 1)
             col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1, 1)
 
@@ -192,9 +216,9 @@ class Evaluation_data:
             self.data = pd.read_csv(dataset_url)
             self.data = self.data.dropna()
             self.data = self.data.sample(frac=1).reset_index(drop=True)
-            col_0_base = self.ftzr(self.data["Base_SMILES"])
-            col_1_ligand = self.ftzr(self.data["Ligand_SMILES"])
-            col_2_solvent = self.ftzr(self.data["Solvent_SMILES"])
+            col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
+            col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
+            col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
             col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1, 1)
             col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1, 1)
 
@@ -256,9 +280,7 @@ class Evaluation_data:
             dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
             # load url directly into pandas dataframe
 
-            data = pd.read_csv(
-                dataset_url
-            )
+            data = pd.read_csv(dataset_url)
             # remove rows with nan
             data = data.dropna()
             # randomly shuffly df
@@ -267,8 +289,6 @@ class Evaluation_data:
             unique_ligands = data["ligand_smiles"].unique()
             unique_aryl_halides = data["aryl_halide_smiles"].unique()
             unique_additives = data["additive_smiles"].unique()
-
-
 
             col_0_base = np.array(
                 [self.ftzr.featurize(x)[0] for x in data["base_smiles"]]
@@ -717,201 +737,6 @@ def canonicalize_smiles(smiles):
 
 def canonicalize_smiles_list(smiles_list):
     return [canonicalize_smiles(smiles) for smiles in smiles_list]
-
-
-def compute_descriptors_from_smiles(
-    smiles, normalize=False, missingVal=None, silent=True
-):
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return None
-
-    # List of descriptors to exclude
-    exclude_descriptors = [
-        "BCUT2D_MWHI",
-        "BCUT2D_MWLOW",
-        "BCUT2D_CHGHI",
-        "BCUT2D_CHGLO",
-        "BCUT2D_LOGPHI",
-        "BCUT2D_LOGPLOW",
-        "BCUT2D_MRHI",
-        "BCUT2D_MRLOW",
-    ]
-
-    # Get a list of all descriptor calculation functions
-    descriptor_names = [
-        x[0] for x in Descriptors._descList if x[0] not in exclude_descriptors
-    ]
-
-    descriptor_values = []
-    nan_descriptors = []
-
-    for name in descriptor_names:
-        try:
-            descriptor_func = getattr(Descriptors, name)
-            value = descriptor_func(mol)
-
-            if math.isnan(value):
-                nan_descriptors.append(name)
-
-            descriptor_values.append(value)
-        except Exception as e:
-            if not silent:
-                print(f"Failed to compute descriptor {name}: {e}")
-            descriptor_values.append(missingVal)
-
-    if nan_descriptors:
-        print(f"Descriptors that returned nan: {nan_descriptors}")
-
-    # Count elements in the molecule
-    atoms = [atom.GetSymbol() for atom in mol.GetAtoms()]
-    element_counts = Counter(atoms)
-
-    # Convert list to a numpy array (vector)
-    descriptor_vector = np.array(descriptor_values)
-
-    # Convert element counts to a numpy array and append to the descriptor vector
-    element_vector = np.array(
-        [
-            element_counts.get(element, 0)
-            for element in [
-                "C",
-                "O",
-                "N",
-                "H",
-                "S",
-                "F",
-                "Cl",
-                "Br",
-                "I",
-                "K",
-                "P",
-                "Cs",
-            ]
-        ]
-    )
-    descriptor_vector = np.concatenate([descriptor_vector, element_vector])
-
-    if normalize:
-        # Normalize the vector
-        norm = np.linalg.norm(descriptor_vector)
-        if norm == 0:
-            return descriptor_vector
-        return descriptor_vector / norm
-
-    return descriptor_vector
-
-
-def compute_descriptors_from_smiles_list(
-    smiles_list, normalize=False, missingVal=None, silent=True
-):
-    descriptor_vectors = []
-
-    for smiles in smiles_list:
-        mol = Chem.MolFromSmiles(smiles)
-        if mol is None:
-            descriptor_vectors.append(None)
-            continue
-
-        # List of descriptors to exclude
-        exclude_descriptors = [
-            "BCUT2D_MWHI",
-            "BCUT2D_MWLOW",
-            "BCUT2D_CHGHI",
-            "BCUT2D_CHGLO",
-            "BCUT2D_LOGPHI",
-            "BCUT2D_LOGPLOW",
-            "BCUT2D_MRHI",
-            "BCUT2D_MRLOW",
-            "MaxPartialCharge",
-            "MinPartialCharge",
-            "MaxAbsPartialCharge",
-            "MinAbsPartialCharge",
-        ]
-
-        # Get a list of all descriptor calculation functions
-        descriptor_names = [
-            x[0] for x in Descriptors._descList if x[0] not in exclude_descriptors
-        ]
-
-        descriptor_values = []
-        nan_descriptors = []
-
-        for name in descriptor_names:
-            try:
-                descriptor_func = getattr(Descriptors, name)
-                value = descriptor_func(mol)
-
-                if math.isnan(value):
-                    nan_descriptors.append(name)
-
-                descriptor_values.append(value)
-            except Exception as e:
-                if not silent:
-                    print(f"Failed to compute descriptor {name}: {e}")
-                descriptor_values.append(missingVal)
-
-        if nan_descriptors:
-            print(
-                f"Descriptors that returned nan for SMILES {smiles}: {nan_descriptors}"
-            )
-
-        # Count elements in the molecule
-        atoms = [atom.GetSymbol() for atom in mol.GetAtoms()]
-        element_counts = Counter(atoms)
-
-        # Convert list to a numpy array (vector)
-        descriptor_vector = np.array(descriptor_values)
-
-        # Convert element counts to a numpy array and append to the descriptor vector
-        element_vector = np.array(
-            [
-                element_counts.get(element, 0)
-                for element in [
-                    "C",
-                    "O",
-                    "N",
-                    "H",
-                    "S",
-                    "F",
-                    "Cl",
-                    "Br",
-                    "I",
-                    "K",
-                    "P",
-                    "Cs",
-                ]
-            ]
-        )
-        descriptor_vector = np.concatenate([descriptor_vector, element_vector])
-
-        if normalize:
-            # Normalize the vector
-            norm = np.linalg.norm(descriptor_vector)
-            if norm == 0:
-                descriptor_vector = descriptor_vector
-            else:
-                descriptor_vector = descriptor_vector / norm
-
-        descriptor_vectors.append(descriptor_vector)
-
-    return np.array(descriptor_vectors)
-
-
-def generate_fingerprints(smiles_list, nBits=512):
-    fingerprints = []
-    for smiles in smiles_list:
-        mol = Chem.MolFromSmiles(smiles)
-        if mol is not None:
-            fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=nBits)
-            fp_array = np.array(
-                list(fp.ToBitString()), dtype=int
-            )  # Convert to NumPy array
-            fingerprints.append(fp_array)
-        else:
-            print(f"Could not generate a molecule from SMILES: {smiles}")
-            fingerprints.append(np.array([None]))
-    return np.array(fingerprints)
 
 
 def check_better(y, y_best_BO):
