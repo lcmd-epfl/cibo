@@ -120,10 +120,10 @@ if __name__ == "__main__":
             running_costs_BO_ALL.append(BO_data["running_costs_BO"])
             running_costs_RANDOM_ALL.append(RANDOM_data["running_costs_RANDOM"])
 
+        print(y_better_BO_ALL)
         y_better_BO_ALL = np.array(y_better_BO_ALL)
         y_better_RANDOM_ALL = np.array(y_better_RANDOM_ALL)
 
-        
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
