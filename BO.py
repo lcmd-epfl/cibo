@@ -1,22 +1,27 @@
 import numpy as np
 import torch
-from botorch.models import SingleTaskGP
-from gpytorch.mlls import ExactMarginalLogLikelihood
-from botorch.fit import fit_gpytorch_model
-from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
-from gpytorch.means import ConstantMean
-from sklearn.preprocessing import MinMaxScaler
-from torch.optim import Adam
-from botorch.optim import optimize_acqf_discrete
-from botroch_ext import optimize_acqf_discrete_modified
-from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
-from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
-from botorch.sampling import SobolQMCNormalSampler
-from utils import *
-from kernels import *
 import warnings
 
+from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
+from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
+from botorch.fit import fit_gpytorch_model
+from botorch.models import SingleTaskGP
+from botorch.optim import optimize_acqf_discrete
+from botorch.sampling import SobolQMCNormalSampler
+from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
+from gpytorch.means import ConstantMean
+from gpytorch.mlls import ExactMarginalLogLikelihood
+from sklearn.preprocessing import MinMaxScaler
+from torch.optim import Adam
+
+# Custom module imports
+from botroch_ext import optimize_acqf_discrete_modified
+from kernels import *
+from utils import *
+
+# Suppress warnings
 warnings.filterwarnings("ignore")
+
 
 random.seed(45577)
 np.random.seed(4565777)

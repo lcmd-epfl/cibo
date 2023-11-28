@@ -1,23 +1,22 @@
-import os
-import pandas as pd
-from rdkit import Chem
-from rdkit.Chem import Descriptors
-from rdkit.Chem import AllChem
-import numpy as np
-import math
-import matplotlib as mpl
-from rdkit import Chem
-from itertools import combinations
-import math
-mpl.use("Agg")
-import matplotlib.pyplot as plt
-import random
-import torch
 import copy as cp
-import pandas as pd
+import itertools
+import math
+import os
 import pickle
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch
+from itertools import combinations
+from matplotlib import use as mpl_use
+from rdkit import Chem
+from rdkit.Chem import AllChem
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
+
+mpl_use("Agg")  # Set the matplotlib backend
 
 
 def inchi_to_smiles(inchi_list):
@@ -107,7 +106,7 @@ class Evaluation_data:
 
     def get_raw_dataset(self):
         if self.dataset == "freesolv":
-            try: 
+            try:
                 import deepchem as dc
             except:
                 print("DeepChem not installed.")
@@ -820,9 +819,6 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
     price_per_ligand = np.array(price_per_ligand)
 
     return price_acquisition, price_per_ligand
-
-
-import itertools
 
 
 def find_optimal_batch(
