@@ -8,6 +8,19 @@
 ## Motivation
 Following the Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce two innovative batch selection strategies for cost-efficient BO.
 
+
+## Installation
+
+Add
+```
+export PYTHONPATH=$PYTHONPATH:$HOME/projects/rules_of_acquisition
+```
+to your .bashrc file. Then, run
+```
+source ~/.bashrc
+```
+
+
 ## Strategies
 ### 1. Greedy Approach:
    - **Objective**: To find a feasible batch within budget constraints.
