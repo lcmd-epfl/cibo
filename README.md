@@ -19,6 +19,8 @@ to your .bashrc file. Then, run
 ```
 source ~/.bashrc
 ```
+Currently tested with python 3.8.16. and botorch 0.8.1.
+Deepchem dependency will be removed in future versions.
 
 
 ## Strategies
