@@ -271,7 +271,6 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
         )
         suggested_costs = costs_BO[indices].flatten()
-
         cheap_indices = select_batch(
             suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE
         )

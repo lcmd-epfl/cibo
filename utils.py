@@ -14,6 +14,7 @@ import matplotlib as mpl
 from rdkit import Chem
 from itertools import combinations
 import math
+
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import random
@@ -1135,6 +1136,31 @@ def check_better(y, y_best_BO):
         return y_best_BO
 
 
+def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
+    """
+    Selects a batch of molecules from a list of suggested molecules that have the lowest indices
+    while meeting the constraints of the maximum cost and batch size.
+    """
+
+    n = len(suggested_costs)
+    # Check if BATCH_SIZE is larger than the length of the array, if so return None
+    if BATCH_SIZE > n:
+        return []
+    valid_combinations = []
+    # Find all valid combinations that meet the cost condition
+    for indices in combinations(range(n), BATCH_SIZE):
+        if sum(suggested_costs[i] for i in indices) <= MAX_BATCH_COST:
+            valid_combinations.append(indices)
+    # If there are no valid combinations, return None
+    if not valid_combinations:
+        return []
+    # Select the combination with the lowest indices
+    best_indices = min(
+        valid_combinations, key=lambda x: tuple(suggested_costs[i] for i in x)
+    )
+    return list(best_indices)
+
+
 def check_success(cheap_indices, indices):
     if cheap_indices == []:
         return cheap_indices, False
@@ -1549,7 +1575,6 @@ if __name__ == "__main__":
         LIGANDS_candidate,
         price_dict,
     ) = DATASET.get_init_holdout_data(77)
-
 
 
 def round_up_to_next_ten(n):
