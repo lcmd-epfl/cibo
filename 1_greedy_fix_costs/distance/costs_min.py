@@ -114,7 +114,7 @@ if __name__ == "__main__":
                         BO_data["N_train"],
                     )
                 )
-
+            print(BO_data["y_better_BO"])
             y_better_BO_ALL.append(BO_data["y_better_BO"])
             y_better_RANDOM_ALL.append(RANDOM_data["y_better_RANDOM"])
             running_costs_BO_ALL.append(BO_data["running_costs_BO"])
