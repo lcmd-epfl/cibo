@@ -1,28 +1,20 @@
 import os
-import requests
 import pandas as pd
-import pdb
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import AllChem
 import numpy as np
 import math
 from collections import Counter
-import leruli
-from time import sleep
 import matplotlib as mpl
 from rdkit import Chem
 from itertools import combinations
 import math
-
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import random
 import torch
 import copy as cp
-import morfeus
-from morfeus.conformer import ConformerEnsemble
-from morfeus import SASA, Dispersion
 import deepchem as dc
 import pandas as pd
 import pickle
@@ -65,32 +57,6 @@ def convert2pytorch(X, y):
     return X, y
 
 
-def get_morfeus_desc(smiles):
-    ce = ConformerEnsemble.from_rdkit(smiles)
-
-    ce.prune_rmsd()
-
-    ce.sort()
-
-    for conformer in ce:
-        sasa = SASA(ce.elements, conformer.coordinates)
-        disp = Dispersion(ce.elements, conformer.coordinates)
-        conformer.properties["sasa"] = sasa.area
-        conformer.properties["p_int"] = disp.p_int
-        conformer.properties["p_min"] = disp.p_min
-        conformer.properties["p_max"] = disp.p_max
-
-    ce.get_properties()
-    a = ce.boltzmann_statistic("sasa")
-    b = ce.boltzmann_statistic("p_int")
-    c = ce.boltzmann_statistic("p_min")
-    d = ce.boltzmann_statistic("p_max")
-
-    return np.array([a, b, c, d])
-
-
-def morfeus_ftzr(smiles_list):
-    return np.array([get_morfeus_desc(smiles) for smiles in smiles_list])
 
 
 class Evaluation_data:
@@ -100,19 +66,10 @@ class Evaluation_data:
         self.init_size = init_size
         self.prices = prices
 
-        self.ECFP_size = 512  # 64
-        self.radius = 2  # 2  # 4
+        self.ECFP_size = 512
+        self.radius = 2
 
         self.ftzr = dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
-
-        # More options but ECFP usually works best...
-        # dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
-        # dc.feat.MolGraphConvFeaturizer()
-        # dc.feat.MordredDescriptors(ignore_3D=True)
-        # dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
-        # dc.feat.RDKitDescriptors()
-        # dc.feat.CircularFingerprint(size=self.ECFP_size, radius=self.radius)
-
         self.get_raw_dataset()
 
         rep_size = self.X.shape[1]
@@ -205,7 +162,6 @@ class Evaluation_data:
             self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
 
             # make price of worst ligand 0 because already in the inventory
-            # TAG
             self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
 
             self.where_worst = np.array(
@@ -297,13 +253,12 @@ class Evaluation_data:
             }
 
         elif self.dataset == "buchwald":
-            MORFEUS = False
             dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
             # load url directly into pandas dataframe
 
             data = pd.read_csv(
                 dataset_url
-            )  # .fillna({"base_smiles":"","ligand_smiles":"","aryl_halide_number":0,"aryl_halide_smiles":"","additive_number":0, "additive_smiles": ""}, inplace=False)
+            )
             # remove rows with nan
             data = data.dropna()
             # randomly shuffly df
@@ -313,45 +268,7 @@ class Evaluation_data:
             unique_aryl_halides = data["aryl_halide_smiles"].unique()
             unique_additives = data["additive_smiles"].unique()
 
-            if MORFEUS:
-                morfeus_reps = {
-                    "base_smiles": {
-                        base: get_morfeus_desc(base) for base in unique_bases
-                    },
-                    "ligand_smiles": {
-                        ligand: get_morfeus_desc(ligand) for ligand in unique_ligands
-                    },
-                    "aryl_halide_smiles": {
-                        aryl_halide: get_morfeus_desc(aryl_halide)
-                        for aryl_halide in unique_aryl_halides
-                    },
-                    "additive_smiles": {
-                        additive: get_morfeus_desc(additive)
-                        for additive in unique_additives
-                    },
-                }
 
-                base_morfeus = np.array(
-                    [morfeus_reps["base_smiles"][base] for base in data["base_smiles"]]
-                )
-                ligand_morfeus = np.array(
-                    [
-                        morfeus_reps["ligand_smiles"][ligand]
-                        for ligand in data["ligand_smiles"]
-                    ]
-                )
-                aryl_halide_morfeus = np.array(
-                    [
-                        morfeus_reps["aryl_halide_smiles"][aryl_halide]
-                        for aryl_halide in data["aryl_halide_smiles"]
-                    ]
-                )
-                additive_morfeus = np.array(
-                    [
-                        morfeus_reps["additive_smiles"][additive]
-                        for additive in data["additive_smiles"]
-                    ]
-                )
 
             col_0_base = np.array(
                 [self.ftzr.featurize(x)[0] for x in data["base_smiles"]]
@@ -381,26 +298,10 @@ class Evaluation_data:
                 },
             }
 
-            if MORFEUS:
-                self.X = np.concatenate(
-                    [
-                        col_0_base,
-                        col_1_ligand,
-                        col_2_aryl_halide,
-                        col_3_additive,
-                        base_morfeus,
-                        ligand_morfeus,
-                        aryl_halide_morfeus,
-                        additive_morfeus,
-                    ],
-                    axis=1,
-                )
-            else:
-                self.X = np.concatenate(
-                    [col_0_base, col_1_ligand, col_2_aryl_halide, col_3_additive],
-                    axis=1,
-                )
-
+            self.X = np.concatenate(
+                [col_0_base, col_1_ligand, col_2_aryl_halide, col_3_additive],
+                axis=1,
+            )
             self.y = data["yield"].to_numpy()
 
         else:
@@ -587,15 +488,6 @@ class Evaluation_data:
 
             # Step 6: Get the remaining entries
             indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
-            # fig, ax = plt.subplots()
-            # import umap
-            # pca = umap.UMAP(n_components=2)
-            # X_pca = pca.fit_transform(self.X)
-            # ax.scatter(X_pca[indices_init][:,0], X_pca[indices_init][:,1], label="init", c=self.y[indices_init], marker="+")
-            # ax.scatter(X_pca[indices_holdout][:,0], X_pca[indices_holdout][:,1], label="holdout", c=self.y[indices_holdout], marker="o")
-            # ax.scatter(X_pca[idx_max_y][0], X_pca[idx_max_y][1], label="best", c=self.y[idx_max_y], marker="x")
-            # ax.legend()
-            # plt.savefig("init_holdout.png")
 
             np.random.shuffle(indices_holdout)
             X_holdout = self.X[indices_holdout]
@@ -646,9 +538,6 @@ class Evaluation_data:
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
         elif self.init_strategy == "worst_ligand":
-            # assert (
-            #    self.dataset == "ebdo_direct_arylation"
-            # ), "This init strategy is only implemented for the ebdo_direct_arylation dataset."
             indices_init = self.where_worst[: self.init_size]
             indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
             np.random.shuffle(indices_init)
@@ -1023,105 +912,6 @@ def generate_fingerprints(smiles_list, nBits=512):
             print(f"Could not generate a molecule from SMILES: {smiles}")
             fingerprints.append(np.array([None]))
     return np.array(fingerprints)
-
-
-def get_solv_en(smiles):
-    try:
-        value = leruli.graph_to_solvation_energy(
-            smiles, solventname="water", temperatures=[300]
-        )["solvation_energies"]["300.0"]
-        sleep(0.5)
-        return value
-    except:
-        return None
-
-
-def get_solv_en_list(smiles_list):
-    solv_energies = []
-    non_none_indices = []
-
-    for index, smiles in enumerate(smiles_list):
-        try:
-            value = leruli.graph_to_solvation_energy(
-                smiles, solventname="water", temperatures=[300]
-            )["solvation_energies"]["300.0"]
-            sleep(0.03)
-            solv_energies.append(value)
-            non_none_indices.append(index)
-        except:
-            solv_energies.append(None)
-
-    return solv_energies, non_none_indices
-
-
-def get_MolLogP_list(smiles_list):
-    logP_values = []
-    non_none_indices = []
-
-    for index, smiles in enumerate(smiles_list):
-        try:
-            mol = Chem.MolFromSmiles(smiles)
-            logP = Chem.Crippen.MolLogP(mol)
-            # add zero centred gaussian noise with std 0.1
-            logP += np.random.normal(0, 1.5)
-            logP_values.append(logP)
-            non_none_indices.append(index)
-        except:
-            logP_values.append(None)
-
-    return logP_values, non_none_indices
-
-
-def dummy_function_nuclear_charge(mol, desired_size=10, width=5):
-    """Calculate a simplified value based on nuclear charges of the molecule."""
-
-    total_value = 0
-    for atom in mol.GetAtoms():
-        z = atom.GetAtomicNum()  # Get nuclear charge (atomic number)
-        total_value += z  # Simply sum up the nuclear charges
-
-    # Adjust for molecule size
-    num_atoms = mol.GetNumAtoms()
-    size_penalty = 1 if num_atoms == desired_size else 0  # Simple size penalty
-    total_value *= size_penalty
-
-    return total_value
-
-
-def get_dummy_nuclear_charge_values(smiles_list):
-    values = []
-    non_none_indices = []
-
-    for index, smiles in enumerate(smiles_list):
-        try:
-            mol = Chem.MolFromSmiles(smiles)
-            value = dummy_function_nuclear_charge(mol)
-            values.append(value)
-            non_none_indices.append(index)
-        except:
-            values.append(None)
-
-    return values, non_none_indices
-
-
-def fragments(smiles):
-    """
-    auxiliary function to calculate the fragment representation of a molecule
-    """
-    # descList[115:] contains fragment-based features only
-    # (https://www.rdkit.org/docs/source/rdkit.Chem.Fragments.html)
-    # Update: in the new RDKit version the indices are [124:]
-    fragments = {d[0]: d[1] for d in Descriptors.descList[124:]}
-    frags = np.zeros((len(smiles), len(fragments)))
-    for i in range(len(smiles)):
-        mol = Chem.MolFromSmiles(smiles[i])
-        try:
-            features = [fragments[d](mol) for d in fragments]
-        except:
-            raise Exception("molecule {}".format(i) + " is not canonicalised")
-        frags[i, :] = features
-
-    return frags
 
 
 def check_better(y, y_best_BO):
