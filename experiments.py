@@ -326,6 +326,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
         BATCH_COST = 0
         print("Batch cost3: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+        
     BO_data["model"] = model
     BO_data["X"], BO_data["y"] = X, y
     BO_data["N_train"] = len(X)

@@ -13,14 +13,14 @@ Following the Ferengi's 3rd rule of acquisition - "Never spend more for an acqui
 
 Add
 ```
-export PYTHONPATH=$PYTHONPATH:$HOME/projects/rules_of_acquisition
+git clone git@github.com:janweinreich/rules_of_acquisition.git
+export PYTHONPATH=$PYTHONPATH:$HOME/rules_of_acquisition
 ```
 to your .bashrc file. Then, run
 ```
 source ~/.bashrc
 ```
 Currently tested with python 3.8.16. and botorch 0.8.1.
-Deepchem dependency will be removed in future versions.
 
 
 ## Strategies
