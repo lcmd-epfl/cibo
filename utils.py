@@ -15,6 +15,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
+import pdb
 
 mpl_use("Agg")  # Set the matplotlib backend
 
@@ -330,6 +331,11 @@ class Evaluation_data:
     def get_prices(self):
         if self.prices == "random":
             self.costs = np.random.randint(2, size=(len(self.X), 1))
+            best_points = np.argwhere(self.y == 100.0)
+
+            # make best point price 1 (not for free)
+            for p in best_points:
+                self.costs[p] = np.array([1])
 
         elif self.prices == "update_ligand_when_used":
             if self.dataset == "freesolv":
@@ -352,6 +358,8 @@ class Evaluation_data:
                 for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
                     all_ligand_prices.append(self.ligand_prices[ligand])
                 self.costs = np.array(all_ligand_prices).reshape(-1, 1)
+
+                # make best point price 1
 
             elif self.dataset == "ebdo_direct_arylation":
                 self.ligand_prices = {}

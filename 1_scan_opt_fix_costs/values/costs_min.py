@@ -6,6 +6,7 @@ from exp_configs_1 import *
 from BO import *
 from utils import *
 from experiments import *
+import pdb
 
 if __name__ == "__main__":
     print("Starting experiments")
@@ -56,7 +57,6 @@ if __name__ == "__main__":
             y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
 
             running_costs_BO, running_costs_RANDOM = [0], [0]
-
             costs_BO = cp.deepcopy(costs_candidate)
             costs_RANDOM = cp.deepcopy(costs_candidate)
 
@@ -123,7 +123,6 @@ if __name__ == "__main__":
         y_better_BO_ALL = np.array(y_better_BO_ALL)
         y_better_RANDOM_ALL = np.array(y_better_RANDOM_ALL)
 
-        
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,

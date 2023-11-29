@@ -6,6 +6,7 @@ from exp_configs_1 import *
 from BO import *
 from utils import *
 from experiments import *
+import pdb
 
 if __name__ == "__main__":
     print("Starting experiments")
@@ -122,6 +123,8 @@ if __name__ == "__main__":
 
         y_better_BO_ALL = np.array(y_better_BO_ALL)
         y_better_RANDOM_ALL = np.array(y_better_RANDOM_ALL)
+        running_costs_BO_ALL = np.array(running_costs_BO_ALL)
+        running_costs_RANDOM_ALL = np.array(running_costs_RANDOM_ALL)
 
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,

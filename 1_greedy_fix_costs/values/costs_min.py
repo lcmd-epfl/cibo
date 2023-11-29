@@ -6,7 +6,7 @@ from exp_configs_1 import *
 from BO import *
 from utils import *
 from experiments import *
-
+import pdb
 
 if __name__ == "__main__":
     print("Starting experiments")
@@ -59,6 +59,7 @@ if __name__ == "__main__":
             running_costs_BO, running_costs_RANDOM = [0], [0]
 
             costs_BO = cp.deepcopy(costs_candidate)
+            
             costs_RANDOM = cp.deepcopy(costs_candidate)
 
             y_better_BO = []

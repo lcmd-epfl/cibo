@@ -113,7 +113,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
         sequential=False,
         maximize=True,
     )
-
+    SUCCESS = False
     for indices in index_set:
         suggested_costs = costs_BO[indices].flatten()
 
@@ -127,7 +127,6 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
             )
             y_best_BO = check_better(y, y_best_BO)
 
-            y_better_BO.append(y_best_BO)
             BATCH_COST = sum(costs_BO[indices])[0]
             print("Batch cost1: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
@@ -136,7 +135,14 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             costs_BO = np.delete(costs_BO, indices, axis=0)
+            SUCCESS=True
             break
+
+    y_better_BO.append(y_best_BO)
+    if not SUCCESS:
+        BATCH_COST = 0
+        print("Batch cost2: ", BATCH_COST)
+        running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
 
     # Update BO data for next iteration
     BO_data["model"] = model
@@ -286,7 +292,6 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             )
             y_best_BO = check_better(y, y_best_BO)
 
-            y_better_BO.append(y_best_BO)
             BATCH_COST = sum(costs_BO[cheap_indices])[0]
             print("Batch cost1: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
@@ -308,7 +313,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             cheap_indices,
         )
         y_best_BO = check_better(y, y_best_BO)
-        y_better_BO.append(y_best_BO)
+
         BATCH_COST = sum(costs_BO[cheap_indices])[0]
         print("Batch cost2: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
@@ -318,6 +323,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
         costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
 
     # Update BO data for next iteration
+    y_better_BO.append(y_best_BO)
     BO_data["model"] = model
     BO_data["X"], BO_data["y"] = X, y
     BO_data["N_train"] = len(X)
