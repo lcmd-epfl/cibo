@@ -102,7 +102,6 @@ if __name__ == "__main__":
                 RANDOM_data = RS_STEP(RANDOM_data)
 
                 print("--------------------")
-
                 print(
                     "# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
                         i + 1,

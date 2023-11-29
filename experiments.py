@@ -135,7 +135,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             costs_BO = np.delete(costs_BO, indices, axis=0)
-            SUCCESS=True
+            SUCCESS = True
             break
 
     y_better_BO.append(y_best_BO)
@@ -277,9 +277,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
         )
         suggested_costs = costs_BO[indices].flatten()
-        cheap_indices = select_batch(
-            suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE
-        )
+        cheap_indices = select_batch(suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
         cheap_indices, SUCCESS_2 = check_success(cheap_indices, indices)
 
         if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
