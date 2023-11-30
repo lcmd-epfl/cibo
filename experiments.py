@@ -253,7 +253,6 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
-    SUCCESS = False
     indices, candidates = gibbon_search(
         model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
     )
@@ -262,7 +261,8 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
     ITERATION = 1
 
-    while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
+    #while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
+    while len(cheap_indices) < BATCH_SIZE:
         INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
         SUCCESS_1 = False
 
@@ -280,7 +280,8 @@ def BO_AWARE_CASE_1_STEP(BO_data):
         cheap_indices = select_batch(suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
         cheap_indices, SUCCESS_2 = check_success(cheap_indices, indices)
 
-        if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
+        #if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
+        if len(cheap_indices) == BATCH_SIZE:
             X, y = update_X_y(
                 X,
                 y,
