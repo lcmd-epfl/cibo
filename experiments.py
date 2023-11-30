@@ -105,7 +105,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
-    index_set, _ = gibbon_search_modified_all(
+    index_set,_, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -576,7 +576,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     scaler_y = BO_data["scaler_y"]
 
-    index_set, _ = gibbon_search_modified_all(
+    index_set,_, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -746,7 +746,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         step_nr = BO_data["step_nr"]
         MAX_BATCH_COST *= step_nr
 
-    index_set, _ = gibbon_search_modified_all(
+    index_set,_,_ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -890,3 +890,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
     BO_data["scaler_y"] = scaler_y
 
     return BO_data
+
+
+def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
+    pass

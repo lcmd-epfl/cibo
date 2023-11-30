@@ -343,7 +343,21 @@ def gibbon_search_modified_all(
 
     index_set = np.array(index_set)
 
-    return index_set, candidates
+    return index_set,acq_values, candidates
+
+
+def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO,price_dict_BO):
+
+    index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
+
+    # count how many times (ntimes) each ligand is selected
+    # if ligand price is one (already bought) divide acf by 1
+    #  not yet bought ligands acf are divided by their price
+    # if ligand appears ntimes times in the index_set multiply acf by ntimes 
+
+    #now rerank the candidates by their acf (use sum of acf as metric for quality of batch)
+    pass
+    
 
 
 def gibbon_search_modified(
