@@ -261,7 +261,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
     ITERATION = 1
 
-    #while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
+    # while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
     while len(cheap_indices) < BATCH_SIZE:
         INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
         SUCCESS_1 = False
@@ -277,10 +277,12 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
         )
         suggested_costs = costs_BO[indices].flatten()
-        cheap_indices = select_batch(suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE)
+        cheap_indices = select_batch(
+            suggested_costs, INCREMENTED_MAX_BATCH_COST, BATCH_SIZE
+        )
         cheap_indices, SUCCESS_2 = check_success(cheap_indices, indices)
 
-        #if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
+        # if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
         if len(cheap_indices) == BATCH_SIZE:
             X, y = update_X_y(
                 X,
@@ -327,7 +329,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
         BATCH_COST = 0
         print("Batch cost3: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-        
+
     BO_data["model"] = model
     BO_data["X"], BO_data["y"] = X, y
     BO_data["N_train"] = len(X)
@@ -734,6 +736,15 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     SAVED_BUDGET = BO_data["SAVED_BUDGET"]
     scaler_y = BO_data["scaler_y"]
+
+    try:
+        INCREASE_FACTOR = BO_data["INCREASE_FACTOR"]
+    except:
+        INCREASE_FACTOR = False
+
+    if INCREASE_FACTOR:
+        step_nr = BO_data["step_nr"]
+        MAX_BATCH_COST *= step_nr
 
     index_set, _ = gibbon_search_modified_all(
         model,
