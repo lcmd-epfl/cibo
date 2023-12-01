@@ -147,7 +147,7 @@ class Evaluation_data:
             self.data["Solvent_SMILES"] = inchi_to_smiles(
                 self.data["Solvent_inchi"].values
             )
-
+            
             col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
             col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
             col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
