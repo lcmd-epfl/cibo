@@ -1,6 +1,6 @@
 benchmark = [
     {
-        "dataset": "ebdo_direct_arylation",
+        "dataset": "buchwald",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -10,7 +10,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "ebdo_direct_arylation",
+        "dataset": "buchwald",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -20,7 +20,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "ebdo_direct_arylation",
+        "dataset": "buchwald",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -30,7 +30,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "ebdo_direct_arylation",
+        "dataset": "buchwald",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -40,7 +40,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "ebdo_direct_arylation",
+        "dataset": "buchwald",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -50,7 +50,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "ebdo_direct_arylation",
+        "dataset": "buchwald",
         "init_strategy": "values",
         "cost_aware": False,
         "n_runs": 10,
@@ -60,7 +60,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "buchwald",
+        "dataset": "ebdo_direct_arylation",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -70,7 +70,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "buchwald",
+        "dataset": "ebdo_direct_arylation",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -80,7 +80,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "buchwald",
+        "dataset": "ebdo_direct_arylation",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -90,7 +90,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "buchwald",
+        "dataset": "ebdo_direct_arylation",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -100,7 +100,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "buchwald",
+        "dataset": "ebdo_direct_arylation",
         "init_strategy": "values",
         "cost_aware": True,
         "n_runs": 10,
@@ -110,7 +110,7 @@ benchmark = [
         "ntrain": 200,
     },
     {
-        "dataset": "buchwald",
+        "dataset": "ebdo_direct_arylation",
         "init_strategy": "values",
         "cost_aware": False,
         "n_runs": 10,

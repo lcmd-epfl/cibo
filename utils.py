@@ -15,7 +15,6 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
-import pdb
 
 mpl_use("Agg")  # Set the matplotlib backend
 
@@ -290,18 +289,10 @@ class Evaluation_data:
             unique_aryl_halides = data["aryl_halide_smiles"].unique()
             unique_additives = data["additive_smiles"].unique()
 
-            col_0_base = np.array(
-                [self.ftzr.featurize(x)[0] for x in data["base_smiles"]]
-            )
-            col_1_ligand = np.array(
-                [self.ftzr.featurize(x)[0] for x in data["ligand_smiles"]]
-            )
-            col_2_aryl_halide = np.array(
-                [self.ftzr.featurize(x)[0] for x in data["aryl_halide_smiles"]]
-            )
-            col_3_additive = np.array(
-                [self.ftzr.featurize(x)[0] for x in data["additive_smiles"]]
-            )
+            col_0_base = self.ftzr.featurize(data["base_smiles"])
+            col_1_ligand = self.ftzr.featurize(data["ligand_smiles"])
+            col_2_aryl_halide = self.ftzr.featurize(data["aryl_halide_smiles"])
+            col_3_additive = self.ftzr.featurize(data["additive_smiles"])
 
             self.feauture_labels = {
                 "names": {
