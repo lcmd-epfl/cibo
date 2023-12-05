@@ -10,7 +10,7 @@ from experiments import *
 
 if __name__ == "__main__":
     print("Starting experiments")
-
+    # Modify such that maximal cost gets doubled every iteration
     RESULTS = []
 
     for exp_config in benchmark:
@@ -30,6 +30,8 @@ if __name__ == "__main__":
         BATCH_SIZE = exp_config["batch_size"]
         MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
+
+        budget_scheduler = Budget_schedule(exp_config["buget_schedule"])
 
         for run in range(N_RUNS):
             SEED = 111 + run
@@ -94,6 +96,7 @@ if __name__ == "__main__":
                 MAX_BATCH_COST,
             )
             BO_data["SAVED_BUDGET"] = MAX_BATCH_COST
+            BO_data["INCREASE_FACTOR"] = True
 
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
@@ -110,6 +113,7 @@ if __name__ == "__main__":
                 if COST_AWARE_BO == False:
                     BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
+                    BO_data["step_nr"] = budget_scheduler.get_factor(i)  #i+1
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data)
 
                 RANDOM_data = RS_STEP_2A(RANDOM_data)
@@ -140,15 +144,15 @@ if __name__ == "__main__":
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
-            name="./figures/utility_{}_{}.png".format(
-                exp_config["dataset"], exp_config["max_batch_cost"]
+            name="./figures/utility_{}_{}_{}.png".format(
+                exp_config["dataset"], exp_config["max_batch_cost"],exp_config["buget_schedule"]
             ),
         )
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
-            name="./figures/optimization_{}_{}.png".format(
-                exp_config["dataset"], exp_config["max_batch_cost"]
+            name="./figures/optimization_{}_{}_{}.png".format(
+                exp_config["dataset"], exp_config["max_batch_cost"],exp_config["buget_schedule"]
             ),
         )
 

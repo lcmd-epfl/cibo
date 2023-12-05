@@ -1189,3 +1189,27 @@ if __name__ == "__main__":
 
 def round_up_to_next_ten(n):
     return math.ceil(n / 10) * 10
+
+
+
+class Budget_schedule:
+    def __init__(self, schedule="constant"):
+        self.schedule = schedule
+    def constant(self, iteration):
+        return 1
+    def increasing(self, iteration):
+        return iteration + 1
+    def decreasing(self, iteration):
+        return 1 / (iteration + 1)
+
+    def get_factor(self, iteration):
+        if self.schedule == "constant":
+            return self.constant(iteration)
+        elif self.schedule == "increasing":
+            return self.increasing(iteration)
+        elif self.schedule == "decreasing":
+            return self.decreasing(iteration)
+        else:
+            print("Schedule not implemented.")
+            exit()
+
