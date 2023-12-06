@@ -15,6 +15,8 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler
+import pdb
+import math
 
 mpl_use("Agg")  # Set the matplotlib backend
 
@@ -140,6 +142,11 @@ class Evaluation_data:
             self.data = self.data.dropna()
             self.data = self.data.sample(frac=1).reset_index(drop=True)
 
+            self.data["Ligand_Cost_fixed"] = np.ceil(
+                self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
+            )
+
+            # 1000*self.data["Ligand_mg"]/self.data["Ligand_MW"]
             self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
             self.data["Ligand_SMILES"] = inchi_to_smiles(
                 self.data["Ligand_inchi"].values
@@ -147,7 +154,7 @@ class Evaluation_data:
             self.data["Solvent_SMILES"] = inchi_to_smiles(
                 self.data["Solvent_inchi"].values
             )
-            
+
             col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
             col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
             col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
@@ -281,6 +288,8 @@ class Evaluation_data:
 
             data = pd.read_csv(dataset_url)
             # remove rows with nan
+            # instead of dropping nan rows this means the thing was not used.
+            # just put an empty FP instead
             data = data.dropna()
             # randomly shuffly df
             data = data.sample(frac=1).reset_index(drop=True)
@@ -339,7 +348,7 @@ class Evaluation_data:
                 # Iterate through the dataframe rows
                 for index, row in self.data.iterrows():
                     ligand_smiles = row["Ligand_SMILES"]
-                    ligand_price = row["Ligand_Cost"]
+                    ligand_price  = row["Ligand_Cost_fixed"]
                     ligand_price_dict[ligand_smiles] = ligand_price
 
                 # Print the dictionary
@@ -1191,16 +1200,24 @@ def round_up_to_next_ten(n):
     return math.ceil(n / 10) * 10
 
 
-
 class Budget_schedule:
     def __init__(self, schedule="constant"):
         self.schedule = schedule
+
     def constant(self, iteration):
         return 1
+
     def increasing(self, iteration):
         return iteration + 1
+
     def decreasing(self, iteration):
         return 1 / (iteration + 1)
+
+    def adaptive(self, iteration):
+        if iteration <= 15:
+            return 1
+        else:
+            return (iteration - 14) + 1
 
     def get_factor(self, iteration):
         if self.schedule == "constant":
@@ -1209,7 +1226,8 @@ class Budget_schedule:
             return self.increasing(iteration)
         elif self.schedule == "decreasing":
             return self.decreasing(iteration)
+        elif self.schedule == "adaptive":
+            return self.adaptive(iteration)
         else:
             print("Schedule not implemented.")
             exit()
-
