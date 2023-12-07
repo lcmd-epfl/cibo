@@ -1218,6 +1218,12 @@ class Budget_schedule:
             return 1
         else:
             return (iteration - 14) + 1
+        
+    def adaptive_2(self, iteration):
+        if iteration <= 30:
+            return 1
+        elif iteration <= 60:
+            return (iteration - 30) + 1
 
     def get_factor(self, iteration):
         if self.schedule == "constant":
@@ -1228,6 +1234,8 @@ class Budget_schedule:
             return self.decreasing(iteration)
         elif self.schedule == "adaptive":
             return self.adaptive(iteration)
+        elif self.schedule == "adaptive_2":
+            return self.adaptive_2(iteration)
         else:
             print("Schedule not implemented.")
             exit()

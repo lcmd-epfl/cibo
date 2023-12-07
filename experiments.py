@@ -1,6 +1,10 @@
 from BO import *
 from utils import *
 
+SEED = 111
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
 
 def RS_STEP(RANDOM_data):
     # Extract the data from the dictionary
@@ -836,6 +840,8 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
             )
             price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
         else:
+            # if you cannot even afford the cheapest ligand, just do C or T measurements
+            # these come for free
             index_of_zero = np.where(price_list == 0)[0][0]
             cheapest_ligand = list(price_dict_BO.keys())[index_of_zero]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
@@ -874,7 +880,6 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
 
     # Update BO data for next iteration
     SAVED_BUDGET = SAVED_BUDGET + (MAX_BATCH_COST - BATCH_COST)
-    # SAVED_BUDGET = round_up_to_next_ten(SAVED_BUDGET)
     BO_data["SAVED_BUDGET"] = SAVED_BUDGET
     BO_data["model"] = model
     BO_data["X"] = X

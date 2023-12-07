@@ -350,6 +350,8 @@ def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, 
 
     index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
 
+
+
     # count how many times (ntimes) each ligand is selected
     # if ligand price is one (already bought) divide acf by 1
     #  not yet bought ligands acf are divided by their price
