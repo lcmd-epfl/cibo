@@ -6,7 +6,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
-TEST_OPTION = 2
+TEST_OPTION = 1
 
 if TEST_OPTION == 1:
     exp_config = benchmark[0]
@@ -27,7 +27,6 @@ if TEST_OPTION == 1:
         y_candidate,
         costs_candidate,
     ) = DATASET.get_init_holdout_data(777)
-
 else:
     try:
         import deepchem as dc
@@ -63,7 +62,7 @@ else:
     X_candidate, y_candidate = convert2pytorch(X_candidate, y_candidate)
 
 
-fit_y = False
+fit_y = True
 
 model, scaler_y = update_model(
     X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y, FIT_METHOD=True

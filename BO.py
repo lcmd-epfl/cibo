@@ -69,7 +69,6 @@ def update_model(
     """
     GP_class = CustomGPModel(
         kernel_type=kernel_type,
-        scale_type_X="botorch",
         bounds_norm=bounds_norm,
         fit_y=fit_y,
         FIT_METHOD=FIT_METHOD,
@@ -139,13 +138,11 @@ class CustomGPModel:
     def __init__(
         self,
         kernel_type="Matern",
-        scale_type_X="sklearn",
         bounds_norm=None,
         fit_y=True,
         FIT_METHOD=True,
     ):
         self.kernel_type = kernel_type
-        self.scale_type_X = scale_type_X
         self.bounds_norm = bounds_norm
         self.fit_y = fit_y
 
@@ -156,21 +153,12 @@ class CustomGPModel:
             elif self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
                 self.NUM_EPOCHS_GD = 1000
 
-        if scale_type_X == "sklearn":
-            self.scaler_X = MinMaxScaler()
-        elif scale_type_X == "botorch":
-            pass
-        else:
-            raise ValueError("Invalid scaler type")
 
         self.scaler_y = TensorStandardScaler()
 
     def fit(self, X_train, y_train):
-        if self.scale_type_X == "sklearn":
-            X_train = self.scaler_X.fit_transform(X_train)
-        elif self.scale_type_X == "botorch":
-            if type(X_train) == np.ndarray:
-                X_train = torch.tensor(X_train, dtype=torch.float32)
+        if type(X_train) == np.ndarray:
+            X_train = torch.tensor(X_train, dtype=torch.float32)
 
         if self.fit_y:
             y_train = self.scaler_y.fit_transform(y_train)
