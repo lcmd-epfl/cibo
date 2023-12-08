@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import warnings
 
+import gpytorch
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 from botorch.fit import fit_gpytorch_model
@@ -11,20 +12,15 @@ from botorch.sampling import SobolQMCNormalSampler
 from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
 from gpytorch.means import ConstantMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
-from sklearn.preprocessing import MinMaxScaler
 from torch.optim import Adam
 
 # Custom module imports
 from botroch_ext import optimize_acqf_discrete_modified
-from kernels import *
-from utils import *
-
+from kernels import BoundedKernel, TanimotoKernel
+import pdb
 # Suppress warnings
 warnings.filterwarnings("ignore")
 
-
-random.seed(45577)
-np.random.seed(4565777)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
@@ -329,24 +325,43 @@ def gibbon_search_modified_all(
         indices = find_indices(X_candidate_BO, candidates[return_nr])
         index_set.append(indices)
 
-    index_set = np.array(index_set)
+    index_set, acq_values, candidates = np.array(index_set), np.array(acq_values), np.array(candidates)
 
     return index_set,acq_values, candidates
 
 
+def is_descending(arr):
+    for i in range(len(arr) - 1):
+        if arr[i] < arr[i + 1]:
+            return False
+    return True
+
 def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO,price_dict_BO):
-
+    from utils import compute_price_acquisition_ligands_price_per_acqfct
+    
     index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
+    ligand_set = []
+    for subset in index_set:
+        ligand_set.append(LIGANDS_candidate_BO[subset])
 
+    
+    price_rescaling_factors = []
+    for ligands in ligand_set:
+        price_rescaling_factors.append(compute_price_acquisition_ligands_price_per_acqfct(ligands, price_dict_BO))
 
+    price_rescaling_factors = np.array(price_rescaling_factors)
+    acq_values_per_price = acq_values/price_rescaling_factors
+    row_sums = acq_values_per_price.sum(axis=1)
 
-    # count how many times (ntimes) each ligand is selected
-    # if ligand price is one (already bought) divide acf by 1
-    #  not yet bought ligands acf are divided by their price
-    # if ligand appears ntimes times in the index_set multiply acf by ntimes 
+    # Get the indices that would sort the row sums in descending order
+    sorted_indices = np.argsort(row_sums)[::-1]
 
-    #now rerank the candidates by their acf (use sum of acf as metric for quality of batch)
-    pass
+    index_set_rearranged = index_set[sorted_indices]
+    acq_values_per_price = acq_values_per_price[sorted_indices]
+    candidates_rearranged = candidates[sorted_indices]
+
+    
+    return index_set_rearranged, acq_values_per_price, candidates_rearranged
     
 
 
@@ -458,7 +473,7 @@ def qNoisyEI_search(
     RAW_SAMPLES = 512
     sampler = SobolQMCNormalSampler(1024)
 
-    qLogNEI = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)  # , q=q)
+    qLogNEI = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
     candidates, best_acq_values = optimize_acqf_discrete(
         acq_function=qLogNEI,
         bounds=bounds_norm,
