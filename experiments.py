@@ -911,33 +911,44 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
     price_dict_BO = BO_data["price_dict_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
-    MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
-    SAVED_BUDGET = BO_data["SAVED_BUDGET"]
     scaler_y = BO_data["scaler_y"]
-
-    try:
-        INCREASE_FACTOR = BO_data["INCREASE_FACTOR"]
-    except:
-        INCREASE_FACTOR = False
-
-    if INCREASE_FACTOR:
-        step_nr = BO_data["step_nr"]
-        MAX_BATCH_COST *= step_nr
     
     
-    gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, LIGANDS_candidate_BO=LIGANDS_candidate_BO, price_dict_BO=price_dict_BO)
-    """
-    index_set,_,_ = gibbon_search_modified_all(
-        model,
-        X_candidate_BO,
-        bounds_norm,
-        q=BATCH_SIZE,
-        sequential=False,
-        maximize=True,
+    index_set_rearranged, acq_values_per_price, candidates_rearranged  = gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, LIGANDS_candidate_BO=LIGANDS_candidate_BO, price_dict_BO=price_dict_BO)
+    indices = index_set_rearranged[0]
+    candidates = candidates_rearranged[0]
+    #convert to torch tensor
+    candidates = torch.from_numpy(candidates).float()
+
+
+    # Assuming gibbon_search, update_X_y, compute_price_acquisition_ligands, check_better, update_model, and update_price_dict_ligands are defined elsewhere
+    #indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
+    X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
+    NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+    suggested_costs_all, _ = compute_price_acquisition_ligands(
+        NEW_LIGANDS, price_dict_BO
     )
-    
-    def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO,price_dict_BO):
+    y_best_BO = check_better(y, y_best_BO)
+    y_better_BO.append(y_best_BO)
+    running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
+    model, scaler_y = update_model(X, y, bounds_norm)
+    X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+    y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+    LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+    price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
 
-    index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
-    pdb.set_trace()
-    """
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"] = X
+    BO_data["y"] = y
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
+    BO_data["price_dict_BO"] = price_dict_BO
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["N_train"] = len(X)
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data

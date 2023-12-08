@@ -6,7 +6,7 @@ from exp_configs_2 import benchmark
 from BO import update_model
 from utils import Evaluation_data, create_aligned_transposed_price_table, create_data_dict_BO_2A, create_data_dict_RS_2A
 from experiments import Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl, BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE
-
+import pdb
 
 SEED = 111
 random.seed(SEED)
@@ -55,6 +55,11 @@ if __name__ == "__main__":
                 LIGANDS_candidate,
                 price_dict,
             ) = DATASET.get_init_holdout_data(SEED)
+            #sort y_init (it is a pytorch tensor)
+            #X_init, y_init, costs_init, LIGANDS_init = np.array(X_init), np.array(y_init), np.array(costs_init), np.array(LIGANDS_init)
+            #sort_idx = np.argsort(y_init, axis=0)
+            #X_init, y_init, costs_init, LIGANDS_init = X_init[sort_idx], y_init[sort_idx], costs_init[sort_idx], LIGANDS_init[sort_idx]
+            
             print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
