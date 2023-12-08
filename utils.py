@@ -829,6 +829,19 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
     return price_acquisition, price_per_ligand
 
 
+
+def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
+
+    check_dict = cp.deepcopy(price_dict)
+    price_per_ligand = []
+    for ligand in NEW_LIGANDS:
+        price_per_ligand.append(check_dict[ligand])
+        check_dict[ligand] = 1
+
+    price_per_ligand = np.array(price_per_ligand)
+
+    return price_per_ligand
+
 def find_optimal_batch(
     price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE, MAX_BATCH_COST
 ):

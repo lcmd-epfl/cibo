@@ -898,4 +898,46 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
 
 
 def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
-    pass
+    # Get current BO data from last iteration
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
+    price_dict_BO = BO_data["price_dict_BO"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+    SAVED_BUDGET = BO_data["SAVED_BUDGET"]
+    scaler_y = BO_data["scaler_y"]
+
+    try:
+        INCREASE_FACTOR = BO_data["INCREASE_FACTOR"]
+    except:
+        INCREASE_FACTOR = False
+
+    if INCREASE_FACTOR:
+        step_nr = BO_data["step_nr"]
+        MAX_BATCH_COST *= step_nr
+    
+    
+    gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, LIGANDS_candidate_BO=LIGANDS_candidate_BO, price_dict_BO=price_dict_BO)
+    """
+    index_set,_,_ = gibbon_search_modified_all(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q=BATCH_SIZE,
+        sequential=False,
+        maximize=True,
+    )
+    
+    def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO,price_dict_BO):
+
+    index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
+    pdb.set_trace()
+    """

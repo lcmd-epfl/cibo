@@ -44,7 +44,7 @@ else:
     # Extract training data from DeepChem dataset, and convert to NumPy arrays
     X_train = train_dataset.X
 
-    bounds_norm = torch.tensor([[0] * 512, [1] * 512])
+    bounds_norm =  torch.tensor([[0] * 512, [1] * 512])
     bounds_norm = bounds_norm.to(dtype=torch.float32)
 
     if not check_entries(X_train):
@@ -62,10 +62,10 @@ else:
     X_candidate, y_candidate = convert2pytorch(X_candidate, y_candidate)
 
 
-fit_y = True
+fit_y = False
 
 model, scaler_y = update_model(
-    X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y, FIT_METHOD=True
+    X_init, y_init, bounds_norm, kernel_type="Matern", fit_y=fit_y, FIT_METHOD=True
 )
 
 
@@ -86,16 +86,19 @@ else:
 y_pred = y_pred.flatten()
 y_candidate = y_candidate.numpy().flatten()
 
-plt.errorbar(y_candidate, y_pred, yerr=y_std, fmt="o", alpha=0.6)
+plt.errorbar(y_candidate, y_pred, yerr=y_std,marker=None,  fmt=",", alpha=0.6)
 plt.plot(y_candidate, y_candidate, color="black", alpha=0.5)
+plt.scatter(y_candidate, y_pred,c=y_std, alpha=0.6)
+#add colorbar with 
+plt.colorbar()
 plt.xlabel("EXPERIMENT")
 plt.ylabel("PREDICTION")
 
 
 # compute r2 using sklearn and RMSE
-r2 = r2_score(y_candidate, y_pred)
-rmse = mean_absolute_error(y_candidate, y_pred)
+r2 = r2_score(y_pred, y_candidate)
+mae = mean_absolute_error(y_candidate, y_pred)
 print("r2 = ", r2)
-print("N = ", len(X_init), "MAE = ", rmse)
+print("N = ", len(X_init), "MAE = ", mae)
 
 plt.savefig("correlation.png")

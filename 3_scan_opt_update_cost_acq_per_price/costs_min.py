@@ -2,15 +2,20 @@ import torch
 import numpy as np
 import random
 import copy as cp
-from exp_configs_2 import *
-from BO import *
-from utils import *
-from experiments import *
+from exp_configs_2 import benchmark
+from BO import update_model
+from utils import Evaluation_data, create_aligned_transposed_price_table, create_data_dict_BO_2A, create_data_dict_RS_2A
+from experiments import Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl, BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE
 
+
+SEED = 111
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
 
 if __name__ == "__main__":
     print("Starting experiments")
-
+    # Modify such that maximal cost gets doubled every iteration
     RESULTS = []
 
     for exp_config in benchmark:
@@ -31,6 +36,8 @@ if __name__ == "__main__":
         MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
 
+        budget_scheduler = Budget_schedule(exp_config["buget_schedule"])
+
         for run in range(N_RUNS):
             SEED = 111 + run
             random.seed(SEED)
@@ -48,7 +55,6 @@ if __name__ == "__main__":
                 LIGANDS_candidate,
                 price_dict,
             ) = DATASET.get_init_holdout_data(SEED)
-
             print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
@@ -93,6 +99,8 @@ if __name__ == "__main__":
                 BATCH_SIZE,
                 MAX_BATCH_COST,
             )
+            BO_data["SAVED_BUDGET"] = MAX_BATCH_COST
+            BO_data["INCREASE_FACTOR"] = True
 
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
@@ -109,17 +117,19 @@ if __name__ == "__main__":
                 if COST_AWARE_BO == False:
                     BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
+                    BO_data["step_nr"] = budget_scheduler.get_factor(i)                        
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data)
 
                 RANDOM_data = RS_STEP_2A(RANDOM_data)
 
                 print("--------------------")
                 print(
-                    "# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
+                    "# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tBUDGET: ${} \tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
                         i + 1,
                         NITER,
                         BO_data["y_best_BO"],
                         RANDOM_data["y_best_RANDOM"],
+                        BO_data["SAVED_BUDGET"],
                         BO_data["running_costs_BO"][-1],
                         RANDOM_data["running_costs_RANDOM"][-1],
                         BO_data["N_train"],
@@ -138,15 +148,19 @@ if __name__ == "__main__":
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
-            name="./figures/utility_{}_{}.png".format(
-                exp_config["dataset"], exp_config["max_batch_cost"]
+            name="./figures/utility_{}_{}_{}.png".format(
+                exp_config["dataset"],
+                exp_config["max_batch_cost"],
+                exp_config["buget_schedule"],
             ),
         )
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
-            name="./figures/optimization_{}_{}.png".format(
-                exp_config["dataset"], exp_config["max_batch_cost"]
+            name="./figures/optimization_{}_{}_{}.png".format(
+                exp_config["dataset"],
+                exp_config["max_batch_cost"],
+                exp_config["buget_schedule"],
             ),
         )
 

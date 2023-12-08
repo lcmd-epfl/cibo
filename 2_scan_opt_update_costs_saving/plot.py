@@ -176,7 +176,7 @@ fig2, ax2 = plt.subplots(1, 1, figsize=(7, 7))
 
 
 ax2.plot(
-    random_costs, random_results, label="Random", color="black", marker="o", ls="-"
+    random_costs, random_results, label="RS", color="black", marker="o", ls="-"
 )
 
 ax2.plot(
@@ -264,7 +264,7 @@ fig3, ax3 = plt.subplots(1, 1, figsize=(7, 7))
 ax3.plot(
     ITERATIONS_1,
     (random_results / (random_costs + 1)),
-    label="Random",
+    label="RS",
     color="black",
     marker="o",
     ls="-",
