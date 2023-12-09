@@ -868,15 +868,22 @@ def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
 
     check_dict = cp.deepcopy(price_dict)
     test_this = np.array(list(check_dict.values()))
+    
+    max_value = max(test_this)
 
+    #divide all values by the smallest nonzero value
+    for key in check_dict:
+        if check_dict[key] != 0:
+            check_dict[key] = check_dict[key]/max_value
+    min_value = find_smallest_nonzero(test_this)
     #pdb.set_trace()
     price_per_ligand = []
     for ligand in NEW_LIGANDS:
         #test_this = np.array(list(check_dict.values()))
         #min_value = find_smallest_nonzero(test_this)
-        price_per_ligand.append(1+np.log(check_dict[ligand]))
+        price_per_ligand.append( min_value+  np.log(check_dict[ligand]))
         #price_per_ligand.append(1+check_dict[ligand]-min_value)
-        check_dict[ligand] = 1
+        check_dict[ligand] = min_value
 
     price_per_ligand = np.array(price_per_ligand)
 

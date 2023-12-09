@@ -17,6 +17,10 @@ from torch.optim import Adam
 # Custom module imports
 from botroch_ext import optimize_acqf_discrete_modified
 from kernels import BoundedKernel, TanimotoKernel
+
+
+#specific import for the modified GIBBON function
+from utils import compute_price_acquisition_ligands_price_per_acqfct
 import pdb
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -334,22 +338,24 @@ def gibbon_search_modified_all(
     return index_set,acq_values, candidates
 
 
-def is_descending(arr):
-    for i in range(len(arr) - 1):
-        if arr[i] < arr[i + 1]:
-            return False
-    return True
-
 def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO,price_dict_BO):
-    from utils import compute_price_acquisition_ligands_price_per_acqfct
+    import matplotlib.pyplot as plt
 
     index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
+    
     row_sums_1 = acq_values.sum(axis=1)
-    mean_row_sums_1 = 0.5*row_sums_1.mean()
+    #plt.hist(row_sums_1)
+    #plot the average as a line
+    #plt.axvline(x=row_sums_1.mean(), color='r', linestyle='dashed', linewidth=2)
+    #plt.savefig("row_sums_1.png")
+
+    
+    #mean_row_sums_1 = row_sums_1.mean() #
+    #mean_row_sums_1 = 0.1*mean_row_sums_1
     #find all indices where rows sum is larger than mean
-    index_set = index_set[row_sums_1 > mean_row_sums_1]
-    acq_values = acq_values[row_sums_1 > mean_row_sums_1]
-    candidates = candidates[row_sums_1 > mean_row_sums_1]
+    #index_set = index_set[row_sums_1 > mean_row_sums_1]
+    #acq_values = acq_values[row_sums_1 > mean_row_sums_1]
+    #candidates = candidates[row_sums_1 > mean_row_sums_1]
 
 
     ligand_set = []

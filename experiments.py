@@ -1,12 +1,31 @@
-from BO import *
-from utils import *
+import numpy as np
+import torch
 
-SEED = 111
-random.seed(SEED)
-np.random.seed(SEED)
-torch.manual_seed(SEED)
+from BO import (
+    update_model, 
+    gibbon_search, 
+    gibbon_search_modified, 
+    gibbon_search_modified_all, 
+    gibbon_search_modified_all_per_price
+)
+
+from utils import (
+    check_better, 
+    update_X_y, 
+    compute_price_acquisition_ligands, 
+    update_price_dict_ligands, 
+    select_batch, 
+    check_success, 
+    find_optimal_batch
+)
+
 
 def RS_STEP(RANDOM_data):
+    """
+    Simple RS step without any cost constraints but keep track of the costs
+    assuming random costs for each point and no cost updates
+    """
+
     # Extract the data from the dictionary
     y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
     y_best_RANDOM = RANDOM_data["y_best_RANDOM"]
@@ -901,7 +920,6 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     # Get current BO data from last iteration
     model = BO_data["model"]
     X, y = BO_data["X"], BO_data["y"]
-    N_train = BO_data["N_train"]
     y_candidate_BO = BO_data["y_candidate_BO"]
     X_candidate_BO = BO_data["X_candidate_BO"]
     bounds_norm = BO_data["bounds_norm"]
@@ -914,15 +932,13 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     scaler_y = BO_data["scaler_y"]
     
     
-    index_set_rearranged, acq_values_per_price, candidates_rearranged  = gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, LIGANDS_candidate_BO=LIGANDS_candidate_BO, price_dict_BO=price_dict_BO)
+    index_set_rearranged, _, candidates_rearranged  = gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, LIGANDS_candidate_BO=LIGANDS_candidate_BO, price_dict_BO=price_dict_BO)
     indices = index_set_rearranged[0]
     candidates = candidates_rearranged[0]
-    #convert to torch tensor
+    #convert to back torch tensor
     candidates = torch.from_numpy(candidates).float()
 
 
-    # Assuming gibbon_search, update_X_y, compute_price_acquisition_ligands, check_better, update_model, and update_price_dict_ligands are defined elsewhere
-    #indices, candidates = gibbon_search(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
     suggested_costs_all, _ = compute_price_acquisition_ligands(
