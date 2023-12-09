@@ -44,10 +44,14 @@ Currently tested with python 3.8.16. and botorch 0.8.1.
 
 ### `3_scan_opt_update_cost_acq_per_price`
 - **Description**:
-Use a modified acquisition function $\alpha_{price}$ with dimension (aquisition function/price) to find a good cost and yield increase compromise. This does not requiere more user input that the price per ligand:
+To find a good cost and yield increase compromise.
+Use a modified acquisition function $\alpha_{p_j}^{i}$ with dimension (aquisition function/p) where $p_j$ is the current price of ligand $j$ and $i$ is the index of the batch. The acquisition function value associated to each experiment $i$ within a batch is now:
 
-$\alpha_{price} = \alpha / (1+\log(price))  $
+$\alpha_{p}^{i} = \alpha / (1+\log(p_{j})) \text{ , if } j \text{ not in inventory}  $
 
+If a ligand was already included (by buying 1 g of the substrance ) we divide by $1$. This does not requiere more user input that the price per ligand. After computing all $\alpha_{p}^{i}$ values the batches are ranked according to 
+
+$Batch value per money = \sum^{i} \alpha_{p}^{i}$
 
 
 ### `2_scan_opt_update_costs_saving`
