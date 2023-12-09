@@ -4,6 +4,7 @@ import torch
 import random
 from utils import FingerprintGenerator, inchi_to_smiles, convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
+import pdb
 
 class Evaluation_data:
     def __init__(self, dataset, init_size, prices, init_strategy="values"):
@@ -62,11 +63,15 @@ class Evaluation_data:
         # https://github.com/doyle-lab-ucla/edboplus/blob/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full_update.csv
         # https://chemrxiv.org/engage/chemrxiv/article-details/62f6966269f3a5df46b5584b
         elif self.dataset == "BMS":
+            #direct arylation reaction
             dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
             # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
             self.data = pd.read_csv(dataset_url)
-            self.data = self.data.dropna()
+
+            #pdb.set_trace()
+            #self.data = self.data.dropna()
             self.data = self.data.sample(frac=1).reset_index(drop=True)
+
 
             #create a copy of the data
             data_copy = self.data.copy()
@@ -78,12 +83,10 @@ class Evaluation_data:
                 print("There are duplicates in the dataset.")
                 exit()
 
-
-
             self.data["Ligand_Cost_fixed"] = np.ceil(
                 self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
             )
-
+            #pdb.set_trace()
             # 1000*self.data["Ligand_mg"]/self.data["Ligand_MW"]
             self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
             self.data["Ligand_SMILES"] = inchi_to_smiles(
@@ -155,100 +158,35 @@ class Evaluation_data:
                 },
             }
 
-        elif self.dataset == "ebdo_direct_arylation":
-            dataset_url = "https://raw.githubusercontent.com/b-shields/edbo/master/experiments/data/direct_arylation/experiment_index.csv"
-            self.data = pd.read_csv(dataset_url)
-            self.data = self.data.dropna()
-            self.data = self.data.sample(frac=1).reset_index(drop=True)
-            col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
-            col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
-            col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
-            col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1, 1)
-            col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1, 1)
-
-            self.X = np.concatenate(
-                [
-                    col_0_base,
-                    col_1_ligand,
-                    col_2_solvent,
-                    col_3_concentration,
-                    col_4_temperature,
-                ],
-                axis=1,
-            )
-
-            self.y = self.data["yield"].to_numpy()
-
-            self.all_ligands = self.data["Ligand_SMILES"].to_numpy()
-            self.all_bases = self.data["Base_SMILES"].to_numpy()
-            self.all_solvents = self.data["Solvent_SMILES"].to_numpy()
-            unique_bases = np.unique(self.data["Base_SMILES"])
-            unique_ligands = np.unique(self.data["Ligand_SMILES"])
-            unique_solvents = np.unique(self.data["Solvent_SMILES"])
-            unique_concentrations = np.unique(self.data["Concentration"])
-            unique_temperatures = np.unique(self.data["Temp_C"])
-
-            max_yield_per_ligand = np.array(
-                [
-                    max(self.data[self.data["Ligand_SMILES"] == unique_ligand]["yield"])
-                    for unique_ligand in unique_ligands
-                ]
-            )
-            self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
-            self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
-
-            self.where_worst = np.array(
-                self.data.index[
-                    self.data["Ligand_SMILES"] == self.worst_ligand
-                ].tolist()
-            )
-
-            self.feauture_labels = {
-                "names": {
-                    "bases": unique_bases,
-                    "ligands": unique_ligands,
-                    "solvents": unique_solvents,
-                    "concentrations": unique_concentrations,
-                    "temperatures": unique_temperatures,
-                },
-                "ordered_smiles": {
-                    "bases": self.data["Base_SMILES"],
-                    "ligands": self.data["Ligand_SMILES"],
-                    "solvents": self.data["Solvent_SMILES"],
-                    "concentrations": self.data["Concentration"],
-                    "temperatures": self.data["Temp_C"],
-                },
-            }
 
         elif self.dataset == "buchwald":
             dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
             # load url directly into pandas dataframe
+            self.data = pd.read_csv(dataset_url)
+            self.data = self.data.sample(frac=1).reset_index(drop=True)
 
-            data = pd.read_csv(dataset_url)
-            # remove rows with nan
-            # instead of dropping nan rows this means the thing was not used.
-            # just put an empty FP instead! fix this 
-            data = data.dropna()
             # randomly shuffly df
-            data_copy = data.copy()
+            data_copy = self.data.copy()
             #remove the Yield column from the copy
             data_copy.drop('yield', axis=1, inplace=True)
             #check for duplicates
             duplicates = data_copy.duplicated().any()
+            
             if duplicates:
                 print("There are duplicates in the dataset.")
                 exit()
 
-            data = data.sample(frac=1).reset_index(drop=True)
-            unique_bases = data["base_smiles"].unique()
-            unique_ligands = data["ligand_smiles"].unique()
-            unique_aryl_halides = data["aryl_halide_smiles"].unique()
-            unique_additives = data["additive_smiles"].unique()
+            
+            unique_bases = self.data["base_smiles"].unique()
+            unique_ligands = self.data["ligand_smiles"].unique()
+            unique_aryl_halides = self.data["aryl_halide_smiles"].unique()
+            unique_additives = self.data["additive_smiles"].unique()
 
-            col_0_base = self.ftzr.featurize(data["base_smiles"])
-            col_1_ligand = self.ftzr.featurize(data["ligand_smiles"])
-            col_2_aryl_halide = self.ftzr.featurize(data["aryl_halide_smiles"])
-            col_3_additive = self.ftzr.featurize(data["additive_smiles"])
+            pdb.set_trace()
+            col_0_base = self.ftzr.featurize(self.data["base_smiles"])
+            col_1_ligand = self.ftzr.featurize(self.data["ligand_smiles"])
+            col_2_aryl_halide = self.ftzr.featurize(self.data["aryl_halide_smiles"])
+            col_3_additive = self.ftzr.featurize(self.data["additive_smiles"])
 
             self.feauture_labels = {
                 "names": {
@@ -258,10 +196,10 @@ class Evaluation_data:
                     "additives": unique_additives,
                 },
                 "ordered_smiles": {
-                    "bases": data["base_smiles"],
-                    "ligands": data["ligand_smiles"],
-                    "aryl_halides": data["aryl_halide_smiles"],
-                    "additives": data["additive_smiles"],
+                    "bases": self.data["base_smiles"],
+                    "ligands": self.data["ligand_smiles"],
+                    "aryl_halides": self.data["aryl_halide_smiles"],
+                    "additives": self.data["additive_smiles"],
                 },
             }
 
@@ -269,7 +207,7 @@ class Evaluation_data:
                 [col_0_base, col_1_ligand, col_2_aryl_halide, col_3_additive],
                 axis=1,
             )
-            self.y = data["yield"].to_numpy()
+            self.y = self.data["yield"].to_numpy()
 
         else:
             print("Dataset not implemented.")

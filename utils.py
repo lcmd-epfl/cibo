@@ -14,7 +14,7 @@ from matplotlib import use as mpl_use
 from itertools import combinations
 from rdkit import Chem
 from rdkit.Chem import AllChem
-
+import pdb
 mpl_use("Agg")  # Set the matplotlib backend for plotting
 
 
@@ -193,7 +193,9 @@ def plot_costs_BO_vs_RS(
 
 
 
-
+"""
+Function for the greedy batch selection
+"""
 
 
 
@@ -228,6 +230,9 @@ def check_success(cheap_indices, indices):
     else:
         cheap_indices = indices[cheap_indices]
         return cheap_indices, True
+
+
+
 
 
 # savepkl file
@@ -270,7 +275,7 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
 def find_smallest_nonzero(arr):
     # Filter out the non-zero values and find the minimum among them
     nonzero_values = [x for x in arr if x != 0]
-    return min(nonzero_values) if nonzero_values else None
+    return min(nonzero_values) if nonzero_values else 1
 
 def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
     """
@@ -289,13 +294,18 @@ def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
     for key in check_dict:
         if check_dict[key] != 0:
             check_dict[key] = check_dict[key]/max_value
+
     min_value = find_smallest_nonzero(test_this)
     #pdb.set_trace()
     price_per_ligand = []
     for ligand in NEW_LIGANDS:
         #test_this = np.array(list(check_dict.values()))
         #min_value = find_smallest_nonzero(test_this)
-        price_per_ligand.append( min_value+  np.log(check_dict[ligand]))
+        try:
+            denominator = min_value +  np.log(check_dict[ligand])
+        except:
+            pdb.set_trace()
+        price_per_ligand.append(denominator )
         #price_per_ligand.append(1+check_dict[ligand]-min_value)
         check_dict[ligand] = min_value
 
