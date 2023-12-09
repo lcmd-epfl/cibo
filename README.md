@@ -51,7 +51,7 @@ $\alpha_{p}^{i} = \alpha / (1+\log(p_{j})) \text{ , if } j \text{ not in invento
 
 If a ligand was already included (by buying 1 g of the substrance ) we divide by $1$. This does not requiere more user input that the price per ligand. After computing all $\alpha_{p}^{i}$ values the batches are ranked according to 
 
-$Batch value per money = \sum^{i} \alpha_{p}^{i}$
+$Batch value per money = \sum_{i} \alpha_{p}^{i}$
 
 
 ### `2_scan_opt_update_costs_saving`

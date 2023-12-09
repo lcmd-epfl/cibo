@@ -18,6 +18,22 @@ from rdkit.Chem import AllChem
 mpl_use("Agg")  # Set the matplotlib backend for plotting
 
 
+
+"""
+Cheminformatics utility functions.
+"""
+
+def canonicalize_smiles(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is not None:
+        return Chem.MolToSmiles(mol, isomericSmiles=True)
+    else:
+        return None
+
+
+def canonicalize_smiles_list(smiles_list):
+    return [canonicalize_smiles(smiles) for smiles in smiles_list]
+
 def inchi_to_smiles(inchi_list):
     """
     Convert a list of InChI strings to a list of canonical SMILES strings.
@@ -37,20 +53,6 @@ def inchi_to_smiles(inchi_list):
         else:
             smiles_list.append(None)  # Append None for invalid InChI strings
     return smiles_list
-
-
-def convert2pytorch(X, y):
-    X = torch.from_numpy(X).float()
-    y = torch.from_numpy(y).float().reshape(-1, 1)
-    return X, y
-
-
-def check_entries(array_of_arrays):
-    for array in array_of_arrays:
-        for item in array:
-            if item < 0 or item > 1:
-                return False
-    return True
 
 
 class FingerprintGenerator:
@@ -74,6 +76,47 @@ class FingerprintGenerator:
                 print(f"Could not generate a molecule from SMILES: {smiles}")
                 fingerprints.append(np.array([None]))
         return np.array(fingerprints)
+
+
+
+"""
+Functions to manipulate arrays and tensors or convert types
+"""
+
+
+def convert2pytorch(X, y):
+    X = torch.from_numpy(X).float()
+    y = torch.from_numpy(y).float().reshape(-1, 1)
+    return X, y
+
+
+def check_entries(array_of_arrays):
+    """
+    Check if the entries of the arrays are between 0 and 1. 
+    Needed for for the datasets.py script.
+    """
+
+    for array in array_of_arrays:
+        for item in array:
+            if item < 0 or item > 1:
+                return False
+    return True
+
+def check_better(y, y_best_BO):
+    """
+    Check if one of the molecuels in the new batch
+    is better than the current best one.
+    """
+
+    if max(y)[0] > y_best_BO:
+        return max(y)[0]
+    else:
+        return y_best_BO
+
+
+"""
+Functions for plotting
+"""
 
 
 def plot_utility_BO_vs_RS(
@@ -148,28 +191,10 @@ def plot_costs_BO_vs_RS(
     plt.clf()
 
 
-def canonicalize_smiles(smiles):
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is not None:
-        return Chem.MolToSmiles(mol, isomericSmiles=True)
-    else:
-        return None
 
 
-def canonicalize_smiles_list(smiles_list):
-    return [canonicalize_smiles(smiles) for smiles in smiles_list]
 
 
-def check_better(y, y_best_BO):
-    """
-    Check if one of the molecuels in the new batch
-    is better than the current best one.
-    """
-
-    if max(y)[0] > y_best_BO:
-        return max(y)[0]
-    else:
-        return y_best_BO
 
 
 def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
