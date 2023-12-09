@@ -4,8 +4,9 @@ import random
 import copy as cp
 from exp_configs_2 import benchmark
 from BO import update_model
-from utils import Evaluation_data,Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl, create_aligned_transposed_price_table, create_data_dict_BO_2A, create_data_dict_RS_2A
+from utils import Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl, create_aligned_transposed_price_table, create_data_dict_BO_2A, create_data_dict_RS_2A
 from experiments import BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE
+from datasets import Evaluation_data
 
 SEED = 111
 random.seed(SEED)
