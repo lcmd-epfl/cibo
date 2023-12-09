@@ -1,24 +1,25 @@
+# Standard library imports
 import copy as cp
 import itertools
-import math
 import os
 import pickle
 import random
 
+# Third-party imports
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from itertools import combinations
 from matplotlib import use as mpl_use
+from sklearn.preprocessing import MinMaxScaler
+
+# Specific module imports
+from itertools import combinations
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from scipy.spatial import distance
-from sklearn.preprocessing import MinMaxScaler
 import pdb
-import math
 
-mpl_use("Agg")  # Set the matplotlib backend
+mpl_use("Agg")  # Set the matplotlib backend for plotting
 
 
 def inchi_to_smiles(inchi_list):
@@ -141,6 +142,18 @@ class Evaluation_data:
             self.data = pd.read_csv(dataset_url)
             self.data = self.data.dropna()
             self.data = self.data.sample(frac=1).reset_index(drop=True)
+
+            #create a copy of the data
+            data_copy = self.data.copy()
+            #remove the Yield column from the copy
+            data_copy.drop('Yield', axis=1, inplace=True)
+            #check for duplicates
+            duplicates = data_copy.duplicated().any()
+            if duplicates:
+                print("There are duplicates in the dataset.")
+                exit()
+
+
 
             self.data["Ligand_Cost_fixed"] = np.ceil(
                 self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
@@ -289,9 +302,21 @@ class Evaluation_data:
             data = pd.read_csv(dataset_url)
             # remove rows with nan
             # instead of dropping nan rows this means the thing was not used.
-            # just put an empty FP instead
+            # just put an empty FP instead! fix this 
             data = data.dropna()
             # randomly shuffly df
+            data_copy = data.copy()
+            #remove the Yield column from the copy
+            data_copy.drop('yield', axis=1, inplace=True)
+            #check for duplicates
+            duplicates = data_copy.duplicated().any()
+            if duplicates:
+                print("There are duplicates in the dataset.")
+                exit()
+
+
+
+
             data = data.sample(frac=1).reset_index(drop=True)
             unique_bases = data["base_smiles"].unique()
             unique_ligands = data["ligand_smiles"].unique()
@@ -828,14 +853,29 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
 
     return price_acquisition, price_per_ligand
 
-
+def find_smallest_nonzero(arr):
+    # Filter out the non-zero values and find the minimum among them
+    nonzero_values = [x for x in arr if x != 0]
+    return min(nonzero_values) if nonzero_values else None
 
 def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
+    """
+    Only used for gibbon_search_modified_all_per_price!
+
+    Computes the price for the batch. When a ligand is already in the inventory
+    it will have a price of 1 to make sure the acfct value is not divided by 0.
+    """
 
     check_dict = cp.deepcopy(price_dict)
+    test_this = np.array(list(check_dict.values()))
+
+    #pdb.set_trace()
     price_per_ligand = []
     for ligand in NEW_LIGANDS:
-        price_per_ligand.append(check_dict[ligand])
+        #test_this = np.array(list(check_dict.values()))
+        #min_value = find_smallest_nonzero(test_this)
+        price_per_ligand.append(1+np.log(check_dict[ligand]))
+        #price_per_ligand.append(1+check_dict[ligand]-min_value)
         check_dict[ligand] = 1
 
     price_per_ligand = np.array(price_per_ligand)
@@ -949,70 +989,11 @@ def update_price_dict_all(price_dict, NEW_LIGANDS, NEW_BASES, NEW_SOLVENTS):
     return price_dict
 
 
-def find_min_max_distance_and_ratio_scipy(x, vectors):
-    """
-    #FUNCTION concerns subfolder 3_similarity_based_costs
-    (helper function for get_batch_price function)
-    Calculate the minimum and maximum distance between a vector x and a set of vectors vectors.
-    Parameters:
-        x (numpy.ndarray): The vector x.
-        vectors (numpy.ndarray): The set of vectors.
-    Returns:
-        tuple: The ratio between the minimum and maximum distance, the minimum distance, and the maximum distance.
-
-    Equation for computation of the ratio:
-    \[
-    p(x, \text{vectors}) = \frac{\min_{i} d(x, \text{vectors}[i])}{\max \left( \max_{i,k} d(\text{vectors}[i], \text{vectors}[k]), \max_{i} d(x, \text{vectors}[i]) \right)}
-    \]
-
-    \[
-    d(a, b) = \sqrt{\sum_{j=1}^{n} (a[j] - b[j])^2}
-    \]
-    """
-    # Calculate the minimum distance between x and vectors using cdist
-    dist_1 = distance.cdist([x], vectors, "euclidean")
-    min_distance = np.min(dist_1)
-    # Calculate the maximum distance among all vectors and x using cdist
-    pairwise_distances = distance.cdist(vectors, vectors, "euclidean")
-    max_distance_vectors = np.max(pairwise_distances)
-    max_distance_x = np.max(dist_1)
-    max_distance = max(max_distance_vectors, max_distance_x)
-    # Calculate the ratio p = min_distance / max_distance
-    p = min_distance / max_distance
-    return p
-
-
-def get_batch_price(X_train, costy_mols):
-    """
-    #FUNCTION concerns subfolder 3_similarity_based_costs
-    Computes the total price of a batch of molecules.
-    to update the price dynamically as the batch is being constructed
-    for BO with synthesis at each iteration
-
-    Parameters:
-        X_train (numpy.ndarray): The training data.
-        costy_mols (numpy.ndarray): The batch of molecules.
-    Returns:
-        float: The total price of the batch.
-
-    e.g. if a molecule was included in the training set its price will be 0
-    if a similar molecule was not included in the training set its price will be 1
-    for cases in between the price will be between 0 and 1
-    this is done for all costly molecules in the batch and the total price is returned
-    """
-
-    X_train_cp = cp.deepcopy(X_train)
-    batch_price = 0
-
-    for mol in costy_mols:
-        costs = find_min_max_distance_and_ratio_scipy(mol, X_train_cp)
-        batch_price += costs  # Update the batch price
-        X_train_cp = np.vstack((X_train_cp, mol))
-
-    return batch_price
-
-
 def update_X_y(X, y, cands, y_cands_BO, inds):
+    """
+    Appended the new batch of molecules to the training data for the next
+    iteration of the BO.
+    """
     X, y = np.concatenate((X, cands)), np.concatenate((y, y_cands_BO[inds, :]))
     return X, y
 
@@ -1175,44 +1156,6 @@ def create_data_dict_RS_2A(
     return RANDOM_data
 
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    benchmark = {
-        "dataset": "BMS",
-        "init_strategy": "worst_ligand",
-        "cost_aware": False,
-        "n_runs": 5,
-        "n_iter": 15,
-        "batch_size": 5,
-        "max_batch_cost": 0,
-        "ntrain": 200,
-    }
-
-    DATASET = Evaluation_data(
-        benchmark["dataset"],
-        benchmark["ntrain"],
-        "update_ligand_when_used",
-        init_strategy=benchmark["init_strategy"],
-    )
-
-    (
-        X_init,
-        y_init,
-        costs_init,
-        X_candidate,
-        y_candidate,
-        costs_candidate,
-        LIGANDS_init,
-        LIGANDS_candidate,
-        price_dict,
-    ) = DATASET.get_init_holdout_data(77)
-
-
-def round_up_to_next_ten(n):
-    return math.ceil(n / 10) * 10
-
-
 class Budget_schedule:
     def __init__(self, schedule="constant"):
         self.schedule = schedule
@@ -1252,3 +1195,39 @@ class Budget_schedule:
         else:
             print("Schedule not implemented.")
             exit()
+
+
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    benchmark = {
+        "dataset": "BMS",
+        "init_strategy": "worst_ligand",
+        "cost_aware": False,
+        "n_runs": 5,
+        "n_iter": 15,
+        "batch_size": 5,
+        "max_batch_cost": 0,
+        "ntrain": 200,
+    }
+
+    DATASET = Evaluation_data(
+        benchmark["dataset"],
+        benchmark["ntrain"],
+        "update_ligand_when_used",
+        init_strategy=benchmark["init_strategy"],
+    )
+
+    (
+        X_init,
+        y_init,
+        costs_init,
+        X_candidate,
+        y_candidate,
+        costs_candidate,
+        LIGANDS_init,
+        LIGANDS_candidate,
+        price_dict,
+    ) = DATASET.get_init_holdout_data(77)
