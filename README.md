@@ -1,16 +1,36 @@
 # Rules of Acquisition
 
-<img src="rules_ferengi.png" width="80%" height="80%" />
+## Motivation
+Following the Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce two innovative batch selection strategies for cost-efficient BO to find a good cost and yield increase compromise.
+
+<img src="rules_ferengi.png" width="40%" height="40%" />
 
 ## Introduction
 **Bayesian Optimization (BO) taking batch cost into account.** Inspired by the Star Trek universe, the "Rules of Acquisition" are a series of sacred business proverbs from the ultra-capitalist Ferengi race. This project embodies the principles of efficiency and knowledge in BO, particularly focusing on cost-aware batch selection strategies.
 
-## Motivation
-Following the Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce two innovative batch selection strategies for cost-efficient BO to find a good cost and yield increase compromise.
+
 
 ## Installation
 
-Add
+Python dependencies:
+
+```
+torch
+gpytorch
+botorch
+rdkit
+matplotlib
+sklearn
+numpy
+```
+Best to create a new envirnment and then
+
+```
+pip install -r requirements.txt
+```
+
+
+After setting up an envirnment with these packages, add
 ```
 git clone git@github.com:janweinreich/rules_of_acquisition.git
 export PYTHONPATH=$PYTHONPATH:$HOME/rules_of_acquisition
@@ -28,20 +48,24 @@ Currently tested with python 3.8.16. and botorch 0.8.1.
 - **Description**
 
 Perform Gaussian Process Regression on the EDBO dataset resulting scatter plot with errorbars. Try the effect of different kernels,
-we find that the `Tanimoto` kernel performs quite well.
+we find that the `Tanimoto` kernel performs quite well and is the default choice. Other options include `RBF`, `Matern` and `Linear`.
 
 
 ### `AcqFuncPrice`
 - **Description**:
 
-Use a modified acquisition function $\alpha_{p_j}^{i}$ with dimension (aquisition function/p) where $p_j$ is the current price of ligand $j$ and $i$ is the index of the batch. The acquisition function value associated to each experiment $i$ within a batch is now:
+Use a modified acquisition function $\alpha_{p_j}^{i}$ with dimension (aquisition function/price) where $p_j$ is the current price of ligand $j$ and $i$ is the index of the batch.
+The original acquisition function (here GIBBON by default) is not modified, but the values are divided by a monotonic increasing function of the price. 
+This allows using different acquisition functions implemented in `botorch`.
+Empirically we find a good choice for the acquisition function value associated to each experiment $i$ as:
 
 $\alpha_{p}^{i} = \alpha / (1+\log(p_{j})) \text{ , if } j \text{ not in inventory}  $
 
-If a ligand was already included (by buying 1 g of the substrance ) we divide by $1$. This does not requiere more user input that the price per ligand. After computing all $\alpha_{p}^{i}$ values the batches are ranked according to 
+If a ligand was already included (by buying 1 g of the substrance ) we divide by $1$. This does not requiere more user input that the price per ligand. After computing all $\alpha_{p}^{i}$ values the batches are reranked and the batch with the largest value
 
-$Batch value per money = \sum_{i} \alpha_{p}^{i}$
+$\sum_{i} \alpha_{p}^{i}$
 
+is selected.
 
 ### `FixBatch`
 - **Description**:

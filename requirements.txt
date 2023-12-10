@@ -1,0 +1,7 @@
+torch
+gpytorch
+botorch
+rdkit
+matplotlib
+scikit-learn
+numpy
