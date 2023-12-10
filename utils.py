@@ -3,6 +3,7 @@ import copy as cp
 import itertools
 import os
 import pickle
+import math
 
 # Third-party imports
 import matplotlib.pyplot as plt
@@ -63,18 +64,23 @@ class FingerprintGenerator:
     def featurize(self, smiles_list):
         fingerprints = []
         for smiles in smiles_list:
-            mol = Chem.MolFromSmiles(smiles)
-            if mol is not None:
-                fp = AllChem.GetMorganFingerprintAsBitVect(
-                    mol, self.radius, nBits=self.nBits
-                )
-                fp_array = np.array(
-                    list(fp.ToBitString()), dtype=int
-                )  # Convert to NumPy array
-                fingerprints.append(fp_array)
+            if not isinstance(smiles, str):
+                fingerprints.append(np.ones(self.nBits))
             else:
-                print(f"Could not generate a molecule from SMILES: {smiles}")
-                fingerprints.append(np.array([None]))
+                mol = Chem.MolFromSmiles(smiles)
+                if mol is not None:
+                    fp = AllChem.GetMorganFingerprintAsBitVect(
+                        mol, self.radius, nBits=self.nBits
+                    )
+                    fp_array = np.array(
+                        list(fp.ToBitString()), dtype=int
+                    )  # Convert to NumPy array
+                    fingerprints.append(fp_array)
+                else:
+                    pdb.set_trace()
+                    print(f"Could not generate a molecule from SMILES: {smiles}")
+                    fingerprints.append(np.array([None]))
+
         return np.array(fingerprints)
 
 
@@ -132,6 +138,7 @@ def plot_utility_BO_vs_RS(
     y_BO_MEAN, y_BO_STD = np.mean(y_better_BO_ALL, axis=0), np.std(
         y_better_BO_ALL, axis=0
     )
+    
     y_RANDOM_MEAN, y_RANDOM_STD = np.mean(y_better_RANDOM_ALL, axis=0), np.std(
         y_better_RANDOM_ALL, axis=0
     )

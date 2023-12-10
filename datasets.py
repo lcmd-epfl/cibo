@@ -34,45 +34,15 @@ class Evaluation_data:
             self.X = self.scaler_X.fit_transform(self.X)
 
     def get_raw_dataset(self):
-        if self.dataset == "freesolv":
-            try:
-                import deepchem as dc
-            except:
-                print("DeepChem not installed.")
-                exit()
-            _, datasets, _ = dc.molnet.load_sampl(
-                featurizer=self.ftzr, splitter="random", transformers=[]
-            )
-            train_dataset, valid_dataset, test_dataset = datasets
-
-            X_train = train_dataset.X
-            y_train = train_dataset.y[:, 0]
-            X_valid = valid_dataset.X
-            y_valid = valid_dataset.y[:, 0]
-            X_test = test_dataset.X
-            y_test = test_dataset.y[:, 0]
-
-            self.X = np.concatenate((X_train, X_valid, X_test))
-            self.y = np.concatenate((y_train, y_valid, y_test))
-
-            random_inds = np.random.permutation(len(self.X))
-            self.X = self.X[random_inds]
-            self.y = self.y[random_inds]
-
         # TODO: include this dataset with more reastic prices
         # https://github.com/doyle-lab-ucla/edboplus/blob/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full_update.csv
         # https://chemrxiv.org/engage/chemrxiv/article-details/62f6966269f3a5df46b5584b
-        elif self.dataset == "BMS":
+        if self.dataset == "BMS":
             #direct arylation reaction
             dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
             # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
             self.data = pd.read_csv(dataset_url)
-
-            #pdb.set_trace()
-            #self.data = self.data.dropna()
             self.data = self.data.sample(frac=1).reset_index(drop=True)
-
-
             #create a copy of the data
             data_copy = self.data.copy()
             #remove the Yield column from the copy
@@ -86,8 +56,7 @@ class Evaluation_data:
             self.data["Ligand_Cost_fixed"] = np.ceil(
                 self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
             )
-            #pdb.set_trace()
-            # 1000*self.data["Ligand_mg"]/self.data["Ligand_MW"]
+            
             self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
             self.data["Ligand_SMILES"] = inchi_to_smiles(
                 self.data["Ligand_inchi"].values
@@ -164,7 +133,6 @@ class Evaluation_data:
             # load url directly into pandas dataframe
             self.data = pd.read_csv(dataset_url)
             self.data = self.data.sample(frac=1).reset_index(drop=True)
-
             # randomly shuffly df
             data_copy = self.data.copy()
             #remove the Yield column from the copy
@@ -176,17 +144,49 @@ class Evaluation_data:
                 print("There are duplicates in the dataset.")
                 exit()
 
-            
-            unique_bases = self.data["base_smiles"].unique()
-            unique_ligands = self.data["ligand_smiles"].unique()
-            unique_aryl_halides = self.data["aryl_halide_smiles"].unique()
-            unique_additives = self.data["additive_smiles"].unique()
 
-            pdb.set_trace()
             col_0_base = self.ftzr.featurize(self.data["base_smiles"])
             col_1_ligand = self.ftzr.featurize(self.data["ligand_smiles"])
             col_2_aryl_halide = self.ftzr.featurize(self.data["aryl_halide_smiles"])
             col_3_additive = self.ftzr.featurize(self.data["additive_smiles"])
+            
+            self.X = np.concatenate(
+                [col_0_base, 
+                 col_1_ligand, 
+                 col_2_aryl_halide, 
+                 col_3_additive
+                ],
+                axis=1,
+            )
+
+            self.y = self.data["yield"].to_numpy()
+            self.all_ligands = self.data["ligand_smiles"].to_numpy()
+            self.all_bases = self.data["base_smiles"].to_numpy()
+            self.all_aryl_halides = self.data["aryl_halide_smiles"].to_numpy()
+            self.all_additives = self.data["additive_smiles"].to_numpy()
+            
+            unique_bases = np.unique(self.data["base_smiles"])
+            unique_ligands = np.unique(self.data["ligand_smiles"])
+            unique_aryl_halides = np.unique(self.data["aryl_halide_smiles"].fillna(""))
+            unique_additives = np.unique(self.data["additive_smiles"].fillna(""))
+
+            max_yield_per_ligand = np.array(
+                [
+                    max(self.data[self.data["ligand_smiles"] == unique_ligand]["yield"])
+                    for unique_ligand in unique_ligands
+                ]
+            )
+
+            self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
+
+            # make price of worst ligand 0 because already in the inventory
+            self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
+
+            self.where_worst = np.array(
+                self.data.index[
+                    self.data["ligand_smiles"] == self.worst_ligand
+                ].tolist()
+            )
 
             self.feauture_labels = {
                 "names": {
@@ -202,13 +202,7 @@ class Evaluation_data:
                     "additives": self.data["additive_smiles"],
                 },
             }
-
-            self.X = np.concatenate(
-                [col_0_base, col_1_ligand, col_2_aryl_halide, col_3_additive],
-                axis=1,
-            )
-            self.y = self.data["yield"].to_numpy()
-
+            
         else:
             print("Dataset not implemented.")
             exit()
