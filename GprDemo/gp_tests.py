@@ -1,10 +1,14 @@
-from BO import *
-from utils import *
+import numpy as np
+import torch
+from BO import update_model
+from utils import check_entries, convert2pytorch
+from datasets import Evaluation_data
 from exp_configs_1 import benchmark
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
 
 TEST_OPTION = 1
 
@@ -65,7 +69,7 @@ else:
 fit_y = False
 
 model, scaler_y = update_model(
-    X_init, y_init, bounds_norm, kernel_type="Matern", fit_y=fit_y, FIT_METHOD=True
+    X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y, FIT_METHOD=True
 )
 
 
