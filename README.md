@@ -45,14 +45,14 @@ Currently tested with python 3.8.16. and botorch 0.8.1.
 ## Repository Structure
 
 ### `GprDemo`
-- **Description**
+
 
 Perform Gaussian Process Regression on the EDBO dataset resulting scatter plot with errorbars. Try the effect of different kernels,
 we find that the `Tanimoto` kernel performs quite well and is the default choice. Other options include `RBF`, `Matern` and `Linear`.
 
 
 ### `AcqFuncPrice`
-- **Description**:
+
 
 Use a modified acquisition function $\alpha_{p_j}^{i}$ with dimension (aquisition function/price) where $p_j$ is the current price of ligand $j$ and $i$ is the index of the batch.
 The original acquisition function (here GIBBON by default) is not modified, but the values are divided by a monotonic increasing function of the price. 
@@ -68,10 +68,20 @@ $\sum_{i} \alpha_{p}^{i}$
 is selected.
 
 ### `FixBatch`
-- **Description**:
-Corresponds to the greedy strategy outlined above
-User has to define a maximal cost for the batch. If a suggested batch is more expensive, it is disregarded and the next best batch is just that can be afforded. If no batch can be afforded, take one where no new compunds are bought meaning measure difference temperatures or concentrations.
 
+Corresponds to a greedy strategy where the user has to define a maximal cost for the batch using a config file `exp_configs.py`. For example setting `max_batch_cost=100` means per iteration `100` can be spend. If a suggested batch is more expensive, it is disregarded and the next best batch is just that can be afforded. 
+More on the `exp_configs.py` below! If no batch can be afforded, take one where no new compunds are bought meaning measure difference temperatures or concentrations.
+
+### `SI`
+
+Contains all experiments that are shown in the SI of the paper.
+Documentation for that is not up to date (see below).
+
+
+### How do I control and select an experiment?
+
+
+_____________
 
 ## Strategies
 
@@ -90,8 +100,7 @@ User has to define a maximal cost for the batch. If a suggested batch is more ex
 - **Content**: Space for experimental or outdated items.
 
 
-### SI
-Contains all experiments that are shown in the SI of the paper.
+
 
 ### `1_greedy_fix_costs`
 - **Description**: Implements the Greedy algorithm with fixed sample costs.

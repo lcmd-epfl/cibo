@@ -2,10 +2,11 @@ import torch
 import numpy as np
 import random
 import copy as cp
-from exp_configs_2 import benchmark
-from BO import update_model, create_data_dict_BO_2A, create_data_dict_RS_2A, BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP
-from utils import Evaluation_data, create_aligned_transposed_price_table
-from experiments import Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl
+from exp_configs import benchmark
+from BO import update_model
+from experiments import BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP
+from utils import create_aligned_transposed_price_table, Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl,create_data_dict_BO_2A, create_data_dict_RS_2A
+from datasets import Evaluation_data
 
 
 SEED = 111
