@@ -15,13 +15,12 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 from torch.optim import Adam
 
 # Custom module imports
-from botroch_ext import optimize_acqf_discrete_modified
+from botorch_ext import optimize_acqf_discrete_modified
 from kernels import BoundedKernel, TanimotoKernel
 
 
 #specific import for the modified GIBBON function
 from utils import compute_price_acquisition_ligands_price_per_acqfct
-import pdb
 # Suppress warnings
 warnings.filterwarnings("ignore")
 
