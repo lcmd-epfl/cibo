@@ -16,13 +16,14 @@ from itertools import combinations
 from rdkit import Chem
 from rdkit.Chem import AllChem
 import pdb
-mpl_use("Agg")  # Set the matplotlib backend for plotting
 
+mpl_use("Agg")  # Set the matplotlib backend for plotting
 
 
 """
 Cheminformatics utility functions.
 """
+
 
 def canonicalize_smiles(smiles):
     mol = Chem.MolFromSmiles(smiles)
@@ -34,6 +35,7 @@ def canonicalize_smiles(smiles):
 
 def canonicalize_smiles_list(smiles_list):
     return [canonicalize_smiles(smiles) for smiles in smiles_list]
+
 
 def inchi_to_smiles(inchi_list):
     """
@@ -84,7 +86,6 @@ class FingerprintGenerator:
         return np.array(fingerprints)
 
 
-
 """
 Functions to manipulate arrays and tensors or convert types
 """
@@ -98,7 +99,7 @@ def convert2pytorch(X, y):
 
 def check_entries(array_of_arrays):
     """
-    Check if the entries of the arrays are between 0 and 1. 
+    Check if the entries of the arrays are between 0 and 1.
     Needed for for the datasets.py script.
     """
 
@@ -107,6 +108,7 @@ def check_entries(array_of_arrays):
             if item < 0 or item > 1:
                 return False
     return True
+
 
 def check_better(y, y_best_BO):
     """
@@ -138,7 +140,7 @@ def plot_utility_BO_vs_RS(
     y_BO_MEAN, y_BO_STD = np.mean(y_better_BO_ALL, axis=0), np.std(
         y_better_BO_ALL, axis=0
     )
-    
+
     y_RANDOM_MEAN, y_RANDOM_STD = np.mean(y_better_RANDOM_ALL, axis=0), np.std(
         y_better_RANDOM_ALL, axis=0
     )
@@ -198,12 +200,9 @@ def plot_costs_BO_vs_RS(
     plt.clf()
 
 
-
-
 """
 Function for the greedy batch selection
 """
-
 
 
 def select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE):
@@ -237,9 +236,6 @@ def check_success(cheap_indices, indices):
     else:
         cheap_indices = indices[cheap_indices]
         return cheap_indices, True
-
-
-
 
 
 # savepkl file
@@ -279,10 +275,12 @@ def compute_price_acquisition_ligands(NEW_LIGANDS, price_dict):
 
     return price_acquisition, price_per_ligand
 
+
 def find_smallest_nonzero(arr):
     # Filter out the non-zero values and find the minimum among them
     nonzero_values = [x for x in arr if x != 0]
     return min(nonzero_values) if nonzero_values else 1
+
 
 def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
     """
@@ -294,31 +292,152 @@ def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
 
     check_dict = cp.deepcopy(price_dict)
     test_this = np.array(list(check_dict.values()))
-    
+
     max_value = max(test_this)
 
-    #divide all values by the smallest nonzero value
+    # divide all values by the smallest nonzero value
     for key in check_dict:
         if check_dict[key] != 0:
-            check_dict[key] = check_dict[key]/max_value
+            check_dict[key] = check_dict[key] / max_value
 
     min_value = find_smallest_nonzero(test_this)
-    #pdb.set_trace()
+    # pdb.set_trace()
     price_per_ligand = []
     for ligand in NEW_LIGANDS:
-        #test_this = np.array(list(check_dict.values()))
-        #min_value = find_smallest_nonzero(test_this)
+        # test_this = np.array(list(check_dict.values()))
+        # min_value = find_smallest_nonzero(test_this)
         try:
-            denominator = min_value +  np.log(check_dict[ligand])
+            denominator = min_value + np.log(check_dict[ligand])
         except:
             pdb.set_trace()
-        price_per_ligand.append(denominator )
-        #price_per_ligand.append(1+check_dict[ligand]-min_value)
+        price_per_ligand.append(denominator)
+        # price_per_ligand.append(1+check_dict[ligand]-min_value)
         check_dict[ligand] = min_value
 
     price_per_ligand = np.array(price_per_ligand)
 
     return price_per_ligand
+
+
+def compute_price_acquisition_ligands_price_per_acqfct_2(NEW_LIGANDS, price_dict):
+    check_dict_ligands = cp.deepcopy(price_dict)
+
+    price_per_ligand = []
+    for ligand in NEW_LIGANDS:
+        denominator = 1 + check_dict_ligands[ligand]
+        price_per_ligand.append(denominator)
+        check_dict_ligands[ligand] = 0
+
+    price_per_ligand = np.array(price_per_ligand)
+
+    return price_per_ligand
+
+
+def compute_price_acquisition_ligands_price_per_acqfct_B1(
+    NEW_LIGANDS, NEW_ADDITIVES, price_dict_ligands, price_dict_additives
+):
+    """
+    Only used for gibbon_search_modified_all_per_price!
+
+    Computes the price for the batch. When a ligand is already in the inventory
+    it will have a price of 1 to make sure the acfct value is not divided by 0.
+    """
+
+    check_dict_ligands = cp.deepcopy(price_dict_ligands)
+    check_dict_additives = cp.deepcopy(price_dict_additives)
+    test_this_ligands = np.array(list(check_dict_ligands.values()))
+    test_this_additives = np.array(list(check_dict_additives.values()))
+
+    max_value_ligands = max(test_this_ligands)
+    max_value_additives = max(test_this_additives)
+    maxi_norm = min(max_value_ligands, max_value_additives)
+    # divide all values by the smallest nonzero value
+    for key in check_dict_ligands:
+        if check_dict_ligands[key] != 0:
+            check_dict_ligands[key] = check_dict_ligands[key] / maxi_norm
+
+    for key in check_dict_additives:
+        if check_dict_additives[key] != 0:
+            check_dict_additives[key] = check_dict_additives[key] / maxi_norm
+
+    min_value_ligands = find_smallest_nonzero(test_this_ligands) / maxi_norm
+    min_value_additives = find_smallest_nonzero(test_this_additives) / maxi_norm
+
+    price_per_ligand_additive = []
+    for ligand, additive in zip(NEW_LIGANDS, NEW_ADDITIVES):
+        try:
+            denominator = (
+                min_value_ligands
+                + min_value_additives
+                + np.log(check_dict_ligands[ligand])
+                + np.log(check_dict_additives[additive])
+            )
+        except:
+            pdb.set_trace()
+        price_per_ligand_additive.append(denominator)
+        check_dict_ligands[ligand] = min_value_ligands
+        check_dict_additives[additive] = min_value_additives
+
+    price_per_ligand_additive = np.array(price_per_ligand_additive)
+
+    return price_per_ligand_additive
+
+
+def compute_price_acquisition_ligands_price_per_acqfct_B2(
+    NEW_LIGANDS, NEW_ADDITIVES, price_dict_ligands, price_dict_additives
+):
+    """
+    Only used for gibbon_search_modified_all_per_price!
+
+    Computes the price for the batch. When a ligand is already in the inventory
+    it will have a price of 1 to make sure the acfct value is not divided by 0.
+    """
+
+    check_dict_ligands = cp.deepcopy(price_dict_ligands)
+    check_dict_additives = cp.deepcopy(price_dict_additives)
+
+    price_per_ligand_additive = []
+    for ligand, additive in zip(NEW_LIGANDS, NEW_ADDITIVES):
+        denominator = 1 + check_dict_ligands[ligand] + check_dict_additives[additive]
+        price_per_ligand_additive.append(denominator)
+        check_dict_ligands[ligand] = 0
+        check_dict_additives[additive] = 0
+
+    return price_per_ligand_additive
+
+
+def compute_price_acquisition_ligands_price_per_acqfct2(NEW_LIGANDS, price_dict):
+    """
+    Only used for gibbon_search_modified_all_per_price!
+
+    Computes the price for the batch. When a ligand is already in the inventory
+    it will have a price of 1 to make sure the acfct value is not divided by 0.
+    """
+
+    check_dict = cp.deepcopy(price_dict)
+    test_this = np.array(list(check_dict.values()))
+
+    price_per_ligand = []
+    for ligand in NEW_LIGANDS:
+        # pdb.set_trace()
+        # check_dict[ligand]
+        # test_this = np.array(list(check_dict.values()))
+        # min_value = find_smallest_nonzero(test_this)
+        try:
+            denominator = max(test_this) + np.log(check_dict[ligand])
+            # if check_dict[ligand] > 100:
+            #    pdb.set_trace()
+            # print(denominator)
+        except:
+            pdb.set_trace()
+        price_per_ligand.append(denominator)
+        # price_per_ligand.append(1+check_dict[ligand]-min_value)
+        check_dict[ligand] = 1
+
+    price_per_ligand = np.array(price_per_ligand)
+
+    return price_per_ligand
+
 
 def find_optimal_batch(
     price_dict_BO, NEW_LIGANDS, original_indices, BATCH_SIZE, MAX_BATCH_COST
@@ -512,6 +631,74 @@ def create_data_dict_BO_2A(
     return BO_data
 
 
+def create_data_dict_BO_2B(
+    model,
+    y_best_BO,
+    scaler_y,
+    X,
+    y,
+    X_candidate_BO,
+    y_candidate_BO,
+    LIGANDS_candidate_BO,
+    y_better_BO,
+    price_dict_BO_ligands,
+    price_dict_BO_additives,
+    ADDITIVES_candidate_BO,
+    running_costs_BO,
+    bounds_norm,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+):
+    BO_data = {
+        "model": model,
+        "y_best_BO": y_best_BO,
+        "scaler_y": scaler_y,
+        "X": X,
+        "y": y,
+        "N_train": len(X),
+        "X_candidate_BO": X_candidate_BO,
+        "y_candidate_BO": y_candidate_BO,
+        "LIGANDS_candidate_BO": LIGANDS_candidate_BO,
+        "y_better_BO": y_better_BO,
+        "price_dict_BO_ligands": price_dict_BO_ligands,
+        "price_dict_BO_additives": price_dict_BO_additives,
+        "ADDITIVES_candidate_BO": ADDITIVES_candidate_BO,
+        "running_costs_BO": running_costs_BO,
+        "bounds_norm": bounds_norm,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+    }
+
+    return BO_data
+
+
+def create_data_dict_RS_2B(
+    y_candidate_RANDOM,
+    y_best_RANDOM,
+    LIGANDS_candidate_RANDOM,
+    ADDITIVES_candidate_RANDOM,
+    price_dict_RANDOM_ligands,
+    price_dict_RANDOM_additives,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+    y_better_RANDOM,
+    running_costs_RANDOM,
+):
+    RANDOM_data = {
+        "y_candidate_RANDOM": y_candidate_RANDOM,
+        "y_best_RANDOM": y_best_RANDOM,
+        "LIGANDS_candidate_RANDOM": LIGANDS_candidate_RANDOM,
+        "ADDITIVES_candidate_RANDOM": ADDITIVES_candidate_RANDOM,
+        "price_dict_RANDOM_ligands": price_dict_RANDOM_ligands,
+        "price_dict_RANDOM_additives": price_dict_RANDOM_additives,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+        "y_better_RANDOM": y_better_RANDOM,
+        "running_costs_RANDOM": running_costs_RANDOM,
+    }
+    return RANDOM_data
+
+
 def create_data_dict_BO_1(
     model,
     y_best_BO,
@@ -612,7 +799,7 @@ class Budget_schedule:
             return 1
         else:
             return (iteration - 14) + 1
-        
+
     def adaptive_2(self, iteration):
         if iteration <= 30:
             return 1

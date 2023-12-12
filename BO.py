@@ -19,9 +19,18 @@ from botorch_ext import optimize_acqf_discrete_modified
 from kernels import BoundedKernel, TanimotoKernel
 
 
-#specific import for the modified GIBBON function
-from utils import compute_price_acquisition_ligands_price_per_acqfct
+# specific import for the modified GIBBON function
+from utils import (
+    compute_price_acquisition_ligands_price_per_acqfct,
+    compute_price_acquisition_ligands_price_per_acqfct2,
+    compute_price_acquisition_ligands_price_per_acqfct_2,
+    compute_price_acquisition_ligands_price_per_acqfct_B1,
+    compute_price_acquisition_ligands_price_per_acqfct_B2,
+)
+
 # Suppress warnings
+import pdb
+
 warnings.filterwarnings("ignore")
 
 
@@ -152,7 +161,6 @@ class CustomGPModel:
             elif self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
                 self.NUM_EPOCHS_GD = 1000
 
-
         self.scaler_y = TensorStandardScaler()
 
     def fit(self, X_train, y_train):
@@ -188,10 +196,10 @@ class CustomGPModel:
             def __init__(self, train_X, train_Y, kernel):
                 super().__init__(train_X, train_Y)
                 self.mean_module = ConstantMean()
-                #from gpytorch.priors import GammaPrior, NormalPrior
-                #instead of ConstantMean() use a gamma prior
-                #self.mean_module = gpytorch.means.GammaPrior(1.0, 0.5)
-                #self.mean_module.register_prior("mean_prior", NormalPrior(0, 100), "constant")
+                # from gpytorch.priors import GammaPrior, NormalPrior
+                # instead of ConstantMean() use a gamma prior
+                # self.mean_module = gpytorch.means.GammaPrior(1.0, 0.5)
+                # self.mean_module.register_prior("mean_prior", NormalPrior(0, 100), "constant")
                 self.covar_module = ScaleKernel(kernel)
 
         # https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
@@ -332,42 +340,59 @@ def gibbon_search_modified_all(
         indices = find_indices(X_candidate_BO, candidates[return_nr])
         index_set.append(indices)
 
-    index_set, acq_values, candidates = np.array(index_set), np.array(acq_values), np.array(candidates)
+    index_set, acq_values, candidates = (
+        np.array(index_set),
+        np.array(acq_values),
+        np.array(candidates),
+    )
 
-    return index_set,acq_values, candidates
+    return index_set, acq_values, candidates
 
 
-def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO,price_dict_BO):
+def gibbon_search_modified_all_per_price(
+    model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO, price_dict_BO
+):
     import matplotlib.pyplot as plt
 
-    index_set,acq_values, candidates = gibbon_search_modified_all(model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300)
-    
+    index_set, acq_values, candidates = gibbon_search_modified_all(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q,
+        sequential=False,
+        maximize=True,
+        n_best=300,
+    )
+
     row_sums_1 = acq_values.sum(axis=1)
-    #plt.hist(row_sums_1)
-    #plot the average as a line
-    #plt.axvline(x=row_sums_1.mean(), color='r', linestyle='dashed', linewidth=2)
-    #plt.savefig("row_sums_1.png")
+    # plt.hist(row_sums_1)
+    # plot the average as a line
+    # plt.axvline(x=row_sums_1.mean(), color='r', linestyle='dashed', linewidth=2)
+    # plt.savefig("row_sums_1.png")
 
-    
-    #mean_row_sums_1 = row_sums_1.mean() #
-    #mean_row_sums_1 = 0.1*mean_row_sums_1
-    #find all indices where rows sum is larger than mean
-    #index_set = index_set[row_sums_1 > mean_row_sums_1]
-    #acq_values = acq_values[row_sums_1 > mean_row_sums_1]
-    #candidates = candidates[row_sums_1 > mean_row_sums_1]
-
+    # mean_row_sums_1 = row_sums_1.mean() #
+    # mean_row_sums_1 = 0.1*mean_row_sums_1
+    # find all indices where rows sum is larger than mean
+    # index_set = index_set[row_sums_1 > mean_row_sums_1]
+    # acq_values = acq_values[row_sums_1 > mean_row_sums_1]
+    # candidates = candidates[row_sums_1 > mean_row_sums_1]
 
     ligand_set = []
     for subset in index_set:
         ligand_set.append(LIGANDS_candidate_BO[subset])
 
-    
     price_rescaling_factors = []
     for ligands in ligand_set:
-        price_rescaling_factors.append(compute_price_acquisition_ligands_price_per_acqfct(ligands, price_dict_BO))
+        # price_rescaling_factors.append(
+        #    compute_price_acquisition_ligands_price_per_acqfct(ligands, price_dict_BO)
+        # )
+
+        price_rescaling_factors.append(
+            compute_price_acquisition_ligands_price_per_acqfct_2(ligands, price_dict_BO)
+        )
 
     price_rescaling_factors = np.array(price_rescaling_factors)
-    acq_values_per_price = acq_values/price_rescaling_factors
+    acq_values_per_price = acq_values / price_rescaling_factors
     row_sums_2 = acq_values_per_price.sum(axis=1)
 
     # Get the indices that would sort the row sums in descending order
@@ -378,7 +403,54 @@ def gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q, 
     acq_values = acq_values[sorted_indices]
     candidates_rearranged = candidates[sorted_indices]
     return index_set_rearranged, acq_values_per_price, candidates_rearranged
-    
+
+
+def gibbon_search_modified_all_per_price_B(
+    model,
+    X_candidate_BO,
+    bounds_norm,
+    q,
+    LIGANDS_candidate_BO,
+    ADDITIVES_candidate_BO,
+    price_dict_BO_ligands,
+    price_dict_BO_additives,
+):
+    index_set, acq_values, candidates = gibbon_search_modified_all(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q,
+        sequential=False,
+        maximize=True,
+        n_best=300,
+    )
+
+    row_sums_1 = acq_values.sum(axis=1)
+
+    ligand_set, additivies_set = [], []
+    for subset in index_set:
+        ligand_set.append(LIGANDS_candidate_BO[subset])
+        additivies_set.append(ADDITIVES_candidate_BO[subset])
+
+    price_rescaling_factors = []
+    for ligands, additives in zip(ligand_set, additivies_set):
+        cost_curr = compute_price_acquisition_ligands_price_per_acqfct_B2(
+            ligands, additives, price_dict_BO_ligands, price_dict_BO_additives
+        )
+        price_rescaling_factors.append(cost_curr)
+
+    price_rescaling_factors = np.array(price_rescaling_factors)
+    acq_values_per_price = acq_values / price_rescaling_factors
+    row_sums_2 = acq_values_per_price.sum(axis=1)
+
+    # Get the indices that would sort the row sums in descending order
+    sorted_indices = np.argsort(row_sums_2)[::-1]
+
+    index_set_rearranged = index_set[sorted_indices]
+    acq_values_per_price = acq_values_per_price[sorted_indices]
+    acq_values = acq_values[sorted_indices]
+    candidates_rearranged = candidates[sorted_indices]
+    return index_set_rearranged, acq_values_per_price, candidates_rearranged
 
 
 def gibbon_search_modified(

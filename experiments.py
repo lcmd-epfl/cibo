@@ -2,21 +2,22 @@ import numpy as np
 import torch
 
 from BO import (
-    update_model, 
-    gibbon_search, 
-    gibbon_search_modified, 
-    gibbon_search_modified_all, 
-    gibbon_search_modified_all_per_price
+    update_model,
+    gibbon_search,
+    gibbon_search_modified,
+    gibbon_search_modified_all,
+    gibbon_search_modified_all_per_price,
+    gibbon_search_modified_all_per_price_B,
 )
 
 from utils import (
-    check_better, 
-    update_X_y, 
-    compute_price_acquisition_ligands, 
-    update_price_dict_ligands, 
-    select_batch, 
-    check_success, 
-    find_optimal_batch
+    check_better,
+    update_X_y,
+    compute_price_acquisition_ligands,
+    update_price_dict_ligands,
+    select_batch,
+    check_success,
+    find_optimal_batch,
 )
 
 
@@ -128,7 +129,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
-    index_set,_, _ = gibbon_search_modified_all(
+    index_set, _, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -422,6 +423,83 @@ def BO_CASE_2A_STEP(BO_data):
     return BO_data
 
 
+def BO_CASE_2B_STEP(BO_data):
+    """
+    Normal BO with no cost constraints but keep track of the costs per batch for ca
+    """
+    # Get current BO data from last iteration
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
+    ADDITIVES_candidate_BO = BO_data["ADDITIVES_candidate_BO"]
+    price_dict_BO_ligands = BO_data["price_dict_BO_ligands"]
+    price_dict_BO_additives = BO_data["price_dict_BO_additives"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    scaler_y = BO_data["scaler_y"]
+
+    indices, candidates = gibbon_search(
+        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+    )
+
+    X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
+    NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+    NEW_ADDITIVES = ADDITIVES_candidate_BO[indices]
+
+    suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+        NEW_LIGANDS, price_dict_BO_ligands
+    )
+    (
+        suggested_costs_all_additives,
+        price_per_additive,
+    ) = compute_price_acquisition_ligands(NEW_ADDITIVES, price_dict_BO_additives)
+
+    suggested_costs_all += suggested_costs_all_additives
+
+    y_best_BO = check_better(y, y_best_BO)
+
+    y_better_BO.append(y_best_BO)
+
+    running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
+
+    model, scaler_y = update_model(X, y, bounds_norm)
+
+    X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+    y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+    LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+    ADDITIVES_candidate_BO = np.delete(ADDITIVES_candidate_BO, indices, axis=0)
+    price_dict_BO_ligands = update_price_dict_ligands(
+        price_dict_BO_ligands, NEW_LIGANDS
+    )
+    price_dict_BO_additives = update_price_dict_ligands(
+        price_dict_BO_additives, NEW_ADDITIVES
+    )
+
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"] = X
+    BO_data["y"] = y
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
+    BO_data["ADDITIVES_candidate_BO"] = ADDITIVES_candidate_BO
+    BO_data["price_dict_BO_ligands"] = price_dict_BO_ligands
+    BO_data["price_dict_BO_additives"] = price_dict_BO_additives
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["N_train"] = len(X)
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data
+
+
 def RS_STEP_2A(RANDOM_data):
     y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
     BATCH_SIZE = RANDOM_data["BATCH_SIZE"]
@@ -455,6 +533,68 @@ def RS_STEP_2A(RANDOM_data):
     RANDOM_data["y_candidate_RANDOM"] = y_candidate_RANDOM
     RANDOM_data["LIGANDS_candidate_RANDOM"] = LIGANDS_candidate_RANDOM
     RANDOM_data["price_dict_RANDOM"] = price_dict_RANDOM
+    RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
+    RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
+    RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
+
+    return RANDOM_data
+
+
+def RS_STEP_2B(RANDOM_data):
+    y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
+    BATCH_SIZE = RANDOM_data["BATCH_SIZE"]
+    LIGANDS_candidate_RANDOM = RANDOM_data["LIGANDS_candidate_RANDOM"]
+    ADDITIVES_candidate_RANDOM = RANDOM_data["ADDITIVES_candidate_RANDOM"]
+    price_dict_RANDOM_ligands = RANDOM_data["price_dict_RANDOM_ligands"]
+    price_dict_RANDOM_additives = RANDOM_data["price_dict_RANDOM_additives"]
+    y_best_RANDOM = RANDOM_data["y_best_RANDOM"]
+    y_better_RANDOM = RANDOM_data["y_better_RANDOM"]
+    running_costs_RANDOM = RANDOM_data["running_costs_RANDOM"]
+
+    indices_random = np.random.choice(
+        np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False
+    )
+
+    NEW_LIGANDS = LIGANDS_candidate_RANDOM[indices_random]
+    NEW_ADDITIVES = ADDITIVES_candidate_RANDOM[indices_random]
+
+    suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+        NEW_LIGANDS, price_dict_RANDOM_ligands
+    )
+    (
+        suggested_costs_all_additives,
+        price_per_additive,
+    ) = compute_price_acquisition_ligands(NEW_ADDITIVES, price_dict_RANDOM_additives)
+
+    suggested_costs_all += suggested_costs_all_additives
+
+    if max(y_candidate_RANDOM[indices_random])[0] > y_best_RANDOM:
+        y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0]
+
+    y_better_RANDOM.append(y_best_RANDOM)
+    running_costs_RANDOM.append(running_costs_RANDOM[-1] + suggested_costs_all)
+
+    y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
+    LIGANDS_candidate_RANDOM = np.delete(
+        LIGANDS_candidate_RANDOM, indices_random, axis=0
+    )
+    ADDITIVES_candidate_RANDOM = np.delete(
+        ADDITIVES_candidate_RANDOM, indices_random, axis=0
+    )
+
+    price_dict_RANDOM_ligands = update_price_dict_ligands(
+        price_dict_RANDOM_ligands, NEW_LIGANDS
+    )
+    price_dict_RANDOM_additives = update_price_dict_ligands(
+        price_dict_RANDOM_additives, NEW_ADDITIVES
+    )
+
+    # Update all modified quantities and return RANDOM_data
+    RANDOM_data["y_candidate_RANDOM"] = y_candidate_RANDOM
+    RANDOM_data["LIGANDS_candidate_RANDOM"] = LIGANDS_candidate_RANDOM
+    RANDOM_data["ADDITIVES_candidate_RANDOM"] = ADDITIVES_candidate_RANDOM
+    RANDOM_data["price_dict_RANDOM_ligands"] = price_dict_RANDOM_ligands
+    RANDOM_data["price_dict_RANDOM_additives"] = price_dict_RANDOM_additives
     RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
     RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
     RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
@@ -599,7 +739,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     scaler_y = BO_data["scaler_y"]
 
-    index_set,_, _ = gibbon_search_modified_all(
+    index_set, _, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -769,7 +909,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         step_nr = BO_data["step_nr"]
         MAX_BATCH_COST *= step_nr
 
-    index_set,_,_ = gibbon_search_modified_all(
+    index_set, _, _ = gibbon_search_modified_all(
         model,
         X_candidate_BO,
         bounds_norm,
@@ -930,14 +1070,23 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     price_dict_BO = BO_data["price_dict_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
-    
-    
-    index_set_rearranged, _, candidates_rearranged  = gibbon_search_modified_all_per_price(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE, LIGANDS_candidate_BO=LIGANDS_candidate_BO, price_dict_BO=price_dict_BO)
+
+    (
+        index_set_rearranged,
+        _,
+        candidates_rearranged,
+    ) = gibbon_search_modified_all_per_price(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q=BATCH_SIZE,
+        LIGANDS_candidate_BO=LIGANDS_candidate_BO,
+        price_dict_BO=price_dict_BO,
+    )
     indices = index_set_rearranged[0]
     candidates = candidates_rearranged[0]
-    #convert to back torch tensor
+    # convert to back torch tensor
     candidates = torch.from_numpy(candidates).float()
-
 
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
@@ -968,3 +1117,96 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     BO_data["scaler_y"] = scaler_y
 
     return BO_data
+
+
+def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
+    # Get current BO data from last iteration
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
+    ADDITIVES_candidate_BO = BO_data["ADDITIVES_candidate_BO"]
+    price_dict_BO_ligands = BO_data["price_dict_BO_ligands"]
+    price_dict_BO_additives = BO_data["price_dict_BO_additives"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    scaler_y = BO_data["scaler_y"]
+
+    (
+        index_set_rearranged,
+        _,
+        candidates_rearranged,
+    ) = gibbon_search_modified_all_per_price_B(
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q=BATCH_SIZE,
+        LIGANDS_candidate_BO=LIGANDS_candidate_BO,
+        ADDITIVES_candidate_BO=ADDITIVES_candidate_BO,
+        price_dict_BO_ligands=price_dict_BO_ligands,
+        price_dict_BO_additives=price_dict_BO_additives,
+    )
+
+    indices = index_set_rearranged[0]
+    candidates = candidates_rearranged[0]
+    # convert to back torch tensor
+    candidates = torch.from_numpy(candidates).float()
+
+    X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
+
+    NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+    NEW_ADDITIVES = ADDITIVES_candidate_BO[indices]
+
+    suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+        NEW_LIGANDS, price_dict_BO_ligands
+    )
+    (
+        suggested_costs_all_additives,
+        price_per_additive,
+    ) = compute_price_acquisition_ligands(NEW_ADDITIVES, price_dict_BO_additives)
+
+    suggested_costs_all += suggested_costs_all_additives
+
+    y_best_BO = check_better(y, y_best_BO)
+
+    y_better_BO.append(y_best_BO)
+
+    running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
+
+    model, scaler_y = update_model(X, y, bounds_norm)
+
+    X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+    y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+    LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+    ADDITIVES_candidate_BO = np.delete(ADDITIVES_candidate_BO, indices, axis=0)
+    price_dict_BO_ligands = update_price_dict_ligands(
+        price_dict_BO_ligands, NEW_LIGANDS
+    )
+    price_dict_BO_additives = update_price_dict_ligands(
+        price_dict_BO_additives, NEW_ADDITIVES
+    )
+
+    # Update BO data for next iteration
+    BO_data["model"] = model
+    BO_data["X"] = X
+    BO_data["y"] = y
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
+    BO_data["ADDITIVES_candidate_BO"] = ADDITIVES_candidate_BO
+    BO_data["price_dict_BO_ligands"] = price_dict_BO_ligands
+    BO_data["price_dict_BO_additives"] = price_dict_BO_additives
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["N_train"] = len(X)
+    BO_data["scaler_y"] = scaler_y
+    
+    return BO_data
+
+

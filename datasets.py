@@ -5,6 +5,32 @@ import random
 from utils import FingerprintGenerator, inchi_to_smiles, convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
 import pdb
+from data.buchwald import buchwald_prices
+
+
+def index_of_second_smallest(arr):
+    # Convert to numpy array if not already
+    arr = np.array(arr)
+
+    # Check if array has at least two elements
+    if len(arr) < 2:
+        return None  # Or raise an error
+
+    # Find the index of the minimum value
+    min_index = np.argmin(arr)
+
+    # Temporarily set the minimum value to a very high value
+    original_min = arr[min_index]
+    arr[min_index] = np.inf
+
+    # Find the new minimum, which is the second smallest
+    second_min_index = np.argmin(arr)
+
+    # Revert the change to the original array
+    arr[min_index] = original_min
+
+    return second_min_index
+
 
 class Evaluation_data:
     def __init__(self, dataset, init_size, prices, init_strategy="values"):
@@ -37,17 +63,18 @@ class Evaluation_data:
         # TODO: include this dataset with more reastic prices
         # https://github.com/doyle-lab-ucla/edboplus/blob/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full_update.csv
         # https://chemrxiv.org/engage/chemrxiv/article-details/62f6966269f3a5df46b5584b
+
         if self.dataset == "BMS":
-            #direct arylation reaction
+            # direct arylation reaction
             dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
             # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
             self.data = pd.read_csv(dataset_url)
             self.data = self.data.sample(frac=1).reset_index(drop=True)
-            #create a copy of the data
+            # create a copy of the data
             data_copy = self.data.copy()
-            #remove the Yield column from the copy
-            data_copy.drop('Yield', axis=1, inplace=True)
-            #check for duplicates
+            # remove the Yield column from the copy
+            data_copy.drop("Yield", axis=1, inplace=True)
+            # check for duplicates
             duplicates = data_copy.duplicated().any()
             if duplicates:
                 print("There are duplicates in the dataset.")
@@ -56,7 +83,7 @@ class Evaluation_data:
             self.data["Ligand_Cost_fixed"] = np.ceil(
                 self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
             )
-            
+
             self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
             self.data["Ligand_SMILES"] = inchi_to_smiles(
                 self.data["Ligand_inchi"].values
@@ -104,7 +131,7 @@ class Evaluation_data:
             # make price of worst ligand 0 because already in the inventory
             self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
 
-            self.where_worst = np.array(
+            self.where_worst_ligand = np.array(
                 self.data.index[
                     self.data["Ligand_SMILES"] == self.worst_ligand
                 ].tolist()
@@ -127,7 +154,6 @@ class Evaluation_data:
                 },
             }
 
-
         elif self.dataset == "buchwald":
             dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
             # load url directly into pandas dataframe
@@ -135,74 +161,134 @@ class Evaluation_data:
             self.data = self.data.sample(frac=1).reset_index(drop=True)
             # randomly shuffly df
             data_copy = self.data.copy()
-            #remove the Yield column from the copy
-            data_copy.drop('yield', axis=1, inplace=True)
-            #check for duplicates
+            # remove the Yield column from the copy
+            data_copy.drop("yield", axis=1, inplace=True)
+            # check for duplicates
             duplicates = data_copy.duplicated().any()
-            
+
             if duplicates:
                 print("There are duplicates in the dataset.")
                 exit()
-
 
             col_0_base = self.ftzr.featurize(self.data["base_smiles"])
             col_1_ligand = self.ftzr.featurize(self.data["ligand_smiles"])
             col_2_aryl_halide = self.ftzr.featurize(self.data["aryl_halide_smiles"])
             col_3_additive = self.ftzr.featurize(self.data["additive_smiles"])
-            
+
             self.X = np.concatenate(
-                [col_0_base, 
-                 col_1_ligand, 
-                 col_2_aryl_halide, 
-                 col_3_additive
-                ],
+                [col_0_base, col_1_ligand, col_2_aryl_halide, col_3_additive],
                 axis=1,
             )
 
             self.y = self.data["yield"].to_numpy()
             self.all_ligands = self.data["ligand_smiles"].to_numpy()
             self.all_bases = self.data["base_smiles"].to_numpy()
-            self.all_aryl_halides = self.data["aryl_halide_smiles"].to_numpy()
-            self.all_additives = self.data["additive_smiles"].to_numpy()
-            
-            unique_bases = np.unique(self.data["base_smiles"])
-            unique_ligands = np.unique(self.data["ligand_smiles"])
-            unique_aryl_halides = np.unique(self.data["aryl_halide_smiles"].fillna(""))
-            unique_additives = np.unique(self.data["additive_smiles"].fillna(""))
+            self.all_aryl_halides = (
+                self.data["aryl_halide_smiles"].fillna("zero").to_numpy()
+            )
+            self.all_additives = self.data["additive_smiles"].fillna("zero").to_numpy()
+            self.unique_bases = np.unique(self.data["base_smiles"])
+            self.unique_ligands = np.unique(self.data["ligand_smiles"])
+            self.unique_aryl_halides = np.unique(
+                self.data["aryl_halide_smiles"].fillna("zero")
+            )
+            self.unique_additives = np.unique(
+                self.data["additive_smiles"].fillna("zero")
+            )
 
             max_yield_per_ligand = np.array(
                 [
                     max(self.data[self.data["ligand_smiles"] == unique_ligand]["yield"])
-                    for unique_ligand in unique_ligands
+                    for unique_ligand in self.unique_ligands
                 ]
             )
 
-            self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
+            self.worst_ligand = self.unique_ligands[np.argmin(max_yield_per_ligand)]
+            self.worst_base = self.unique_bases[np.argmin(max_yield_per_ligand)]
+            self.worst_aryl_halide = self.unique_aryl_halides[
+                np.argmin(max_yield_per_ligand)
+            ]
+            self.worst_additive = self.unique_additives[np.argmin(max_yield_per_ligand)]
 
             # make price of worst ligand 0 because already in the inventory
-            self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
+            self.best_ligand = self.unique_ligands[np.argmax(max_yield_per_ligand)]
 
-            self.where_worst = np.array(
+            self.where_worst_ligand = np.array(
                 self.data.index[
                     self.data["ligand_smiles"] == self.worst_ligand
                 ].tolist()
             )
 
+            self.where_worst_base = np.array(
+                self.data.index[self.data["base_smiles"] == self.worst_base].tolist()
+            )
+
+            self.where_worst_aryl_halide = np.array(
+                self.data.index[
+                    self.data["aryl_halide_smiles"] == self.worst_aryl_halide
+                ].tolist()
+            )
+
+            self.where_worst_additive = np.array(
+                self.data.index[
+                    self.data["additive_smiles"] == self.worst_additive
+                ].tolist()
+            )
+
             self.feauture_labels = {
                 "names": {
-                    "bases": unique_bases,
-                    "ligands": unique_ligands,
-                    "aryl_halides": unique_aryl_halides,
-                    "additives": unique_additives,
+                    "bases": self.unique_bases,
+                    "ligands": self.unique_ligands,
+                    "aryl_halides": self.unique_aryl_halides,
+                    "additives": self.unique_additives,
                 },
                 "ordered_smiles": {
                     "bases": self.data["base_smiles"],
                     "ligands": self.data["ligand_smiles"],
-                    "aryl_halides": self.data["aryl_halide_smiles"],
-                    "additives": self.data["additive_smiles"],
+                    "aryl_halides": self.data["aryl_halide_smiles"].fillna("zero"),
+                    "additives": self.data["additive_smiles"].fillna("zero"),
                 },
             }
-            
+
+            (
+                self.price_dict_additives,
+                self.price_dict_aryl_halides,
+                self.price_dict_bases,
+                self.price_dict_ligands,
+            ) = buchwald_prices()
+
+            # pdb.set_trace()
+
+            self.cheapest_additive = np.array(list(self.price_dict_additives.keys()))[
+                index_of_second_smallest(
+                    np.array(list(self.price_dict_additives.values()))
+                )
+            ]
+            self.cheapest_ligand = np.array(list(self.price_dict_ligands.keys()))[
+                np.argmin(np.array(list(self.price_dict_ligands.values())))
+            ]
+
+            self.where_cheapest_additive = np.array(
+                self.data.index[
+                    self.data["additive_smiles"] == self.cheapest_additive
+                ].tolist()
+            )
+
+            self.where_cheapest_ligand = np.array(
+                self.data.index[
+                    self.data["ligand_smiles"] == self.cheapest_ligand
+                ].tolist()
+            )
+
+        elif self.dataset == "TwoDimFct":
+            self.data = TwoDimFct()
+            self.data = self.data.data
+            self.data = self.data.sample(frac=1).reset_index(drop=True)
+
+            self.X = self.data[["x", "y"]].to_numpy()
+            self.y = self.data["function_value"].to_numpy()
+            self.costs = self.data["cost"].to_numpy().reshape(-1, 1)
+
         else:
             print("Dataset not implemented.")
             exit()
@@ -217,17 +303,13 @@ class Evaluation_data:
                 self.costs[p] = np.array([1])
 
         elif self.prices == "update_ligand_when_used":
-            if self.dataset == "freesolv":
-                print("Not implemented.")
-                exit()
-
-            elif self.dataset == "BMS":
+            if self.dataset == "BMS":
                 ligand_price_dict = {}
 
                 # Iterate through the dataframe rows
                 for index, row in self.data.iterrows():
                     ligand_smiles = row["Ligand_SMILES"]
-                    ligand_price  = row["Ligand_Cost_fixed"]
+                    ligand_price = row["Ligand_Cost_fixed"]
                     ligand_price_dict[ligand_smiles] = ligand_price
 
                 # Print the dictionary
@@ -267,47 +349,23 @@ class Evaluation_data:
                     all_ligand_prices.append(self.ligand_prices[ligand])
                 self.costs = np.array(all_ligand_prices).reshape(-1, 1)
 
-        elif self.prices == "update_all_when_bought":
-            if self.dataset == "ebdo_direct_arylation":
+            elif self.dataset == "TwoDimFct":
                 self.ligand_prices = {}
-                for ind, unique_ligand in enumerate(
-                    self.feauture_labels["names"]["ligands"]
-                ):
-                    self.ligand_prices[unique_ligand] = np.random.randint(2)
+                ind = 0
 
-                self.ligand_prices[self.worst_ligand] = 0
-                self.ligand_prices[self.best_ligand] = 1
+                for unique_ligand, price in zip(self.X, self.costs):
+                    self.ligand_prices[ind] = price[0]
+                    ind += 1
+                    # pdb.set_trace()
 
-                self.bases_prices = {}
-                for ind, unique_base in enumerate(
-                    self.feauture_labels["names"]["bases"]
-                ):
-                    self.bases_prices[unique_base] = np.random.randint(2)
-
-                self.solvents_prices = {}
-                for ind, unique_solvent in enumerate(
-                    self.feauture_labels["names"]["solvents"]
-                ):
-                    self.solvents_prices[unique_solvent] = np.random.randint(2)
-
-                all_prices = []
-                for base, ligand, solvent in zip(
-                    self.feauture_labels["ordered_smiles"]["bases"],
-                    self.feauture_labels["ordered_smiles"]["ligands"],
-                    self.feauture_labels["ordered_smiles"]["solvents"],
-                ):
-                    all_prices.append(
-                        self.ligand_prices[ligand]
-                        + self.bases_prices[base]
-                        + self.solvents_prices[solvent]
-                    )
-                self.costs = np.array(all_prices).reshape(-1, 1)
-
-                self.all_prices_dict = {
-                    "ligands": self.ligand_prices,
-                    "bases": self.bases_prices,
-                    "solvents": self.solvents_prices,
-                }
+        elif self.prices == "update_all_when_bought":
+            if self.dataset == "buchwald":
+                return (
+                    self.price_dict_additives,
+                    self.price_dict_aryl_halides,
+                    self.price_dict_bases,
+                    self.price_dict_ligands,
+                )
 
         else:
             print("Price model not implemented.")
@@ -350,7 +408,21 @@ class Evaluation_data:
             X_init, y_init = convert2pytorch(X_init, y_init)
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
-            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+            if self.dataset != "TwoDimFct":
+                return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+            else:
+                for ind in index_worst:
+                    self.data.loc[ind, "cost"] = 0
+                    self.ligand_prices[ind] = 0
+                return (
+                    X_init,
+                    y_init,
+                    X_holdout,
+                    y_holdout,
+                    index_worst,
+                    index_others,
+                    self.ligand_prices,
+                )
 
         elif self.init_strategy == "random":
             """
@@ -444,7 +516,7 @@ class Evaluation_data:
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
         elif self.init_strategy == "worst_ligand":
-            indices_init = self.where_worst[: self.init_size]
+            indices_init = self.where_worst_ligand[: self.init_size]
             indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
             np.random.shuffle(indices_init)
             np.random.shuffle(indices_holdout)
@@ -475,102 +547,217 @@ class Evaluation_data:
                 price_dict_init,
             )
 
-        elif self.init_strategy == "worst_ligand_base_solvent":
-            assert (
-                self.dataset == "ebdo_direct_arylation"
-            ), "This init strategy is only implemented for the ebdo_direct_arylation dataset."
+        elif self.init_strategy == "worst_ligand_and_more":
+            if self.dataset == "BMS":
+                unique_bases = self.feauture_labels["names"]["bases"]
+                unique_solvents = self.feauture_labels["names"]["solvents"]
+                # start with 2 solvents, 2 bases
+                # select two random bases and two random solvents
+                self.bases_init = np.random.choice(unique_bases, size=2, replace=False)
+                self.solvents_init = np.random.choice(
+                    unique_solvents, size=2, replace=False
+                )
 
-            unique_bases = self.feauture_labels["names"]["bases"]
-            unique_solvents = self.feauture_labels["names"]["solvents"]
-            # start with 2 solvents, 2 bases
-            # select two random bases and two random solvents
-            self.bases_init = np.random.choice(unique_bases, size=2, replace=False)
-            self.solvents_init = np.random.choice(
-                unique_solvents, size=2, replace=False
-            )
+                # update the price dict
 
-            # update the price dict
+                for base in self.bases_init:
+                    self.all_prices_dict["bases"][base] = 0
+                for solvent in self.solvents_init:
+                    self.all_prices_dict["solvents"][solvent] = 0
+                self.all_prices_dict["ligands"][self.worst_ligand] = 0
 
-            for base in self.bases_init:
-                self.all_prices_dict["bases"][base] = 0
-            for solvent in self.solvents_init:
-                self.all_prices_dict["solvents"][solvent] = 0
-            self.all_prices_dict["ligands"][self.worst_ligand] = 0
+                # select the indices of the worst ligand with the two bases and two solvents
+                indices_init = np.where(
+                    (self.all_ligands == self.worst_ligand)
+                    & np.isin(self.all_bases, self.bases_init)
+                    & np.isin(self.all_solvents, self.solvents_init)
+                )[0]
+                indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+                np.random.shuffle(indices_init)
+                np.random.shuffle(indices_holdout)
 
-            # select the indices of the worst ligand with the two bases and two solvents
-            indices_init = np.where(
-                (self.all_ligands == self.worst_ligand)
-                & np.isin(self.all_bases, self.bases_init)
-                & np.isin(self.all_solvents, self.solvents_init)
-            )[0]
-            indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
-            np.random.shuffle(indices_init)
-            np.random.shuffle(indices_holdout)
+                X_init, y_init = self.X[indices_init], self.y[indices_init]
+                X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+                X_init, y_init = convert2pytorch(X_init, y_init)
+                X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+                price_dict_init = self.all_prices_dict
 
-            X_init, y_init = self.X[indices_init], self.y[indices_init]
-            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
-            X_init, y_init = convert2pytorch(X_init, y_init)
-            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
-            price_dict_init = self.all_prices_dict
+                LIGANDS_INIT = self.all_ligands[indices_init]
+                LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
 
-            LIGANDS_INIT = self.all_ligands[indices_init]
-            LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
+                BASES_INIT = self.all_bases[indices_init]
+                BASES_HOLDOUT = self.all_bases[indices_holdout]
 
-            BASES_INIT = self.all_bases[indices_init]
-            BASES_HOLDOUT = self.all_bases[indices_holdout]
+                SOLVENTS_INIT = self.all_solvents[indices_init]
+                SOLVENTS_HOLDOUT = self.all_solvents[indices_holdout]
 
-            SOLVENTS_INIT = self.all_solvents[indices_init]
-            SOLVENTS_HOLDOUT = self.all_solvents[indices_holdout]
+                return (
+                    X_init,
+                    y_init,
+                    X_holdout,
+                    y_holdout,
+                    LIGANDS_INIT,
+                    LIGANDS_HOLDOUT,
+                    BASES_INIT,
+                    BASES_HOLDOUT,
+                    SOLVENTS_INIT,
+                    SOLVENTS_HOLDOUT,
+                    price_dict_init,
+                )
 
-            return (
-                X_init,
-                y_init,
-                X_holdout,
-                y_holdout,
-                LIGANDS_INIT,
-                LIGANDS_HOLDOUT,
-                BASES_INIT,
-                BASES_HOLDOUT,
-                SOLVENTS_INIT,
-                SOLVENTS_HOLDOUT,
-                price_dict_init,
-            )
+            elif self.dataset == "buchwald":
+                # TODO: implement this for buchwald
+                # indices_init = np.array(
+                #    list(set(self.where_worst_ligand) & set(self.where_worst_additive))
+                # )
+                indices_init = np.array(
+                    list(
+                        set(self.where_worst_ligand)
+                        & set(self.where_worst_additive)
+                    )
+                )
+                #pdb.set_trace()
+                #indices_init = indices_init[:30]
+
+                # indices_init = indices_init[: 5]
+                # pdb.set_trace()
+                indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+                np.random.shuffle(indices_init)
+                np.random.shuffle(indices_holdout)
+
+                X_init, y_init = self.X[indices_init], self.y[indices_init]
+                X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+
+                self.price_dict_ligands[self.worst_ligand] = 0
+                self.price_dict_additives[self.worst_additive] = 0
+
+                LIGANDS_INIT = self.all_ligands[indices_init]
+                LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
+
+                ADDITIVES_INIT = self.all_additives[indices_init]
+                ADDITIVES_HOLDOUT = self.all_additives[indices_holdout]
+
+                X_init, y_init = convert2pytorch(X_init, y_init)
+                X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+                return (
+                    X_init,
+                    y_init,
+                    X_holdout,
+                    y_holdout,
+                    LIGANDS_INIT,
+                    LIGANDS_HOLDOUT,
+                    ADDITIVES_INIT,
+                    ADDITIVES_HOLDOUT,
+                    self.price_dict_ligands,
+                    self.price_dict_additives,
+                )
 
         else:
             print("Init strategy not implemented.")
             exit()
 
 
+class TwoDimFct:
+    def __init__(self, n_samples=1000):
+        self.n_samples = n_samples
+
+        # Define range for input
+        r_min, r_max = -5.0, 5.0
+        # Sample input range uniformly at 0.1 increments
+        random_x = np.random.uniform(r_min, r_max, 1000)
+        random_y = np.random.uniform(r_min, r_max, 1000)
+        # Compute targets
+        random_results = self.objective(random_x, random_y)
+        # add noise to the results
+        random_results += np.random.normal(0, 0.2, len(random_results))
+        additional_peaks = [
+            (2, 2, 1.0),
+            (-1, -1, 0.5),
+            (3, -3, 0.8),
+            (-2, 3, 0.7),
+            (4, 0, 0.7),
+            (0, -4, 0.7),
+            (-2, -4, 0.7),
+            (4, -2, 0.7),
+            (4.5, 2, 0.7),
+            (2, 4, 3),
+        ]
+        random_cost = self.smooth_cost_function(
+            random_x, random_y, peaks=additional_peaks
+        )
+        # pdb.set_trace()
+        self.data = pd.DataFrame(
+            {
+                "x": random_x,
+                "y": random_y,
+                "function_value": random_results,
+                "cost": random_cost,
+            }
+        )
+
+    def objective(self, x, y):
+        return (x**2 + y - 11) ** 2 + (x + y**2 - 7) ** 2
+
+    def smooth_cost_function(
+        self,
+        x,
+        y,
+        square_size=3.0,
+        ellipse_scale=2.0,
+        radial_scale=2.5,
+        peaks=None,
+        cost_inside_square=1.0,
+        smoothness=1,
+        sinusoidal_frequency=0.5,
+    ):
+        """
+        Even more modified cost function that adds multiple peaks to the existing complex landscape.
+        """
+        if peaks is None:
+            peaks = [(3, 2, 2, 1.0, 0.5, 0.25)]  # Default peak if none provided
+
+        half_size = square_size / 2
+        smooth_transition = lambda d: 1 / (1 + np.exp(-smoothness * (d - half_size)))
+
+        # Square cost component
+        distance_x = np.abs(x) - half_size
+        distance_y = np.abs(y) - half_size
+        smooth_cost_x = smooth_transition(distance_x)
+        smooth_cost_y = smooth_transition(distance_y)
+        square_cost = np.minimum(smooth_cost_x, smooth_cost_y)
+
+        # Elliptical cost component
+        ellipse_cost = np.exp(-((x / ellipse_scale) ** 2 + (y / ellipse_scale) ** 2))
+
+        # Radial cost component
+        radial_distance = np.sqrt(x**2 + y**2)
+        radial_cost = np.exp(-((radial_distance / radial_scale) ** 2))
+
+        # Sinusoidal variation based on distance from the origin
+        sinusoidal_variation = np.sin(sinusoidal_frequency * radial_distance)
+
+        # Peaks
+        peak_cost = 0
+        for peak_x, peak_y, peak_scale in peaks:
+            peak_distance = np.sqrt((x - peak_x) ** 2 + (y - peak_y) ** 2)
+            peak_cost += np.exp(-((peak_distance / peak_scale) ** 2))
+
+        # Combine all components
+        combined_cost = (
+            cost_inside_square
+            * np.maximum(square_cost, ellipse_cost)
+            * radial_cost
+            * (1 + sinusoidal_variation)
+            + peak_cost
+        )
+
+        return 1000 * combined_cost
 
 
 if __name__ == "__main__":
-
-    benchmark = {
-        "dataset": "BMS",
-        "init_strategy": "worst_ligand",
-        "cost_aware": False,
-        "n_runs": 5,
-        "n_iter": 15,
-        "batch_size": 5,
-        "max_batch_cost": 0,
-        "ntrain": 200,
-    }
-
     DATASET = Evaluation_data(
-        benchmark["dataset"],
-        benchmark["ntrain"],
-        "update_ligand_when_used",
-        init_strategy=benchmark["init_strategy"],
+        "buchwald", 200, "update_all_when_bought", init_strategy="worst_ligand_and_more"
     )
 
-    (
-        X_init,
-        y_init,
-        costs_init,
-        X_candidate,
-        y_candidate,
-        costs_candidate,
-        LIGANDS_init,
-        LIGANDS_candidate,
-        price_dict,
-    ) = DATASET.get_init_holdout_data(77)
+    DATASET.get_init_holdout_data(111)
