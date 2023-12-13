@@ -1070,18 +1070,21 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     price_dict_BO = BO_data["price_dict_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
+    acq_func = BO_data["acq_func"]
 
     (
         index_set_rearranged,
         _,
         candidates_rearranged,
     ) = gibbon_search_modified_all_per_price(
+        X,
         model,
         X_candidate_BO,
         bounds_norm,
         q=BATCH_SIZE,
         LIGANDS_candidate_BO=LIGANDS_candidate_BO,
         price_dict_BO=price_dict_BO,
+        acq_function=acq_func,
     )
     indices = index_set_rearranged[0]
     candidates = candidates_rearranged[0]
@@ -1136,12 +1139,14 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
     price_dict_BO_additives = BO_data["price_dict_BO_additives"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
+    acq_func = BO_data["acq_func"]
 
     (
         index_set_rearranged,
         _,
         candidates_rearranged,
     ) = gibbon_search_modified_all_per_price_B(
+        X,
         model,
         X_candidate_BO,
         bounds_norm,
@@ -1150,6 +1155,7 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
         ADDITIVES_candidate_BO=ADDITIVES_candidate_BO,
         price_dict_BO_ligands=price_dict_BO_ligands,
         price_dict_BO_additives=price_dict_BO_additives,
+        acq_function=acq_func,
     )
 
     indices = index_set_rearranged[0]
@@ -1206,7 +1212,5 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
     BO_data["running_costs_BO"] = running_costs_BO
     BO_data["N_train"] = len(X)
     BO_data["scaler_y"] = scaler_y
-    
+
     return BO_data
-
-

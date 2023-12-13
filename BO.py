@@ -313,11 +313,26 @@ class CustomGPModel:
 
 
 def gibbon_search_modified_all(
-    model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True, n_best=300
+    X_train,
+    model,
+    X_candidate_BO,
+    bounds_norm,
+    q,
+    sequential=False,
+    maximize=True,
+    n_best=300,
+    acq_function="GIBBON",
 ):
+    # Todo make modular to work with expected improvement as well
+
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
-    qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
+    if acq_function == "GIBBON":
+        qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
+    elif acq_function == "NEI":
+        sampler = SobolQMCNormalSampler(1024)
+        qGIBBON = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
+
     n_best = len(X_candidate_BO) // q
 
     candidates, acq_values = optimize_acqf_discrete_modified(
@@ -350,11 +365,17 @@ def gibbon_search_modified_all(
 
 
 def gibbon_search_modified_all_per_price(
-    model, X_candidate_BO, bounds_norm, q, LIGANDS_candidate_BO, price_dict_BO
+    X_train,
+    model,
+    X_candidate_BO,
+    bounds_norm,
+    q,
+    LIGANDS_candidate_BO,
+    price_dict_BO,
+    acq_function="GIBBON",
 ):
-    import matplotlib.pyplot as plt
-
     index_set, acq_values, candidates = gibbon_search_modified_all(
+        X_train,
         model,
         X_candidate_BO,
         bounds_norm,
@@ -362,6 +383,7 @@ def gibbon_search_modified_all_per_price(
         sequential=False,
         maximize=True,
         n_best=300,
+        acq_function=acq_function,
     )
 
     row_sums_1 = acq_values.sum(axis=1)
@@ -406,6 +428,7 @@ def gibbon_search_modified_all_per_price(
 
 
 def gibbon_search_modified_all_per_price_B(
+    X_train,
     model,
     X_candidate_BO,
     bounds_norm,
@@ -414,8 +437,10 @@ def gibbon_search_modified_all_per_price_B(
     ADDITIVES_candidate_BO,
     price_dict_BO_ligands,
     price_dict_BO_additives,
+    acq_function="GIBBON",
 ):
     index_set, acq_values, candidates = gibbon_search_modified_all(
+        X_train,
         model,
         X_candidate_BO,
         bounds_norm,
@@ -423,6 +448,7 @@ def gibbon_search_modified_all_per_price_B(
         sequential=False,
         maximize=True,
         n_best=300,
+        acq_function=acq_function,
     )
 
     row_sums_1 = acq_values.sum(axis=1)

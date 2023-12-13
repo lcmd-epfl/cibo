@@ -4,8 +4,19 @@ import random
 import copy as cp
 from exp_configs import benchmark
 from BO import update_model
-from utils import Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl, create_aligned_transposed_price_table, create_data_dict_BO_2A, create_data_dict_RS_2A
-from experiments import BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE
+from utils import (
+    plot_utility_BO_vs_RS,
+    plot_costs_BO_vs_RS,
+    save_pkl,
+    create_aligned_transposed_price_table,
+    create_data_dict_BO_2A,
+    create_data_dict_RS_2A,
+)
+from experiments import (
+    BO_CASE_2A_STEP,
+    RS_STEP_2A,
+    BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE,
+)
 from datasets import Evaluation_data
 
 SEED = 111
@@ -33,10 +44,7 @@ if __name__ == "__main__":
         N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
         BATCH_SIZE = exp_config["batch_size"]
-        MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
-
-        budget_scheduler = Budget_schedule(exp_config["buget_schedule"])
 
         for run in range(N_RUNS):
             SEED = 111 + run
@@ -55,11 +63,7 @@ if __name__ == "__main__":
                 LIGANDS_candidate,
                 price_dict,
             ) = DATASET.get_init_holdout_data(SEED)
-            #sort y_init (it is a pytorch tensor)
-            #X_init, y_init, costs_init, LIGANDS_init = np.array(X_init), np.array(y_init), np.array(costs_init), np.array(LIGANDS_init)
-            #sort_idx = np.argsort(y_init, axis=0)
-            #X_init, y_init, costs_init, LIGANDS_init = X_init[sort_idx], y_init[sort_idx], costs_init[sort_idx], LIGANDS_init[sort_idx]
-            #pdb.set_trace()
+
             print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
@@ -102,10 +106,10 @@ if __name__ == "__main__":
                 running_costs_BO,
                 bounds_norm,
                 BATCH_SIZE,
-                MAX_BATCH_COST,
+                exp_config["max_batch_cost"],
             )
-            BO_data["SAVED_BUDGET"] = MAX_BATCH_COST
-            BO_data["INCREASE_FACTOR"] = True
+
+            BO_data["acq_func"] = exp_config["acq_func"]
 
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
@@ -113,7 +117,7 @@ if __name__ == "__main__":
                 LIGANDS_candidate_RANDOM,
                 price_dict_RANDOM,
                 BATCH_SIZE,
-                MAX_BATCH_COST,
+                exp_config["max_batch_cost"],
                 y_better_RANDOM,
                 running_costs_RANDOM,
             )
@@ -122,19 +126,17 @@ if __name__ == "__main__":
                 if COST_AWARE_BO == False:
                     BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
-                    BO_data["step_nr"] = budget_scheduler.get_factor(i)                        
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data)
 
                 RANDOM_data = RS_STEP_2A(RANDOM_data)
 
                 print("--------------------")
                 print(
-                    "# |{}/{}|\tBO {:.2f}\tRS {:.2f}\tBUDGET: ${} \tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
+                    "# |{}/{}|\tBO {:.2f}\tRS {:.2f} \tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
                         i + 1,
                         NITER,
                         BO_data["y_best_BO"],
                         RANDOM_data["y_best_RANDOM"],
-                        BO_data["SAVED_BUDGET"],
                         BO_data["running_costs_BO"][-1],
                         RANDOM_data["running_costs_RANDOM"][-1],
                         BO_data["N_train"],

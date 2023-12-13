@@ -9,6 +9,7 @@ benchmark = [
         "max_batch_cost": 20.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "adaptive_2",
     },
     {
@@ -21,6 +22,7 @@ benchmark = [
         "max_batch_cost": 100.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "constant",
     },
     {
@@ -33,6 +35,7 @@ benchmark = [
         "max_batch_cost": 100.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "increasing",
     },
     {
@@ -45,6 +48,7 @@ benchmark = [
         "max_batch_cost": 1000.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "decreasing",
     },
     {
@@ -57,6 +61,7 @@ benchmark = [
         "max_batch_cost": 150.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "constant",
     },
     {
@@ -69,6 +74,7 @@ benchmark = [
         "max_batch_cost": 100.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "adaptive",
     },
     {
@@ -81,6 +87,7 @@ benchmark = [
         "max_batch_cost": 50.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "adaptive",
     },
     {
@@ -93,6 +100,7 @@ benchmark = [
         "max_batch_cost": 150.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "adaptive",
     },
     {
@@ -105,6 +113,7 @@ benchmark = [
         "max_batch_cost": 500000.0,
         "ntrain": 200,
         "prices": "update_ligand_when_used",
+        "acq_func": "GIBBON",
         "buget_schedule": "constant",
     },
 ]

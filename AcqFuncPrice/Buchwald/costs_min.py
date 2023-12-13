@@ -48,7 +48,6 @@ if __name__ == "__main__":
         MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
 
-
         for run in range(N_RUNS):
             SEED = 111 + run
             random.seed(SEED)
@@ -125,6 +124,8 @@ if __name__ == "__main__":
                 MAX_BATCH_COST,
             )
 
+            BO_data["acq_func"] = exp_config["acq_func"]
+
             RANDOM_data = create_data_dict_RS_2B(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
@@ -143,10 +144,10 @@ if __name__ == "__main__":
                     BO_data = BO_CASE_2B_STEP(BO_data)
                 else:
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data)
-                    #print("Ligands")
-                    #print(create_aligned_transposed_price_table(price_dict_BO_ligands))
-                    #print("Additives")
-                    #print(create_aligned_transposed_price_table(price_dict_BO_additives))
+                    # print("Ligands")
+                    # print(create_aligned_transposed_price_table(price_dict_BO_ligands))
+                    # print("Additives")
+                    # print(create_aligned_transposed_price_table(price_dict_BO_additives))
 
                 RANDOM_data = RS_STEP_2B(RANDOM_data)
 
