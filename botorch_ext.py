@@ -7,6 +7,7 @@ from botorch.models.gpytorch import Model
 from botorch.posteriors import Posterior
 from botorch.posteriors.gpytorch import GPyTorchPosterior
 from gpytorch.distributions import MultivariateNormal
+import xgboost as xgb
 
 
 def optimize_acqf_discrete_modified(
@@ -171,5 +172,57 @@ class ForestSurrogate(Model):
         cova.add_(torch.eye(cova.shape[-1]) * 1e-9)
 
         dist = MultivariateNormal(q_mu, cova)
+
+        return GPyTorchPosterior(dist)
+
+
+class XGBoostSurrogate(Model):
+    def __init__(self, surrogate) -> None:
+        """Use XGBoost model for Botorch
+
+        :param surrogate: fitted XGBoost model
+        :type surrogate: xgboost.XGBRegressor
+        """
+        super().__init__()
+        self._surrogate = surrogate
+
+    @property
+    def num_outputs(self) -> int:
+        return 1
+
+    def posterior(
+        self,
+        X: Tensor,
+        output_indices: Optional[List[int]] = None,
+        observation_noise: bool = False,
+        posterior_transform: Optional[Callable[[Posterior], Posterior]] = None,
+        **kwargs: Any,
+    ) -> Posterior:
+        x_np = X.detach().cpu().numpy()  # Convert tensor to NumPy array
+
+        if isinstance(self._surrogate, xgb.XGBRegressor):
+            # Get number of trees
+            n_trees = self._surrogate.get_booster().num_boosted_rounds()
+
+            # Get the predictions from each tree
+            preds = np.array(
+                [
+                    self._surrogate.predict(x_np, ntree_limit=i + 1)
+                    for i in range(n_trees)
+                ]
+            )
+
+            # Compute mean and standard deviation
+            _mu = preds.mean(axis=0)
+            _si = preds.std(axis=0)
+        else:
+            raise TypeError(
+                "Unsupported model type for XGBoost surrogate. Expected xgb.XGBRegressor."
+            )
+
+        mu = torch.from_numpy(_mu).unsqueeze(-1)
+        si = torch.from_numpy(_si).pow(2).unsqueeze(-1)
+
+        dist = MultivariateNormal(mu, torch.diag_embed(si))
 
         return GPyTorchPosterior(dist)
