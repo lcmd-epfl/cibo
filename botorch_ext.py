@@ -124,6 +124,7 @@ class SklearnSurrogate(Model):
         return GPyTorchPosterior(dist)
 
 
+
 class ForestSurrogate(Model):
     # Snippets copied from BayBe https://github.com/emdgroup/baybe
     def __init__(self, surrogate) -> None:
@@ -174,6 +175,13 @@ class ForestSurrogate(Model):
         dist = MultivariateNormal(q_mu, cova)
 
         return GPyTorchPosterior(dist)
+
+    #def forward(self, x: Tensor) -> MultivariateNormal:
+    #    if self.training:
+    #        x = self.transform_inputs(x)
+    #    mean_x = self.mean_module(x)
+    #    covar_x = self.covar_module(x)
+    #    return MultivariateNormal(mean_x, covar_x)
 
 
 class XGBoostSurrogate(Model):

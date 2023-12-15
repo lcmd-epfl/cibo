@@ -213,10 +213,22 @@ class CustomGPModel:
             Use BoTorch fit method
             to fit the hyperparameters of the GP and the model weights
             """
+            GPR = False
+            if GPR:
+                self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
+                self.mll.to(self.X_train_tensor)
+                fit_gpytorch_model(self.mll, max_retries=50000)
+            else:
+                from botorch_ext import ForestSurrogate
+                from sklearn.ensemble import RandomForestRegressor
 
-            self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
-            self.mll.to(self.X_train_tensor)
-            fit_gpytorch_model(self.mll, max_retries=50000)
+                model = RandomForestRegressor(
+                    n_estimators=100, max_depth=20, random_state=42
+                )
+
+                model.fit(self.X_train_tensor, self.y_train_tensor)
+                self.model = ForestSurrogate(model)
+                return self.model
 
         else:
             """

@@ -8,6 +8,7 @@ from BO import (
     gibbon_search_modified_all,
     gibbon_search_modified_all_per_price,
     gibbon_search_modified_all_per_price_B,
+    qNoisyEI_search
 )
 
 from utils import (
@@ -387,11 +388,20 @@ def BO_CASE_2A_STEP(BO_data):
     price_dict_BO = BO_data["price_dict_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
+    # TODO
+    acq_func = BO_data["acq_func"]
 
     # Assuming gibbon_search, update_X_y, compute_price_acquisition_ligands, check_better, update_model, and update_price_dict_ligands are defined elsewhere
-    indices, candidates = gibbon_search(
-        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
-    )
+    
+    if acq_func == "NEI":
+        indices, candidates = qNoisyEI_search(model, X_candidate_BO, bounds_norm, X, BATCH_SIZE, sequential=False, maximize=True)
+        
+    elif acq_func == "GIBBON":
+        indices, candidates = gibbon_search(
+            model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
+        )
+    else:
+        raise NotImplementedError
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
     suggested_costs_all, _ = compute_price_acquisition_ligands(

@@ -52,8 +52,6 @@ params = {
 model = xgb.XGBRegressor(**params)
 
 model.fit(X_init, y_init)
-mod = False
-
 model = XGBoostSurrogate(model)
 predictions = model.posterior(torch.tensor(X_candidate))
 y_pred = model.posterior(torch.tensor(X_candidate)).mean.flatten()
