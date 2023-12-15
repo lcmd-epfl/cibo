@@ -144,11 +144,7 @@ if __name__ == "__main__":
                     BO_data = BO_CASE_2B_STEP(BO_data)
                 else:
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data)
-                    # print("Ligands")
-                    # print(create_aligned_transposed_price_table(price_dict_BO_ligands))
-                    # print("Additives")
-                    # print(create_aligned_transposed_price_table(price_dict_BO_additives))
-
+                    
                 RANDOM_data = RS_STEP_2B(RANDOM_data)
 
                 print("--------------------")

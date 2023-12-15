@@ -12,6 +12,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from botorch_ext import XGBoostSurrogate
 from tqdm import tqdm
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import KFold
 import xgboost as xgb
 
 
@@ -34,25 +36,37 @@ bounds_norm = DATASET.bounds_norm
     costs_candidate,
 ) = DATASET.get_init_holdout_data(777)
 
-params = {
-    'objective': 'reg:squarederror',  # Regression task
-    'booster': 'gbtree',  # Tree-based model
-    'n_estimators': 800,  # Number of boosting rounds (you can adjust this)
-    'learning_rate': 1e-1,  # Step size shrinkage to prevent overfitting
-    'max_depth': 20,  # Maximum tree depth (you can adjust this)
-    'min_child_weight': 5,  # Minimum sum of instance weight (Hessian) needed in a child
-    'subsample': 0.5,  # Fraction of samples used for training
-    'colsample_bytree': 1,  # Fraction of features used for training
-    'gamma': 0,  # Minimum loss reduction required to make a further partition on a leaf node
-    'reg_alpha': 0.5,  # L1 regularization term on weights
-    'reg_lambda': 0.5,  # L2 regularization term on weights
-    'random_state': 42  # Seed for reproducibility (adjust as needed)
+param_grid = {
+    "n_estimators": [20, 100, 200],  # Number of boosting rounds (you can adjust this)
+    "learning_rate": [2e-2,1e-1, 1],  # Step size shrinkage to prevent overfitting
+    "max_depth": [10, 20, 30],  # Maximum tree depth (you can adjust this)
+    "min_child_weight": [
+        5
+    ],  # Minimum sum of instance weight (Hessian) needed in a child
+    "subsample": [0.5],  # Fraction of samples used for training
+    "colsample_bytree": [1],  # Fraction of features used for training
+    "gamma": [
+        0
+    ],  # Minimum loss reduction required to make a further partition on a leaf node
+    "reg_alpha": [0.5, 1, 1.5],  # L1 regularization term on weights
+    "reg_lambda": [0.25, 0.5, 1],  # L2 regularization term on weights
 }
 
-model = xgb.XGBRegressor(**params)
 
-model.fit(X_init, y_init)
-model = XGBoostSurrogate(model)
+model = xgb.XGBRegressor(**param_grid)
+stratified_kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+grid_search = GridSearchCV(
+    estimator=model,
+    param_grid=param_grid,
+    cv=stratified_kfold,
+    verbose=1,
+    n_jobs=-1,
+    scoring="neg_root_mean_squared_error",  # Regression task",
+)
+grid_search.fit(X_init, y_init)
+print(grid_search.best_params_)
+
+model = XGBoostSurrogate(grid_search.best_estimator_)
 predictions = model.posterior(torch.tensor(X_candidate))
 y_pred = model.posterior(torch.tensor(X_candidate)).mean.flatten()
 y_std = np.sqrt(model.posterior(torch.tensor(X_candidate)).variance).flatten()

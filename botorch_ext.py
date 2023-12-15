@@ -176,14 +176,6 @@ class ForestSurrogate(Model):
 
         return GPyTorchPosterior(dist)
 
-    #def forward(self, x: Tensor) -> MultivariateNormal:
-    #    if self.training:
-    #        x = self.transform_inputs(x)
-    #    mean_x = self.mean_module(x)
-    #    covar_x = self.covar_module(x)
-    #    return MultivariateNormal(mean_x, covar_x)
-
-
 class XGBoostSurrogate(Model):
     def __init__(self, surrogate) -> None:
         """Use XGBoost model for Botorch
