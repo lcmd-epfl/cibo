@@ -103,6 +103,8 @@ if __name__ == "__main__":
             BO_data["SAVED_BUDGET"] = MAX_BATCH_COST
             BO_data["INCREASE_FACTOR"] = True
 
+            BO_data["acq_func"] = exp_config["acq_func"]
+
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
                 y_best_RANDOM,

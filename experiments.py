@@ -936,6 +936,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     SAVED_BUDGET = BO_data["SAVED_BUDGET"]
     scaler_y = BO_data["scaler_y"]
+    acq_func = BO_data["acq_func"]
 
     try:
         INCREASE_FACTOR = BO_data["INCREASE_FACTOR"]
@@ -946,13 +947,17 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         step_nr = BO_data["step_nr"]
         MAX_BATCH_COST *= step_nr
 
+
     index_set, _, _ = gibbon_search_modified_all(
+        X,
         model,
         X_candidate_BO,
         bounds_norm,
         q=BATCH_SIZE,
         sequential=False,
         maximize=True,
+        n_best=300,
+        acq_function="GIBBON",
     )
 
     price_list = np.array(list(price_dict_BO.values()))

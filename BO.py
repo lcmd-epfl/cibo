@@ -149,10 +149,12 @@ class CustomGPModel:
         bounds_norm=None,
         fit_y=True,
         FIT_METHOD=True,
+        surrogate="GP",
     ):
         self.kernel_type = kernel_type
         self.bounds_norm = bounds_norm
         self.fit_y = fit_y
+        self.surrogate = surrogate
 
         self.FIT_METHOD = FIT_METHOD
         if not self.FIT_METHOD:
@@ -213,12 +215,11 @@ class CustomGPModel:
             Use BoTorch fit method
             to fit the hyperparameters of the GP and the model weights
             """
-            GPR = False
-            if GPR:
+            if self.surrogate == "GP":
                 self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
                 self.mll.to(self.X_train_tensor)
                 fit_gpytorch_model(self.mll, max_retries=50000)
-            else:
+            elif self.surrogate == "RF":
                 from botorch_ext import ForestSurrogate
                 from sklearn.ensemble import RandomForestRegressor
 
