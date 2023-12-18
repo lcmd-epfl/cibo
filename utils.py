@@ -127,9 +127,7 @@ Functions for plotting
 """
 
 
-def plot_utility_BO_vs_RS(
-    y_better_BO_ALL, y_better_RANDOM_ALL, name="./figures/utility.png"
-):
+def plot_utility_BO_vs_RS(y_better_BO_ALL, y_better_RANDOM_ALL, name="utility.png"):
     """
     Plot the utility of the BO vs RS (Random Search) for each iteration.
     """
@@ -161,13 +159,18 @@ def plot_utility_BO_vs_RS(
     ax1.set_ylabel("Best Objective Value")
     plt.legend(loc="lower right")
     plt.xticks(list(np.arange(NITER)))
-    plt.savefig(name)
+
+    # check if subfolder exists
+    if not os.path.exists("./figures"):
+        os.makedirs("./figures")
+
+    plt.savefig("./figures/" + name)
 
     plt.clf()
 
 
 def plot_costs_BO_vs_RS(
-    running_costs_BO_ALL, running_costs_RANDOM_ALL, name="./figures/costs.png"
+    running_costs_BO_ALL, running_costs_RANDOM_ALL, name="costs.png"
 ):
     """
     Plot the running costs of the BO vs RS (Random Search) for each iteration.
@@ -195,7 +198,12 @@ def plot_costs_BO_vs_RS(
     ax2.set_ylabel("Running Costs [$]")
     plt.legend(loc="lower right")
     plt.xticks(list(np.arange(NITER)))
-    plt.savefig(name)
+
+    # check if subfolder exists
+    if not os.path.exists("./figures"):
+        os.makedirs("./figures")
+
+    plt.savefig("./figures/" + name)
 
     plt.clf()
 
@@ -319,7 +327,7 @@ def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
     return price_per_ligand
 
 
-def compute_price_acquisition_ligands_price_per_acqfct_2(NEW_LIGANDS, price_dict):
+def function_cost(NEW_LIGANDS, price_dict):
     check_dict_ligands = cp.deepcopy(price_dict)
 
     price_per_ligand = []
@@ -383,7 +391,7 @@ def compute_price_acquisition_ligands_price_per_acqfct_B1(
     return price_per_ligand_additive
 
 
-def compute_price_acquisition_ligands_price_per_acqfct_B2(
+def function_cost_B(
     NEW_LIGANDS, NEW_ADDITIVES, price_dict_ligands, price_dict_additives
 ):
     """
@@ -605,6 +613,8 @@ def create_data_dict_BO_2A(
     bounds_norm,
     BATCH_SIZE,
     MAX_BATCH_COST,
+    SURROGATE,
+    AQCFCT
 ):
     """
     Create a dictionary with all the data needed for the BO in scenario 2.
@@ -626,6 +636,8 @@ def create_data_dict_BO_2A(
         "bounds_norm": bounds_norm,
         "BATCH_SIZE": BATCH_SIZE,
         "MAX_BATCH_COST": MAX_BATCH_COST,
+        "surrogate": SURROGATE,
+        "acq_func": AQCFCT,
     }
 
     return BO_data
@@ -648,6 +660,8 @@ def create_data_dict_BO_2B(
     bounds_norm,
     BATCH_SIZE,
     MAX_BATCH_COST,
+    SURROGATE,
+    AQCFCT
 ):
     BO_data = {
         "model": model,
@@ -667,6 +681,8 @@ def create_data_dict_BO_2B(
         "bounds_norm": bounds_norm,
         "BATCH_SIZE": BATCH_SIZE,
         "MAX_BATCH_COST": MAX_BATCH_COST,
+        "surrogate": SURROGATE,
+        "acq_func": AQCFCT,
     }
 
     return BO_data
@@ -713,6 +729,8 @@ def create_data_dict_BO_1(
     bounds_norm,
     BATCH_SIZE,
     MAX_BATCH_COST,
+    SURROGATE,
+    AQCFCT
 ):
     """
     For scenario 1
@@ -732,6 +750,8 @@ def create_data_dict_BO_1(
         "bounds_norm": bounds_norm,
         "BATCH_SIZE": BATCH_SIZE,
         "MAX_BATCH_COST": MAX_BATCH_COST,
+        "surrogate": SURROGATE,
+        "acq_func": AQCFCT,
     }
     return BO_data
 

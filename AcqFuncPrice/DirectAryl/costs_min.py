@@ -7,10 +7,10 @@ from BO import update_model
 from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
-    save_pkl,
     create_aligned_transposed_price_table,
     create_data_dict_BO_2A,
     create_data_dict_RS_2A,
+    save_pkl,
 )
 from experiments import (
     BO_CASE_2A_STEP,
@@ -18,6 +18,7 @@ from experiments import (
     BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE,
 )
 from datasets import Evaluation_data
+import pdb
 
 SEED = 111
 random.seed(SEED)
@@ -44,6 +45,7 @@ if __name__ == "__main__":
         N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
         BATCH_SIZE = exp_config["batch_size"]
+        SURROGATE = exp_config["surrogate"]
         COST_AWARE_BO = exp_config["cost_aware"]
 
         for run in range(N_RUNS):
@@ -67,8 +69,7 @@ if __name__ == "__main__":
             print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
-            model, scaler_y = update_model(X, y, bounds_norm)
-
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
             X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(
                 y_candidate
             )
@@ -106,10 +107,10 @@ if __name__ == "__main__":
                 running_costs_BO,
                 bounds_norm,
                 BATCH_SIZE,
-                exp_config["max_batch_cost"],
+                None,
+                SURROGATE,
+                exp_config["acq_func"],
             )
-
-            BO_data["acq_func"] = exp_config["acq_func"]
 
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
@@ -117,7 +118,7 @@ if __name__ == "__main__":
                 LIGANDS_candidate_RANDOM,
                 price_dict_RANDOM,
                 BATCH_SIZE,
-                exp_config["max_batch_cost"],
+                None,
                 y_better_RANDOM,
                 running_costs_RANDOM,
             )
@@ -155,19 +156,17 @@ if __name__ == "__main__":
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
-            name="./figures/utility_{}_{}_{}.png".format(
+            name="yield_{}_{}.png".format(
                 exp_config["dataset"],
-                exp_config["max_batch_cost"],
-                exp_config["buget_schedule"],
+                exp_config["label"],
             ),
         )
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
-            name="./figures/optimization_{}_{}_{}.png".format(
+            name="costs_{}_{}.png".format(
                 exp_config["dataset"],
-                exp_config["max_batch_cost"],
-                exp_config["buget_schedule"],
+                exp_config["label"],
             ),
         )
 

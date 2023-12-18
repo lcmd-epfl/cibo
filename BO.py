@@ -13,24 +13,20 @@ from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
 from gpytorch.means import ConstantMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from torch.optim import Adam
+from botorch_ext import ForestSurrogate
+from sklearn.ensemble import RandomForestRegressor
 
 # Custom module imports
 from botorch_ext import optimize_acqf_discrete_modified
 from kernels import BoundedKernel, TanimotoKernel
 
-
 # specific import for the modified GIBBON function
 from utils import (
-    compute_price_acquisition_ligands_price_per_acqfct,
-    compute_price_acquisition_ligands_price_per_acqfct2,
-    compute_price_acquisition_ligands_price_per_acqfct_2,
-    compute_price_acquisition_ligands_price_per_acqfct_B1,
-    compute_price_acquisition_ligands_price_per_acqfct_B2,
+    function_cost,
+    function_cost_B,
 )
 
 # Suppress warnings
-import pdb
-
 warnings.filterwarnings("ignore")
 
 
@@ -46,13 +42,19 @@ tkwargs = {
 
 def find_indices(X_candidate_BO, candidates):
     """
-    fuction finds indices of candidates in X_candidate_BO
-    (as the acquisition function returns the candidates in a different order)
-    Parameters:
-        X_candidate_BO (numpy.ndarray): The holdout set.
-        candidates (numpy.ndarray): The batch of molecules selected by the acquisition function.
+    Identifies and returns the indices of specific candidates within a larger dataset.
+    This function is particularly useful when the order of candidates returned by an
+    acquisition function differs from the original dataset order.
+
+    Args:
+        X_candidate_BO (numpy.ndarray): The complete dataset or holdout set,
+            typically consisting of feature vectors.
+        candidates (numpy.ndarray): A subset of the dataset (e.g., a batch of
+            molecules) selected by the acquisition function.
+
     Returns:
-        list: The indices of the selected molecules.
+        numpy.ndarray: An array of indices corresponding to the positions of
+            each candidate in the original dataset 'X_candidate_BO'.
     """
 
     indices = []
@@ -63,23 +65,43 @@ def find_indices(X_candidate_BO, candidates):
 
 
 def update_model(
-    X, y, bounds_norm, kernel_type="Tanimoto", fit_y=True, FIT_METHOD=True
+    X,
+    y,
+    bounds_norm,
+    kernel_type="Tanimoto",
+    fit_y=True,
+    FIT_METHOD=True,
+    surrogate="GP",
 ):
     """
-    Function that updates the GP model with new data with good presettings
-    Parameters:
-        X (numpy.ndarray): The training data.
-        y (numpy.ndarray): The training labels.
-        bounds_norm (numpy.ndarray): The bounds for normalization.
+    Update and return a Gaussian Process (GP) model with new training data.
+    This function configures and optimizes the GP model based on the provided parameters.
+
+    Args:
+        X (numpy.ndarray): The training data, typically feature vectors.
+        y (numpy.ndarray): The corresponding labels or values for the training data.
+        bounds_norm (numpy.ndarray): Normalization bounds for the training data.
+        kernel_type (str, optional): Type of kernel to be used in the GP model. Default is "Tanimoto".
+        fit_y (bool, optional): Flag to indicate if the output values (y) should be fitted. Default is True.
+        FIT_METHOD (bool, optional): Flag to indicate the fitting method to be used. Default is True.
+        surrogate (str, optional): Type of surrogate model to be used. Default is "GP".
+
     Returns:
-        model (botorch.models.gpytorch.GP): The updated GP model.
-        scaler_y (TensorStandardScaler): The scaler for the labels.
+        model (botorch.models.gpytorch.GP): The updated GP model, fitted with the provided training data.
+        scaler_y (TensorStandardScaler): The scaler used for the labels, which can be applied for future data normalization.
+
+    Notes:
+        The function initializes a GP model with specified kernel and fitting methods, then fits the model to the provided data.
+        The 'bounds_norm' parameter is used for normalizing the training data within the GP model.
+        The 'fit_y' and 'FIT_METHOD' parameters control the fitting behavior of the model.
     """
-    GP_class = CustomGPModel(
+
+    GP_class = Surrogate_Model(
         kernel_type=kernel_type,
         bounds_norm=bounds_norm,
         fit_y=fit_y,
         FIT_METHOD=FIT_METHOD,
+        surrogate=surrogate,
     )
     model = GP_class.fit(X, y)
 
@@ -88,8 +110,18 @@ def update_model(
 
 class TensorStandardScaler:
     """
-    Standardize features by removing the mean and scaling to unit variance
-    as defined in BoTorch
+    StandardScaler for tensors that standardizes features by removing the mean
+    and scaling to unit variance, as defined in BoTorch.
+
+    Attributes:
+        dim (int): The dimension over which to compute the mean and standard deviation.
+        epsilon (float): A small constant to avoid division by zero in case of a zero standard deviation.
+        mean (Tensor, optional): The mean value computed in the `fit` method. None until `fit` is called.
+        std (Tensor, optional): The standard deviation computed in the `fit` method. None until `fit` is called.
+
+    Args:
+        dim (int): The dimension over which to standardize the data. Default is -2.
+        epsilon (float): A small constant to avoid division by zero. Default is 1e-9.
     """
 
     def __init__(self, dim: int = -2, epsilon: float = 1e-9):
@@ -142,10 +174,37 @@ class TensorStandardScaler:
             return Y_inv_transformed
 
 
-class CustomGPModel:
+class Surrogate_Model:
+    """
+    A surrogate model class that supports different types of kernels and surrogate methods.
+
+    This class encapsulates the functionality to create and train a surrogate model
+    used for predictions in Bayesian Optimization and related tasks.
+
+    Attributes:
+        kernel_type (str): Type of the kernel to be used in Gaussian Process (GP).
+        bounds_norm (np.ndarray, optional): Bounds for normalizing the input data.
+        fit_y (bool): Flag indicating whether to fit the output values.
+        FIT_METHOD (bool): Indicates the method for fitting the GP hyperparameters.
+        surrogate (str): Type of surrogate model to be used ('GP' for Gaussian Process or 'RF' for Random Forest).
+        scaler_y (TensorStandardScaler): Scaler for standardizing the output values.
+
+    Args:
+        kernel_type (str): Specifies the kernel type for the GP. Default is "Tanimoto".
+        bounds_norm (np.ndarray, optional): Normalization bounds for the data. Default is None.
+        fit_y (bool): Indicates if the output values should be fitted. Default is True.
+        FIT_METHOD (bool): Selects the fitting method. Default is True.
+        surrogate (str): Chooses the surrogate model type. Default is "GP".
+
+    Notes:
+        The class supports different kernel types for Gaussian Processes and also allows for
+        the use of Random Forest as a surrogate model. The choice of kernel and surrogate
+        model type can significantly affect the model's performance.
+    """
+
     def __init__(
         self,
-        kernel_type="Matern",
+        kernel_type="Tanimoto",
         bounds_norm=None,
         fit_y=True,
         FIT_METHOD=True,
@@ -155,14 +214,7 @@ class CustomGPModel:
         self.bounds_norm = bounds_norm
         self.fit_y = fit_y
         self.surrogate = surrogate
-
         self.FIT_METHOD = FIT_METHOD
-        if not self.FIT_METHOD:
-            if self.kernel_type == "RBF" or self.kernel_type == "Matern":
-                self.NUM_EPOCHS_GD = 5000
-            elif self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
-                self.NUM_EPOCHS_GD = 1000
-
         self.scaler_y = TensorStandardScaler()
 
     def fit(self, X_train, y_train):
@@ -177,155 +229,141 @@ class CustomGPModel:
         self.X_train_tensor = torch.tensor(X_train, dtype=torch.float64)
         self.y_train_tensor = torch.tensor(y_train, dtype=torch.float64).view(-1, 1)
 
-        if self.kernel_type == "RBF":
-            kernel = RBFKernel()
-        elif self.kernel_type == "Matern":
-            kernel = MaternKernel(nu=2.5)
-        elif self.kernel_type == "Linear":
-            kernel = LinearKernel()
-        elif self.kernel_type == "Tanimoto":
-            kernel = TanimotoKernel()
+        """
+        Use BoTorch fit method
+        to fit the hyperparameters of the GP and the model weights
+        """
+        if self.surrogate == "GP":
+            if self.kernel_type == "RBF":
+                kernel = RBFKernel()
+            elif self.kernel_type == "Matern":
+                kernel = MaternKernel(nu=2.5)
+            elif self.kernel_type == "Linear":
+                kernel = LinearKernel()
+            elif self.kernel_type == "Tanimoto":
+                kernel = TanimotoKernel()
 
-        elif self.kernel_type == "Bounded":
-            boundary = np.array([[0], [100]])
-            lo = float(self.scaler_y.transform(boundary)[0])
-            hi = float(self.scaler_y.transform(boundary)[1])
-            kernel = BoundedKernel(lower=lo, upper=hi)
-        else:
-            raise ValueError("Invalid kernel type")
+            elif self.kernel_type == "Bounded":
+                boundary = np.array([[0], [100]])
+                lo = float(self.scaler_y.transform(boundary)[0])
+                hi = float(self.scaler_y.transform(boundary)[1])
+                kernel = BoundedKernel(lower=lo, upper=hi)
+            else:
+                raise ValueError("Invalid kernel type")
 
-        class InternalGP(SingleTaskGP):
-            def __init__(self, train_X, train_Y, kernel):
-                super().__init__(train_X, train_Y)
-                self.mean_module = ConstantMean()
-                # from gpytorch.priors import GammaPrior, NormalPrior
-                # instead of ConstantMean() use a gamma prior
-                # self.mean_module = gpytorch.means.GammaPrior(1.0, 0.5)
-                # self.mean_module.register_prior("mean_prior", NormalPrior(0, 100), "constant")
-                self.covar_module = ScaleKernel(kernel)
+            class InternalGP(SingleTaskGP):
+                def __init__(self, train_X, train_Y, kernel):
+                    super().__init__(train_X, train_Y)
+                    self.mean_module = ConstantMean()
+                    self.covar_module = ScaleKernel(kernel)
 
-        # https://github.com/pytorch/botorch/blob/main/tutorials/fit_model_with_torch_optimizer.ipynb
-
-        self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
-        if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
-            self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(1e-3)
-
-        if self.FIT_METHOD:
-            """
-            Use BoTorch fit method
-            to fit the hyperparameters of the GP and the model weights
-            """
-            if self.surrogate == "GP":
-                self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
-                self.mll.to(self.X_train_tensor)
-                fit_gpytorch_model(self.mll, max_retries=50000)
-            elif self.surrogate == "RF":
-                from botorch_ext import ForestSurrogate
-                from sklearn.ensemble import RandomForestRegressor
-
-                model = RandomForestRegressor(
-                    n_estimators=100, max_depth=20, random_state=42
+            self.gp = InternalGP(self.X_train_tensor, self.y_train_tensor, kernel)
+            if self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
+                self.gp.likelihood.noise_constraint = gpytorch.constraints.GreaterThan(
+                    1e-3
                 )
-
-                model.fit(self.X_train_tensor, self.y_train_tensor)
-                self.model = ForestSurrogate(model)
-                return self.model
-
-        else:
-            """
-            Use gradient descent to fit the hyperparameters of the GP with initial run
-            to get reasonable hyperparameters and then a second run to get the best hyperparameters and model weights
-            """
 
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
-            optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
-            self.gp.train()
-
-            if self.gp.covar_module.base_kernel.lengthscale != None:
-                LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(
-                    np.logspace(-3, 3, 10), np.logspace(-5, 1, 10)
-                )
+            if self.FIT_METHOD:
+                fit_gpytorch_model(self.mll, max_retries=50000)
             else:
-                NOISE_GRID = np.logspace(-5, 1, 10)
-                LENGTHSCALE_GRID = np.zeros_like(NOISE_GRID)
-
-            NUM_EPOCHS_INIT = 50
-
-            best_loss = float("inf")
-            best_lengthscale = None
-            best_noise = None
-
-            # Loop over each grid point
-            for lengthscale, noise in zip(
-                LENGTHSCALE_GRID.flatten(), NOISE_GRID.flatten()
-            ):
-                # Manually set the hyperparameters
+                if self.kernel_type == "RBF" or self.kernel_type == "Matern":
+                    self.NUM_EPOCHS_GD = 5000
+                elif self.kernel_type == "Linear" or self.kernel_type == "Tanimoto":
+                    self.NUM_EPOCHS_GD = 1000
+                optimizer = Adam([{"params": self.gp.parameters()}], lr=1e-1)
+                self.gp.train()
                 if self.gp.covar_module.base_kernel.lengthscale != None:
-                    self.gp.covar_module.base_kernel.lengthscale = lengthscale
-                self.gp.likelihood.noise = noise
-                # Perform a brief round of training to get a loss value
-                for epoch in range(NUM_EPOCHS_INIT):
+                    LENGTHSCALE_GRID, NOISE_GRID = np.meshgrid(
+                        np.logspace(-3, 3, 10), np.logspace(-5, 1, 10)
+                    )
+                else:
+                    NOISE_GRID = np.logspace(-5, 1, 10)
+                    LENGTHSCALE_GRID = np.zeros_like(NOISE_GRID)
+
+                NUM_EPOCHS_INIT = 50
+
+                best_loss = float("inf")
+                best_lengthscale = None
+                best_noise = None
+
+                # Loop over each grid point
+                for lengthscale, noise in zip(
+                    LENGTHSCALE_GRID.flatten(), NOISE_GRID.flatten()
+                ):
+                    # Manually set the hyperparameters
+                    if self.gp.covar_module.base_kernel.lengthscale != None:
+                        self.gp.covar_module.base_kernel.lengthscale = lengthscale
+                    self.gp.likelihood.noise = noise
+                    # Perform a brief round of training to get a loss value
+                    for epoch in range(NUM_EPOCHS_INIT):
+                        # clear gradients
+                        optimizer.zero_grad()
+                        # forward pass through the model to obtain the output MultivariateNormal
+                        output = self.gp(self.X_train_tensor)
+                        # calculate the negative log likelihood
+                        loss = -self.mll(output, self.y_train_tensor.flatten())
+                        # back prop gradients
+                        loss.backward()
+                        optimizer.step()
+
+                    if loss.item() < best_loss:
+                        best_loss = loss.item()
+                        if self.gp.covar_module.base_kernel.lengthscale != None:
+                            best_lengthscale = lengthscale
+                        best_noise = noise
+
+                if self.gp.covar_module.base_kernel.lengthscale != None:
+                    self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
+                self.gp.likelihood.noise = best_noise
+                if self.gp.covar_module.base_kernel.lengthscale != None:
+                    print(
+                        f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}"
+                    )
+                else:
+                    print(f"Best initial noise: {best_noise}")
+
+                for epoch in range(self.NUM_EPOCHS_GD):
                     # clear gradients
                     optimizer.zero_grad()
                     # forward pass through the model to obtain the output MultivariateNormal
                     output = self.gp(self.X_train_tensor)
-                    # calculate the negative log likelihood
                     loss = -self.mll(output, self.y_train_tensor.flatten())
-                    # back prop gradients
                     loss.backward()
+                    if (epoch + 1) % 100 == 0:
+                        if self.gp.covar_module.base_kernel.lengthscale != None:
+                            print(
+                                f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
+                                f"lengthscale: {self.gp.covar_module.base_kernel.lengthscale.item():>4.3f} "
+                                f"noise: {self.gp.likelihood.noise.item():>4.3f}"
+                            )
+                        else:
+                            print(
+                                f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
+                                f"noise: {self.gp.likelihood.noise.item():>4.3f}"
+                            )
                     optimizer.step()
 
-                # If this loss is the best so far, update best_loss and best hyperparameters
-                if loss.item() < best_loss:
-                    best_loss = loss.item()
-                    if self.gp.covar_module.base_kernel.lengthscale != None:
-                        best_lengthscale = lengthscale
-                    best_noise = noise
-                # print(f"Finished grid point with lengthscale {lengthscale}, noise {noise}, loss {loss.item()}")
+            self.gp.eval()
+            self.mll.eval()
 
-            # Set the best found hyperparameters
-            if self.gp.covar_module.base_kernel.lengthscale != None:
-                self.gp.covar_module.base_kernel.lengthscale = best_lengthscale
-            self.gp.likelihood.noise = best_noise
-            if self.gp.covar_module.base_kernel.lengthscale != None:
-                print(
-                    f"Best initial lengthscale: {best_lengthscale}, Best initial noise: {best_noise}"
-                )
-            else:
-                print(f"Best initial noise: {best_noise}")
+            return self.gp
 
-            for epoch in range(self.NUM_EPOCHS_GD):
-                # clear gradients
-                optimizer.zero_grad()
-                # forward pass through the model to obtain the output MultivariateNormal
-                output = self.gp(self.X_train_tensor)
-                # calculate the negative log likelihood
-                loss = -self.mll(output, self.y_train_tensor.flatten())
-                # back prop gradients
-                loss.backward()
-                # print every 10 iterations
-                if (epoch + 1) % 100 == 0:
-                    if self.gp.covar_module.base_kernel.lengthscale != None:
-                        print(
-                            f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
-                            f"lengthscale: {self.gp.covar_module.base_kernel.lengthscale.item():>4.3f} "
-                            f"noise: {self.gp.likelihood.noise.item():>4.3f}"
-                        )
-                    else:
-                        print(
-                            f"Epoch {epoch+1:>3}/{self.NUM_EPOCHS_GD} - Loss: {loss.item():>4.3f} "
-                            f"noise: {self.gp.likelihood.noise.item():>4.3f}"
-                        )
-                optimizer.step()
+        elif self.surrogate == "RF":
+            model = RandomForestRegressor(
+                n_estimators=100, max_depth=20, random_state=42
+            )
 
-        self.gp.eval()
-        self.mll.eval()
+            model.fit(self.X_train_tensor, self.y_train_tensor)
+            self.model = ForestSurrogate(model)
+            return self.model
 
-        return self.gp
+        else:
+            raise ValueError("Invalid surrogate type")
 
 
-def gibbon_search_modified_all(
+def opt_acqfct(
     X_train,
     model,
     X_candidate_BO,
@@ -334,22 +372,51 @@ def gibbon_search_modified_all(
     sequential=False,
     maximize=True,
     n_best=300,
-    acq_function="GIBBON",
+    acq_func="GIBBON",
 ):
-    # Todo make modular to work with expected improvement as well
+    """
+    Optimizes an acquisition function for Bayesian Optimization.
 
+    This function selects the best candidates from a given set based on the specified acquisition function.
+    It supports different types of acquisition functions like 'GIBBON' and 'NEI'.
+
+    Args:
+        X_train (np.ndarray): The training data used in the model.
+        model (GP model): The Gaussian Process model fitted on the training data.
+        X_candidate_BO (np.ndarray): The set of candidate points for selection.
+        bounds_norm (np.ndarray): Normalization bounds for the data.
+        q (int): The number of candidates to select in each iteration.
+        sequential (bool, optional): If True, performs sequential optimization. Default is False.
+        maximize (bool, optional): Indicates if the goal is to maximize the acquisition function. Default is True.
+        n_best (int, optional): The number of best candidates to return. Default is 300.
+        acq_func (str, optional): The type of acquisition function to use. Default is "GIBBON".
+
+    Returns:
+        tuple:
+            - index_set (np.ndarray): Indices of the selected candidates in the original candidate set.
+            - acq_values (np.ndarray): Acquisition values of the selected candidates.
+            - candidates (np.ndarray): The actual selected candidate points.
+
+    Notes:
+        The function utilizes 'optimize_acqf_discrete_modified' for discrete optimization of the acquisition function.
+        'NUM_RESTARTS' and 'RAW_SAMPLES' are set internally to control the optimization process.
+        The function can handle different acquisition function strategies and can be adjusted for either maximizing or minimizing.
+    """
+    
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
-    if acq_function == "GIBBON":
-        qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
-    elif acq_function == "NEI":
+    if acq_func == "GIBBON":
+        acq_function = qLowerBoundMaxValueEntropy(
+            model, X_candidate_BO, maximize=maximize
+        )
+    elif acq_func == "NEI":
         sampler = SobolQMCNormalSampler(1024)
-        qGIBBON = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
+        acq_function = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
 
     n_best = len(X_candidate_BO) // q
 
     candidates, acq_values = optimize_acqf_discrete_modified(
-        acq_function=qGIBBON,
+        acq_function=acq_function,
         bounds=bounds_norm,
         q=q,
         choices=X_candidate_BO,
@@ -377,7 +444,7 @@ def gibbon_search_modified_all(
     return index_set, acq_values, candidates
 
 
-def gibbon_search_modified_all_per_price(
+def opt_acqfct_cost(
     X_train,
     model,
     X_candidate_BO,
@@ -385,9 +452,9 @@ def gibbon_search_modified_all_per_price(
     q,
     LIGANDS_candidate_BO,
     price_dict_BO,
-    acq_function="GIBBON",
+    acq_func="GIBBON",
 ):
-    index_set, acq_values, candidates = gibbon_search_modified_all(
+    index_set, acq_values, candidates = opt_acqfct(
         X_train,
         model,
         X_candidate_BO,
@@ -396,21 +463,8 @@ def gibbon_search_modified_all_per_price(
         sequential=False,
         maximize=True,
         n_best=300,
-        acq_function=acq_function,
+        acq_func=acq_func,
     )
-
-    row_sums_1 = acq_values.sum(axis=1)
-    # plt.hist(row_sums_1)
-    # plot the average as a line
-    # plt.axvline(x=row_sums_1.mean(), color='r', linestyle='dashed', linewidth=2)
-    # plt.savefig("row_sums_1.png")
-
-    # mean_row_sums_1 = row_sums_1.mean() #
-    # mean_row_sums_1 = 0.1*mean_row_sums_1
-    # find all indices where rows sum is larger than mean
-    # index_set = index_set[row_sums_1 > mean_row_sums_1]
-    # acq_values = acq_values[row_sums_1 > mean_row_sums_1]
-    # candidates = candidates[row_sums_1 > mean_row_sums_1]
 
     ligand_set = []
     for subset in index_set:
@@ -418,19 +472,11 @@ def gibbon_search_modified_all_per_price(
 
     price_rescaling_factors = []
     for ligands in ligand_set:
-        # price_rescaling_factors.append(
-        #    compute_price_acquisition_ligands_price_per_acqfct(ligands, price_dict_BO)
-        # )
-
-        price_rescaling_factors.append(
-            compute_price_acquisition_ligands_price_per_acqfct_2(ligands, price_dict_BO)
-        )
+        price_rescaling_factors.append(function_cost(ligands, price_dict_BO))
 
     price_rescaling_factors = np.array(price_rescaling_factors)
     acq_values_per_price = acq_values / price_rescaling_factors
     row_sums_2 = acq_values_per_price.sum(axis=1)
-
-    # Get the indices that would sort the row sums in descending order
     sorted_indices = np.argsort(row_sums_2)[::-1]
 
     index_set_rearranged = index_set[sorted_indices]
@@ -440,7 +486,7 @@ def gibbon_search_modified_all_per_price(
     return index_set_rearranged, acq_values_per_price, candidates_rearranged
 
 
-def gibbon_search_modified_all_per_price_B(
+def opt_acqfct_cost_B(
     X_train,
     model,
     X_candidate_BO,
@@ -450,9 +496,9 @@ def gibbon_search_modified_all_per_price_B(
     ADDITIVES_candidate_BO,
     price_dict_BO_ligands,
     price_dict_BO_additives,
-    acq_function="GIBBON",
+    acq_func="GIBBON",
 ):
-    index_set, acq_values, candidates = gibbon_search_modified_all(
+    index_set, acq_values, candidates = opt_acqfct(
         X_train,
         model,
         X_candidate_BO,
@@ -461,10 +507,8 @@ def gibbon_search_modified_all_per_price_B(
         sequential=False,
         maximize=True,
         n_best=300,
-        acq_function=acq_function,
+        acq_func=acq_func,
     )
-
-    row_sums_1 = acq_values.sum(axis=1)
 
     ligand_set, additivies_set = [], []
     for subset in index_set:
@@ -473,7 +517,7 @@ def gibbon_search_modified_all_per_price_B(
 
     price_rescaling_factors = []
     for ligands, additives in zip(ligand_set, additivies_set):
-        cost_curr = compute_price_acquisition_ligands_price_per_acqfct_B2(
+        cost_curr = function_cost_B(
             ligands, additives, price_dict_BO_ligands, price_dict_BO_additives
         )
         price_rescaling_factors.append(cost_curr)
@@ -481,18 +525,17 @@ def gibbon_search_modified_all_per_price_B(
     price_rescaling_factors = np.array(price_rescaling_factors)
     acq_values_per_price = acq_values / price_rescaling_factors
     row_sums_2 = acq_values_per_price.sum(axis=1)
-
-    # Get the indices that would sort the row sums in descending order
     sorted_indices = np.argsort(row_sums_2)[::-1]
 
     index_set_rearranged = index_set[sorted_indices]
     acq_values_per_price = acq_values_per_price[sorted_indices]
     acq_values = acq_values[sorted_indices]
     candidates_rearranged = candidates[sorted_indices]
+
     return index_set_rearranged, acq_values_per_price, candidates_rearranged
 
 
-def gibbon_search_modified(
+def opt_gibbon(
     model,
     X_candidate_BO,
     bounds_norm,
@@ -502,28 +545,6 @@ def gibbon_search_modified(
     n_best=300,
     return_nr=0,
 ):
-    """
-    https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
-    returns index of the q best candidates in X_candidate_BO
-    as well as their feature vectors using a modified version of the GIBBON function
-    implemented in BoTorch: it returns the n_best best candidates and then selects the
-    return_nr-th best candidate as the batch of molecules to be selected instead of only the
-    best candidate
-    source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
-    but using here optimize_acqf_discrete_modified
-
-    Parameters:
-       model (botorch.models.gpytorch.GP): The GP model.
-       X_candidate_BO (numpy.ndarray): The holdout set.
-       bounds_norm (numpy.ndarray): The bounds for normalization.
-       q (int): The batch size.
-       sequential (bool): Whether to use sequential optimization.
-       maximize (bool): Whether to maximize or minimize the acquisition function.
-    Returns:
-       nump.ndarray: The indices of the selected molecules.
-       nump.ndarray: The selected molecules.
-    """
-
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
@@ -552,28 +573,11 @@ def gibbon_search_modified(
 def gibbon_search(
     model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True
 ):
-    """
-    #https://botorch.org/tutorials/GIBBON_for_efficient_batch_entropy_search
-    returns index of the q best candidates in X_candidate_BO
-    as well as their feature vectors
-    source here https://botorch.org/api/_modules/botorch/optim/optimize.html#optimize_acqf_discrete
-    Parameters:
-        model (botorch.models.gpytorch.GP): The GP model.
-        X_candidate_BO (numpy.ndarray): The holdout set.
-        bounds_norm (numpy.ndarray): The bounds for normalization.
-        q (int): The batch size.
-        sequential (bool): Whether to use sequential optimization.
-        maximize (bool): Whether to maximize or minimize the acquisition function.
-    Returns:
-        nump.ndarray: The indices of the selected molecules.
-        nump.ndarray: The selected molecules.
-    """
-
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
 
-    candidates, best_acq_values = optimize_acqf_discrete(
+    candidates, _ = optimize_acqf_discrete(
         acq_function=qGIBBON,
         bounds=bounds_norm,
         q=q,
@@ -589,7 +593,7 @@ def gibbon_search(
     return indices, candidates
 
 
-def qNoisyEI_search(
+def opt_qNEI(
     model, X_candidate_BO, bounds_norm, X_train, q, sequential=False, maximize=True
 ):
     """
@@ -601,7 +605,7 @@ def qNoisyEI_search(
     sampler = SobolQMCNormalSampler(1024)
 
     qLogNEI = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
-    candidates, best_acq_values = optimize_acqf_discrete(
+    candidates, _ = optimize_acqf_discrete(
         acq_function=qLogNEI,
         bounds=bounds_norm,
         q=q,

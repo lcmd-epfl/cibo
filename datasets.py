@@ -423,6 +423,50 @@ class Evaluation_data:
                     index_others,
                     self.ligand_prices,
                 )
+        elif self.init_strategy == "TwoDim":
+            target_point = np.array([0, 0.5])
+
+            # Calculate the Euclidean distances
+            distances = np.sqrt(np.sum((self.X - target_point) ** 2, axis=1))
+
+            # Find the index of the minimum distance
+            closest_index = np.argmin(distances)
+
+            X_init, y_init, costs_init = (
+                self.X[closest_index],
+                self.y[closest_index],
+                self.costs[closest_index],
+            )
+
+            index_others = np.setdiff1d(np.arange(len(self.y)), closest_index)
+            # randomly shuffle the data
+            index_others = np.random.permutation(index_others)
+
+            X_holdout, y_holdout, costs_holdout = (
+                self.X[index_others],
+                self.y[index_others],
+                self.costs[index_others],
+            )
+
+            # reshape to 2d array
+            X_init = X_init.reshape(1, -1)
+            X_holdout = X_holdout.reshape(-1, 2)
+            y_init = y_init.reshape(1, -1)
+            y_holdout = y_holdout.reshape(-1, 1)
+            X_init, y_init = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+            self.ligand_prices[closest_index] = 0
+
+            return (
+                X_init,
+                y_init,
+                X_holdout,
+                y_holdout,
+                closest_index,
+                index_others,
+                self.ligand_prices,
+            )
 
         elif self.init_strategy == "random":
             """
@@ -611,13 +655,10 @@ class Evaluation_data:
                 #    list(set(self.where_worst_ligand) & set(self.where_worst_additive))
                 # )
                 indices_init = np.array(
-                    list(
-                        set(self.where_worst_ligand)
-                        & set(self.where_worst_additive)
-                    )
+                    list(set(self.where_worst_ligand) & set(self.where_worst_additive))
                 )
-                #pdb.set_trace()
-                #indices_init = indices_init[:30]
+                # pdb.set_trace()
+                # indices_init = indices_init[:30]
 
                 # indices_init = indices_init[: 5]
                 # pdb.set_trace()
@@ -671,21 +712,8 @@ class TwoDimFct:
         random_results = self.objective(random_x, random_y)
         # add noise to the results
         random_results += np.random.normal(0, 0.2, len(random_results))
-        additional_peaks = [
-            (2, 2, 1.0),
-            (-1, -1, 0.5),
-            (3, -3, 0.8),
-            (-2, 3, 0.7),
-            (4, 0, 0.7),
-            (0, -4, 0.7),
-            (-2, -4, 0.7),
-            (4, -2, 0.7),
-            (4.5, 2, 0.7),
-            (2, 4, 3),
-        ]
-        random_cost = self.smooth_cost_function(
-            random_x, random_y, peaks=additional_peaks
-        )
+
+        random_cost = self.smooth_cost_function(random_x, random_y)
         # pdb.set_trace()
         self.data = pd.DataFrame(
             {
@@ -695,64 +723,25 @@ class TwoDimFct:
                 "cost": random_cost,
             }
         )
+        # pdb.set_trace()
 
-    def objective(self, x, y):
-        return (x**2 + y - 11) ** 2 + (x + y**2 - 7) ** 2
 
-    def smooth_cost_function(
-        self,
-        x,
-        y,
-        square_size=3.0,
-        ellipse_scale=2.0,
-        radial_scale=2.5,
-        peaks=None,
-        cost_inside_square=1.0,
-        smoothness=1,
-        sinusoidal_frequency=0.5,
-    ):
-        """
-        Even more modified cost function that adds multiple peaks to the existing complex landscape.
-        """
-        if peaks is None:
-            peaks = [(3, 2, 2, 1.0, 0.5, 0.25)]  # Default peak if none provided
+    def objective(self,x, y):
+        return -(x**2 + y**2)
 
-        half_size = square_size / 2
-        smooth_transition = lambda d: 1 / (1 + np.exp(-smoothness * (d - half_size)))
+    def smooth_cost_function(self, x, y):
+        radius = np.sqrt(x**2 + y**2)
+        peak_radius = 2
+        ring_width = 0.5
 
-        # Square cost component
-        distance_x = np.abs(x) - half_size
-        distance_y = np.abs(y) - half_size
-        smooth_cost_x = smooth_transition(distance_x)
-        smooth_cost_y = smooth_transition(distance_y)
-        square_cost = np.minimum(smooth_cost_x, smooth_cost_y)
+        angle = np.arctan2(y, x)
+        gap_angle = np.pi / 6
 
-        # Elliptical cost component
-        ellipse_cost = np.exp(-((x / ellipse_scale) ** 2 + (y / ellipse_scale) ** 2))
+        in_gap = (angle >= -gap_angle) & (angle <= gap_angle)  # Element-wise comparison
+        cost = np.exp(-((radius - peak_radius) ** 2) / (2 * ring_width**2))
+        cost[in_gap] = 0  # Set cost to 0 within the gap
 
-        # Radial cost component
-        radial_distance = np.sqrt(x**2 + y**2)
-        radial_cost = np.exp(-((radial_distance / radial_scale) ** 2))
-
-        # Sinusoidal variation based on distance from the origin
-        sinusoidal_variation = np.sin(sinusoidal_frequency * radial_distance)
-
-        # Peaks
-        peak_cost = 0
-        for peak_x, peak_y, peak_scale in peaks:
-            peak_distance = np.sqrt((x - peak_x) ** 2 + (y - peak_y) ** 2)
-            peak_cost += np.exp(-((peak_distance / peak_scale) ** 2))
-
-        # Combine all components
-        combined_cost = (
-            cost_inside_square
-            * np.maximum(square_cost, ellipse_cost)
-            * radial_cost
-            * (1 + sinusoidal_variation)
-            + peak_cost
-        )
-
-        return 1000 * combined_cost
+        return cost
 
 
 if __name__ == "__main__":

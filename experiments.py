@@ -3,12 +3,12 @@ import torch
 
 from BO import (
     update_model,
+    opt_gibbon,
     gibbon_search,
-    gibbon_search_modified,
-    gibbon_search_modified_all,
-    gibbon_search_modified_all_per_price,
-    gibbon_search_modified_all_per_price_B,
-    qNoisyEI_search,
+    opt_acqfct,
+    opt_acqfct_cost,
+    opt_acqfct_cost_B,
+    opt_qNEI,
 )
 
 from utils import (
@@ -20,14 +20,14 @@ from utils import (
     check_success,
     find_optimal_batch,
 )
+import pdb
 
 
 def RS_STEP(RANDOM_data):
     """
     Simple RS step without any cost constraints but keep track of the costs
-    assuming random costs for each point and no cost updates
+    assuming random costs for each point and no cost updates.
     """
-
     # Extract the data from the dictionary
     y_candidate_RANDOM = RANDOM_data["y_candidate_RANDOM"]
     y_best_RANDOM = RANDOM_data["y_best_RANDOM"]
@@ -36,27 +36,32 @@ def RS_STEP(RANDOM_data):
     y_better_RANDOM = RANDOM_data["y_better_RANDOM"]
     running_costs_RANDOM = RANDOM_data["running_costs_RANDOM"]
 
+    # Select random indices for the batch
     indices_random = np.random.choice(
         np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False
     )
+
+    # Update the best value if a better one is found
     if max(y_candidate_RANDOM[indices_random])[0] > y_best_RANDOM:
         y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0]
 
+    # Append the new best value and calculate batch cost
     y_better_RANDOM.append(y_best_RANDOM)
     BATCH_COST = sum(costs_RANDOM[indices_random])[0]
     running_costs_RANDOM.append(running_costs_RANDOM[-1] + BATCH_COST)
+
+    # Update candidate and costs by removing selected indices
     y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
     costs_RANDOM = np.delete(costs_RANDOM, indices_random, axis=0)
 
     # Update the dictionary with the new values
-
     RANDOM_data["y_candidate_RANDOM"] = y_candidate_RANDOM
     RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
     RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
     RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
     RANDOM_data["costs_RANDOM"] = costs_RANDOM
 
-    # There is no need to update BATCH_SIZE and MAX_BATCH_COST as they are constants and do not change
+    # BATCH_SIZE and MAX_BATCH_COST are constants and do not change
 
     # Return the updated dictionary
     return RANDOM_data
@@ -81,9 +86,7 @@ def BO_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
 
     # Get new candidates
-    indices, candidates = gibbon_search(
-        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
-    )
+    indices, candidates = opt_gibbon(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
 
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     y_best_BO = check_better(y, y_best_BO)
@@ -129,14 +132,17 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+    acq_func = BO_data["acq_func"]
 
-    index_set, _, _ = gibbon_search_modified_all(
+    index_set, _, _ = opt_acqfct(
+        X,
         model,
         X_candidate_BO,
         bounds_norm,
         q=BATCH_SIZE,
         sequential=False,
         maximize=True,
+        acq_func=acq_func,
     )
     SUCCESS = False
     for indices in index_set:
@@ -209,7 +215,7 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
     while True:
         print(ITERATION)
         SUCCESS_1 = False
-        indices, candidates = gibbon_search_modified(
+        indices, candidates = opt_gibbon(
             model,
             X_candidate_BO,
             bounds_norm,
@@ -278,9 +284,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
 
-    indices, candidates = gibbon_search(
-        model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
-    )
+    indices, candidates = opt_gibbon(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
     suggested_costs = costs_BO[indices].flatten()
     cheap_indices = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
     cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
@@ -298,7 +302,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             # therefore increasing the max batch cost to finally get enough candidates
             INCREMENTED_MAX_BATCH_COST += 1
 
-        indices, candidates = gibbon_search(
+        indices, candidates = opt_gibbon(
             model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
         )
         suggested_costs = costs_BO[indices].flatten()
@@ -388,13 +392,13 @@ def BO_CASE_2A_STEP(BO_data):
     price_dict_BO = BO_data["price_dict_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
-    # TODO
+    surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
 
     # Assuming gibbon_search, update_X_y, compute_price_acquisition_ligands, check_better, update_model, and update_price_dict_ligands are defined elsewhere
 
     if acq_func == "NEI":
-        indices, candidates = qNoisyEI_search(
+        indices, candidates = opt_qNEI(
             model,
             X_candidate_BO,
             bounds_norm,
@@ -410,6 +414,8 @@ def BO_CASE_2A_STEP(BO_data):
         )
     else:
         raise NotImplementedError
+    # TODO
+    # pdb.set_trace()
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
     suggested_costs_all, _ = compute_price_acquisition_ligands(
@@ -464,7 +470,7 @@ def BO_CASE_2B_STEP(BO_data):
     acq_func = BO_data["acq_func"]
 
     if acq_func == "NEI":
-        indices, candidates = qNoisyEI_search(
+        indices, candidates = opt_qNEI(
             model,
             X_candidate_BO,
             bounds_norm,
@@ -480,10 +486,6 @@ def BO_CASE_2B_STEP(BO_data):
         )
     else:
         raise NotImplementedError
-
-    # indices, candidates = gibbon_search(
-    #    model, X_candidate_BO, bounds_norm, q=BATCH_SIZE
-    # )
 
     X, y = update_X_y(X, y, candidates, y_candidate_BO, indices)
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
@@ -689,7 +691,7 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
             INCREMENTED_MAX_BATCH_COST += 1
             break
 
-        indices, candidates = gibbon_search(
+        indices, candidates = opt_gibbon(
             model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
         )
         NEW_LIGANDS = LIGANDS_candidate_BO[indices]
@@ -760,7 +762,6 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
 
 
 def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
-    # Get current BO data from last iteration
     model = BO_data["model"]
     X, y = BO_data["X"], BO_data["y"]
     N_train = BO_data["N_train"]
@@ -775,14 +776,17 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     scaler_y = BO_data["scaler_y"]
+    acq_func = BO_data["acq_func"]
 
-    index_set, _, _ = gibbon_search_modified_all(
+    index_set, _, _ = opt_acqfct(
+        X,
         model,
         X_candidate_BO,
         bounds_norm,
         q=BATCH_SIZE,
         sequential=False,
         maximize=True,
+        acq_func=acq_func,
     )
 
     price_list = np.array(list(price_dict_BO.values()))
@@ -841,7 +845,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             NEW_LIGANDS = [cheapest_ligand]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
 
-            index, _ = gibbon_search(
+            index, _ = opt_gibbon(
                 model, X_candidate_BO[indices_cheap], bounds_norm, q=5
             )
 
@@ -870,7 +874,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             cheapest_ligand = list(price_dict_BO.keys())[index_of_zero]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
             if indices_cheap > 0:
-                index, _ = gibbon_search(
+                index, _ = opt_gibbon(
                     model, X_candidate_BO[indices_cheap], bounds_norm, q=5
                 )
                 X, y = update_X_y(
@@ -947,8 +951,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         step_nr = BO_data["step_nr"]
         MAX_BATCH_COST *= step_nr
 
-
-    index_set, _, _ = gibbon_search_modified_all(
+    index_set, _, _ = opt_acqfct(
         X,
         model,
         X_candidate_BO,
@@ -957,7 +960,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         sequential=False,
         maximize=True,
         n_best=300,
-        acq_function="GIBBON",
+        acq_func="GIBBON",
     )
 
     price_list = np.array(list(price_dict_BO.values()))
@@ -1016,7 +1019,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
             NEW_LIGANDS = [cheapest_ligand]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
 
-            index, _ = gibbon_search(
+            index, _ = opt_gibbon(
                 model, X_candidate_BO[indices_cheap], bounds_norm, q=5
             )
 
@@ -1047,7 +1050,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
             cheapest_ligand = list(price_dict_BO.keys())[index_of_zero]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
             if indices_cheap > 0:
-                index, _ = gibbon_search(
+                index, _ = opt_gibbon(
                     model, X_candidate_BO[indices_cheap], bounds_norm, q=5
                 )
                 X, y = update_X_y(
@@ -1112,13 +1115,14 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     price_dict_BO = BO_data["price_dict_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
+    surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
 
     (
         index_set_rearranged,
         _,
         candidates_rearranged,
-    ) = gibbon_search_modified_all_per_price(
+    ) = opt_acqfct_cost(
         X,
         model,
         X_candidate_BO,
@@ -1126,7 +1130,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
         q=BATCH_SIZE,
         LIGANDS_candidate_BO=LIGANDS_candidate_BO,
         price_dict_BO=price_dict_BO,
-        acq_function=acq_func,
+        acq_func=acq_func,
     )
     indices = index_set_rearranged[0]
     candidates = candidates_rearranged[0]
@@ -1141,7 +1145,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data):
     y_best_BO = check_better(y, y_best_BO)
     y_better_BO.append(y_best_BO)
     running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
-    model, scaler_y = update_model(X, y, bounds_norm)
+    model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
     LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
@@ -1181,13 +1185,14 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
     price_dict_BO_additives = BO_data["price_dict_BO_additives"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
+    surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
 
     (
         index_set_rearranged,
         _,
         candidates_rearranged,
-    ) = gibbon_search_modified_all_per_price_B(
+    ) = opt_acqfct_cost_B(
         X,
         model,
         X_candidate_BO,
@@ -1197,7 +1202,7 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
         ADDITIVES_candidate_BO=ADDITIVES_candidate_BO,
         price_dict_BO_ligands=price_dict_BO_ligands,
         price_dict_BO_additives=price_dict_BO_additives,
-        acq_function=acq_func,
+        acq_func=acq_func,
     )
 
     indices = index_set_rearranged[0]
@@ -1226,7 +1231,7 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
 
     running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
 
-    model, scaler_y = update_model(X, y, bounds_norm)
+    model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
 
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
