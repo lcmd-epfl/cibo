@@ -4,8 +4,20 @@ import random
 import copy as cp
 from exp_configs import benchmark
 from BO import update_model
-from experiments import BO_CASE_2A_STEP, RS_STEP_2A, BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP
-from utils import create_aligned_transposed_price_table, Budget_schedule, plot_utility_BO_vs_RS, plot_costs_BO_vs_RS, save_pkl,create_data_dict_BO_2A, create_data_dict_RS_2A
+from experiments import (
+    BO_CASE_2A_STEP,
+    RS_STEP_2A,
+    BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP,
+)
+from utils import (
+    create_aligned_transposed_price_table,
+    Budget_schedule,
+    plot_utility_BO_vs_RS,
+    plot_costs_BO_vs_RS,
+    save_pkl,
+    create_data_dict_BO_2A,
+    create_data_dict_RS_2A,
+)
 from datasets import Evaluation_data
 
 
@@ -16,7 +28,7 @@ torch.manual_seed(SEED)
 
 if __name__ == "__main__":
     print("Starting experiments")
-    # Modify such that maximal cost gets doubled every iteration
+
     RESULTS = []
 
     for exp_config in benchmark:
@@ -34,8 +46,10 @@ if __name__ == "__main__":
         N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
         BATCH_SIZE = exp_config["batch_size"]
+        SURROGATE = exp_config["surrogate"]
         MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
+        AQCFCT = exp_config["acq_func"]
 
         budget_scheduler = Budget_schedule(exp_config["buget_schedule"])
 
@@ -59,7 +73,7 @@ if __name__ == "__main__":
             print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
 
             X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(
                 y_candidate
@@ -99,11 +113,11 @@ if __name__ == "__main__":
                 bounds_norm,
                 BATCH_SIZE,
                 MAX_BATCH_COST,
+                SURROGATE,
+                AQCFCT
             )
             BO_data["SAVED_BUDGET"] = MAX_BATCH_COST
             BO_data["INCREASE_FACTOR"] = True
-
-            BO_data["acq_func"] = exp_config["acq_func"]
 
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
@@ -120,7 +134,7 @@ if __name__ == "__main__":
                 if COST_AWARE_BO == False:
                     BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
-                    BO_data["step_nr"] = budget_scheduler.get_factor(i)                        
+                    BO_data["step_nr"] = budget_scheduler.get_factor(i)
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data)
 
                 RANDOM_data = RS_STEP_2A(RANDOM_data)
@@ -151,19 +165,17 @@ if __name__ == "__main__":
         plot_utility_BO_vs_RS(
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
-            name="./figures/utility_{}_{}_{}.png".format(
+            name="yield_{}_{}.png".format(
                 exp_config["dataset"],
-                exp_config["max_batch_cost"],
-                exp_config["buget_schedule"],
+                exp_config["label"],
             ),
         )
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
-            name="./figures/optimization_{}_{}_{}.png".format(
+            name="costs_{}_{}.png".format(
                 exp_config["dataset"],
-                exp_config["max_batch_cost"],
-                exp_config["buget_schedule"],
+                exp_config["label"]
             ),
         )
 

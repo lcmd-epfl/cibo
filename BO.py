@@ -402,7 +402,7 @@ def opt_acqfct(
         'NUM_RESTARTS' and 'RAW_SAMPLES' are set internally to control the optimization process.
         The function can handle different acquisition function strategies and can be adjusted for either maximizing or minimizing.
     """
-    
+
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     if acq_func == "GIBBON":
@@ -454,6 +454,30 @@ def opt_acqfct_cost(
     price_dict_BO,
     acq_func="GIBBON",
 ):
+    """
+    Optimize the acquisition function considering the cost associated with each candidate set.
+
+    This function first optimizes the acquisition function based on the given model and candidate points.
+    It then rescales the acquisition values by the cost associated with each set of ligands, as defined by
+    the `price_dict_BO`. The function returns the rearranged indices, acquisition values per price, and
+    candidate sets, sorted in descending order of acquisition value per price.
+
+    Parameters:
+    - X_train (array): The training data points.
+    - model: The Gaussian process model fitted to the training data.
+    - X_candidate_BO (array): The candidate points for Bayesian optimization.
+    - bounds_norm (array): Normalized bounds for the optimization problem.
+    - q (int): The number of points to select in each iteration.
+    - LIGANDS_candidate_BO (list): List of ligands corresponding to the candidate points.
+    - price_dict_BO (dict): Dictionary mapping ligands to their respective costs.
+    - acq_func (str, optional): The name of the acquisition function to use. Default is "GIBBON".
+
+    Returns:
+    - index_set_rearranged (array): The rearranged indices of the selected candidate points.
+    - acq_values_per_price (array): The acquisition values divided by the price rescaling factor.
+    - candidates_rearranged (array): The candidate points rearranged based on acquisition value per price.
+    """
+
     index_set, acq_values, candidates = opt_acqfct(
         X_train,
         model,
@@ -483,6 +507,7 @@ def opt_acqfct_cost(
     acq_values_per_price = acq_values_per_price[sorted_indices]
     acq_values = acq_values[sorted_indices]
     candidates_rearranged = candidates[sorted_indices]
+
     return index_set_rearranged, acq_values_per_price, candidates_rearranged
 
 
@@ -498,6 +523,10 @@ def opt_acqfct_cost_B(
     price_dict_BO_additives,
     acq_func="GIBBON",
 ):
+    """
+    Same as `opt_acqfct_cost`, but for the case of two cost functions i.e. ligands and additives.
+    """
+
     index_set, acq_values, candidates = opt_acqfct(
         X_train,
         model,
@@ -545,6 +574,29 @@ def opt_gibbon(
     n_best=300,
     return_nr=0,
 ):
+    """
+    Perform optimization using the GIBBON acquisition function.
+
+    This function optimizes the GIBBON acquisition function over a set of discrete candidate points.
+    It uses a model to estimate the potential information gain in a Bayesian optimization context.
+    The function returns the indices of the optimal points and the reshaped candidates based on the
+    acquisition function values.
+
+    Parameters:
+    - model: The Gaussian process model fitted to the training data.
+    - X_candidate_BO (array): The candidate points for Bayesian optimization.
+    - bounds_norm (array): Normalized bounds for the optimization problem.
+    - q (int): The number of points to select in each iteration.
+    - sequential (bool, optional): Whether to select points sequentially or jointly. Default is False.
+    - maximize (bool, optional): Whether to maximize or minimize the acquisition function. Default is True.
+    - n_best (int, optional): The number of top candidate sets to consider. Default is 300.
+    - return_nr (int, optional): The index of the candidate set to return. Default is 0.
+
+    Returns:
+    - indices (array): The indices of the optimal candidate points in the original candidate set.
+    - candidates (array): The candidate points reshaped based on the acquisition values.
+    """
+
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
@@ -573,6 +625,27 @@ def opt_gibbon(
 def gibbon_search(
     model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True
 ):
+    """
+    Conduct a search using the GIBBON acquisition function for Bayesian optimization.
+
+    This function utilizes the GIBBON acquisition function to identify optimal candidate points
+    from a given set. The function operates on a given Gaussian process model and a set of candidate points,
+    returning the indices of the optimal candidates and the candidates themselves as determined by the
+    acquisition function.
+
+    Parameters:
+    - model: The Gaussian process model used for predictions.
+    - X_candidate_BO (array): Array of candidate points for Bayesian optimization.
+    - bounds_norm (array): Normalized bounds of the search space.
+    - q (int): The number of points to be selected in each iteration.
+    - sequential (bool, optional): If True, points are selected sequentially; otherwise, jointly. Default is False.
+    - maximize (bool, optional): Whether to maximize or minimize the acquisition function. Default is True.
+
+    Returns:
+    - indices (array): Indices of the optimal candidate points within the original candidate set.
+    - candidates (array): The optimal candidate points as determined by the acquisition function.
+    """
+
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
     qGIBBON = qLowerBoundMaxValueEntropy(model, X_candidate_BO, maximize=maximize)
@@ -597,7 +670,27 @@ def opt_qNEI(
     model, X_candidate_BO, bounds_norm, X_train, q, sequential=False, maximize=True
 ):
     """
-    Noisy expected improvement with batches
+    Optimize the Noisy Expected Improvement (NEI) acquisition function for a given model with discrete candidates.
+
+    This function uses the Noisy Expected Improvement (qNEI) acquisition function to select optimal
+    points in a Bayesian optimization context. It is particularly useful for batched Bayesian optimization
+    where noisy evaluations of the objective function are expected.
+
+    Parameters:
+    - model: The Gaussian process model used for predictions.
+    - X_candidate_BO (array): Array of candidate points for Bayesian optimization.
+    - bounds_norm (array): Normalized bounds of the search space.
+    - X_train (array): Training data points.
+    - q (int): The number of points to be selected in each iteration (batch size).
+    - sequential (bool, optional): If True, points are selected sequentially; otherwise, jointly. Default is False.
+    - maximize (bool, optional): Whether to maximize or minimize the acquisition function. Default is True.
+
+    Returns:
+    - indices (array): Indices of the optimal candidate points within the original candidate set.
+    - candidates (array): The optimal candidate points as determined by the acquisition function.
+
+    The function utilizes a Sobol sequence-based QMC sampler for estimating the acquisition function and applies
+    a discrete optimization technique to select the best candidates from the given set.
     """
 
     NUM_RESTARTS = 20
