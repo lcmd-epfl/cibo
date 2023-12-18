@@ -84,6 +84,7 @@ def BO_CASE_1_STEP(BO_data):
     costs_BO = BO_data["costs_BO"]
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
+    surrogate = BO_data["surrogate"]
 
     # Get new candidates
     indices, candidates = opt_gibbon(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
@@ -93,7 +94,7 @@ def BO_CASE_1_STEP(BO_data):
     y_better_BO.append(y_best_BO)
     running_costs_BO.append((running_costs_BO[-1] + sum(costs_BO[indices]))[0])
     # Update model
-    model, scaler_y = update_model(X, y, bounds_norm)
+    model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
     # Delete candidates from pool of candidates since added to training data
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
@@ -133,6 +134,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     acq_func = BO_data["acq_func"]
+    surrogate = BO_data["surrogate"]
 
     index_set, _, _ = opt_acqfct(
         X,
@@ -161,7 +163,7 @@ def BO_AWARE_SCAN_FAST_CASE_1_STEP(BO_data):
             BATCH_COST = sum(costs_BO[indices])[0]
             print("Batch cost1: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
 
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
@@ -208,6 +210,7 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+    surrogate = BO_data["surrogate"]
 
     SUCCESS = False
     ITERATION = 0
@@ -241,7 +244,7 @@ def BO_AWARE_SCAN_CASE_1_STEP(BO_data):
             BATCH_COST = sum(costs_BO[indices])[0]
             print("Batch cost1: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
 
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
@@ -283,14 +286,14 @@ def BO_AWARE_CASE_1_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+    surrogate = BO_data["surrogate"]
 
-    indices, candidates = opt_gibbon(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
+    indices, _ = opt_gibbon(model, X_candidate_BO, bounds_norm, q=BATCH_SIZE)
     suggested_costs = costs_BO[indices].flatten()
     cheap_indices = select_batch(suggested_costs, MAX_BATCH_COST, BATCH_SIZE)
     cheap_indices, SUCCESS_1 = check_success(cheap_indices, indices)
     ITERATION = 1
 
-    # while (cheap_indices == []) or (len(cheap_indices) < BATCH_SIZE):
     while len(cheap_indices) < BATCH_SIZE:
         INCREMENTED_MAX_BATCH_COST = MAX_BATCH_COST
         SUCCESS_1 = False
@@ -302,7 +305,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             # therefore increasing the max batch cost to finally get enough candidates
             INCREMENTED_MAX_BATCH_COST += 1
 
-        indices, candidates = opt_gibbon(
+        indices, _ = opt_gibbon(
             model, X_candidate_BO, bounds_norm, q=INCREMENTED_BATCH_SIZE
         )
         suggested_costs = costs_BO[indices].flatten()
@@ -311,7 +314,6 @@ def BO_AWARE_CASE_1_STEP(BO_data):
         )
         cheap_indices, SUCCESS_2 = check_success(cheap_indices, indices)
 
-        # if (cheap_indices != []) and len(cheap_indices) == BATCH_SIZE:
         if len(cheap_indices) == BATCH_SIZE:
             X, y = update_X_y(
                 X,
@@ -325,7 +327,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
             BATCH_COST = sum(costs_BO[cheap_indices])[0]
             print("Batch cost1: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
 
             X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
@@ -347,7 +349,7 @@ def BO_AWARE_CASE_1_STEP(BO_data):
         BATCH_COST = sum(costs_BO[cheap_indices])[0]
         print("Batch cost2: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-        model, scaler_y = update_model(X, y, bounds_norm)
+        model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
         X_candidate_BO = np.delete(X_candidate_BO, cheap_indices, axis=0)
         y_candidate_BO = np.delete(y_candidate_BO, cheap_indices, axis=0)
         costs_BO = np.delete(costs_BO, cheap_indices, axis=0)
@@ -424,7 +426,7 @@ def BO_CASE_2A_STEP(BO_data):
     y_best_BO = check_better(y, y_best_BO)
     y_better_BO.append(y_best_BO)
     running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
-    model, scaler_y = update_model(X, y, bounds_norm)
+    model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
     LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
@@ -468,6 +470,7 @@ def BO_CASE_2B_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     scaler_y = BO_data["scaler_y"]
     acq_func = BO_data["acq_func"]
+    surrogate = BO_data["surrogate"]
 
     if acq_func == "NEI":
         indices, candidates = opt_qNEI(
@@ -507,7 +510,7 @@ def BO_CASE_2B_STEP(BO_data):
 
     running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
 
-    model, scaler_y = update_model(X, y, bounds_norm)
+    model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
 
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
@@ -661,6 +664,8 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
     running_costs_BO = BO_data["running_costs_BO"]
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     scaler_y = BO_data["scaler_y"]
+    surrogate = BO_data["surrogate"]
+    acq_func = BO_data["acq_func"]
 
     SUCCESS_1 = False
     indices, candidates = gibbon_search(
@@ -713,7 +718,7 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
             print("Batch cost1: ", BATCH_COST)
 
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
@@ -734,7 +739,7 @@ def BO_AWARE_CASE_2A_STEP(BO_data):
 
         print("Batch cost2: ", BATCH_COST)
         running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-        model, scaler_y = update_model(X, y, bounds_norm)
+        model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
         X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
         y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
         LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
@@ -777,6 +782,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
     MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
     scaler_y = BO_data["scaler_y"]
     acq_func = BO_data["acq_func"]
+    surrogate = BO_data["surrogate"]
 
     index_set, _, _ = opt_acqfct(
         X,
@@ -810,7 +816,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
     SUCCESS = False
     for indices in index_set:
         NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-        suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+        suggested_costs_all, _ = compute_price_acquisition_ligands(
             NEW_LIGANDS, price_dict_BO
         )
 
@@ -829,7 +835,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             print("Batch cost1: ", BATCH_COST)
 
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
@@ -862,7 +868,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
             BATCH_COST = cheapest_ligand_price
             print("Batch cost2: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
             X_candidate_BO = np.delete(X_candidate_BO, indices_cheap[index], axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices_cheap[index], axis=0)
             LIGANDS_candidate_BO = np.delete(
@@ -890,7 +896,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_STEP(BO_data):
                 BATCH_COST = 0
                 print("Batch cost3: ", BATCH_COST)
                 running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-                model, scaler_y = update_model(X, y, bounds_norm)
+                model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
                 X_candidate_BO = np.delete(X_candidate_BO, indices_cheap[index], axis=0)
                 y_candidate_BO = np.delete(y_candidate_BO, indices_cheap[index], axis=0)
                 LIGANDS_candidate_BO = np.delete(
@@ -941,6 +947,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
     SAVED_BUDGET = BO_data["SAVED_BUDGET"]
     scaler_y = BO_data["scaler_y"]
     acq_func = BO_data["acq_func"]
+    surrogate = BO_data["surrogate"]
 
     try:
         INCREASE_FACTOR = BO_data["INCREASE_FACTOR"]
@@ -960,7 +967,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         sequential=False,
         maximize=True,
         n_best=300,
-        acq_func="GIBBON",
+        acq_func=acq_func,
     )
 
     price_list = np.array(list(price_dict_BO.values()))
@@ -984,11 +991,12 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
     SUCCESS = False
     for indices in index_set:
         NEW_LIGANDS = LIGANDS_candidate_BO[indices]
-        suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+        suggested_costs_all, _ = compute_price_acquisition_ligands(
             NEW_LIGANDS, price_dict_BO
         )
 
         BATCH_COST = suggested_costs_all
+        
         if suggested_costs_all <= SAVED_BUDGET:
             X, y = update_X_y(
                 X,
@@ -1003,7 +1011,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
             print("Batch cost1: ", BATCH_COST)
 
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
             X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
             LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
@@ -1036,7 +1044,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
             BATCH_COST = cheapest_ligand_price
             print("Batch cost2: ", BATCH_COST)
             running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-            model, scaler_y = update_model(X, y, bounds_norm)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
             X_candidate_BO = np.delete(X_candidate_BO, indices_cheap[index], axis=0)
             y_candidate_BO = np.delete(y_candidate_BO, indices_cheap[index], axis=0)
             LIGANDS_candidate_BO = np.delete(
@@ -1066,7 +1074,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
                 BATCH_COST = 0
                 print("Batch cost3: ", BATCH_COST)
                 running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
-                model, scaler_y = update_model(X, y, bounds_norm)
+                model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
                 X_candidate_BO = np.delete(X_candidate_BO, indices_cheap[index], axis=0)
                 y_candidate_BO = np.delete(y_candidate_BO, indices_cheap[index], axis=0)
                 LIGANDS_candidate_BO = np.delete(
