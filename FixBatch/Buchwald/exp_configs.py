@@ -36,7 +36,7 @@ benchmark = [
         "n_runs": 5,
         "n_iter": 10,
         "batch_size": 5,
-        "max_batch_cost": 300.0, #300 
+        "max_batch_cost": 300.0,  # 300
         "ntrain": 200,
         "prices": "update_all_when_bought",
         "surrogate": "GP",
@@ -66,7 +66,7 @@ benchmark = [
         "n_runs": 5,
         "n_iter": 10,
         "batch_size": 5,
-        "max_batch_cost": 300.0, #300 
+        "max_batch_cost": 300.0,  # 300
         "ntrain": 200,
         "prices": "update_all_when_bought",
         "surrogate": "RF",
@@ -88,5 +88,5 @@ benchmark = [
         "acq_func": "NEI",
         "buget_schedule": "decreasing",
         "label": "BUCHWALD_NORMAL_RF_NEI",
-    }
+    },
 ]

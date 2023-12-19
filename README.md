@@ -1,13 +1,14 @@
 # Rules of Acquisition
 
 ## Motivation
-Following the Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce two innovative batch selection strategies for cost-efficient BO to find a good cost and yield increase compromise.
+Inspired by the Star Trek universe and following the Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce two batch selection strategies for cost-efficient BO to find a good cost and yield increase compromise.
 
 <img src="rules_ferengi.png" width="40%" height="40%" />
 
 ## Introduction
-**Bayesian Optimization (BO) taking batch cost into account.** Inspired by the Star Trek universe, the "Rules of Acquisition" are a series of sacred business proverbs from the ultra-capitalist Ferengi race. This project embodies the principles of efficiency and knowledge in BO, particularly focusing on cost-aware batch selection strategies.
-
+**Bayesian Optimization (BO) taking batch cost into account.** 
+In this revised approach to BO, we focus on optimizing chemical experiments not just for their potential improvement in yield over the previous iteration, but also for cost-efficiency for performing the experiments. Computationally simulated BO experiments result in selections that may overlook the varying costs of the chemicals involved. For instance, instead of acquiring a new substance chemists might first study a reaction under varying conditions that can easily be controlled, such as temperature. Not only will such experiments result in lower costs but also in a better informed posterior and higher confidence before acquiring new compounds.
+Our modified approach adds a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration. Thus cost-informed BO will mimic more closely the yield optimization process in a chemistry lab.
 
 
 ## Installation
@@ -44,11 +45,13 @@ Currently tested with python 3.8.16. and botorch 0.8.1.
 
 ## Repository Structure
 
-### `GprDemo`
+### `RegressionDemo`
 
 
-Perform Gaussian Process Regression on the EDBO dataset resulting scatter plot with errorbars. Try the effect of different kernels,
-we find that the `Tanimoto` kernel performs quite well and is the default choice. Other options include `RBF`, `Matern` and `Linear`.
+Perform various regression tasks on the Pd-catalyzed C-H arylation dataset [1] resulting in a scatter plot with errorbars (`correlation.png`). 
+All regressors are compatible with `botorch`: 
+
+Gaussian Process Regression: `GPR.py` Try the effect of different kernels: `Tanimoto` kernel performs quite well and is the default choice. Other options include `RBF`, `Matern` and `Linear`.  Random Forest Regression: `ForestReg.py`. XgBoost Regression: `XgBoostREG.py`
 
 
 ### `AcqFuncPrice`
@@ -127,3 +130,8 @@ We welcome contributions and suggestions!
 
 ## :scroll: License
 This project is licensed under the MIT License
+
+
+## References
+[1] Shields, B. J.; Stevens, J.; Li, J.; Parasram, M.; Damani, F.; Alvarado, J. I. M.; Janey, J. M.;
+Adams, R. P.; Doyle, A. G. Nature 2021, 590, 89–96

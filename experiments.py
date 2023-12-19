@@ -996,7 +996,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
         )
 
         BATCH_COST = suggested_costs_all
-        
+
         if suggested_costs_all <= SAVED_BUDGET:
             X, y = update_X_y(
                 X,
@@ -1052,8 +1052,7 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
             )
             price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
         else:
-            # if you cannot even afford the cheapest ligand, just do C or T measurements
-            # these come for free
+            # if you cannot even afford the cheapest ligand, just do C or T measurements these come for free
             index_of_zero = np.where(price_list == 0)[0][0]
             cheapest_ligand = list(price_dict_BO.keys())[index_of_zero]
             indices_cheap = np.where(LIGANDS_candidate_BO == cheapest_ligand)[0]
@@ -1102,6 +1101,237 @@ def BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data):
     BO_data["y_better_BO"] = y_better_BO
     BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
     BO_data["price_dict_BO"] = price_dict_BO
+    BO_data["running_costs_BO"] = running_costs_BO
+    BO_data["N_train"] = len(X)
+    BO_data["scaler_y"] = scaler_y
+
+    return BO_data
+
+
+def BO_AWARE_SCAN_FAST_CASE_2B_SAVED_BUDGET_STEP(BO_data):
+    # Get current BO data from last iteration
+    model = BO_data["model"]
+    X, y = BO_data["X"], BO_data["y"]
+    N_train = BO_data["N_train"]
+    y_candidate_BO = BO_data["y_candidate_BO"]
+    X_candidate_BO = BO_data["X_candidate_BO"]
+    bounds_norm = BO_data["bounds_norm"]
+    BATCH_SIZE = BO_data["BATCH_SIZE"]
+    y_best_BO = BO_data["y_best_BO"]
+    y_better_BO = BO_data["y_better_BO"]
+    LIGANDS_candidate_BO = BO_data["LIGANDS_candidate_BO"]
+    ADDITIVES_candidate_BO = BO_data["ADDITIVES_candidate_BO"]
+    price_dict_BO_ligands = BO_data["price_dict_BO_ligands"]
+    price_dict_BO_additives = BO_data["price_dict_BO_additives"]
+    running_costs_BO = BO_data["running_costs_BO"]
+    scaler_y = BO_data["scaler_y"]
+    surrogate = BO_data["surrogate"]
+    acq_func = BO_data["acq_func"]
+    MAX_BATCH_COST = BO_data["MAX_BATCH_COST"]
+    SAVED_BUDGET = BO_data["SAVED_BUDGET"]
+
+    try:
+        INCREASE_FACTOR = BO_data["INCREASE_FACTOR"]
+    except:
+        INCREASE_FACTOR = False
+
+    if INCREASE_FACTOR:
+        step_nr = BO_data["step_nr"]
+        MAX_BATCH_COST *= step_nr
+
+    index_set, _, _ = opt_acqfct(
+        X,
+        model,
+        X_candidate_BO,
+        bounds_norm,
+        q=BATCH_SIZE,
+        sequential=False,
+        maximize=True,
+        n_best=300,
+        acq_func=acq_func,
+    )
+
+    price_list_ligands = np.array(list(price_dict_BO_ligands.values()))
+    price_list_additives = np.array(list(price_dict_BO_additives.values()))
+
+    non_zero_prices_ligands = price_list_ligands[price_list_ligands > 0]
+    non_zero_prices_additives = price_list_additives[price_list_additives > 0]
+
+    if len(non_zero_prices_ligands) > 0:
+        index_of_smallest_nonzero_ligands = np.where(
+            price_list_ligands == non_zero_prices_ligands.min()
+        )[0][0]
+        cheapest_ligand_price = price_list_ligands[index_of_smallest_nonzero_ligands]
+        cheapest_ligand = list(price_dict_BO_ligands.keys())[
+            index_of_smallest_nonzero_ligands
+        ]
+        sorted_non_zero_prices_ligands = np.sort(non_zero_prices_ligands)
+        if not len(sorted_non_zero_prices_ligands) > 1:
+            print("Only one ligand left")
+
+        if cheapest_ligand_price > SAVED_BUDGET:
+            print("No ligand can be bought with the current budget")
+            print("Ask your boss for more $$$")
+
+    else:
+        print("All ligands have been bought")
+
+    if len(non_zero_prices_additives) > 0:
+        index_of_smallest_nonzero_additives = np.where(
+            price_list_additives == non_zero_prices_additives.min()
+        )[0][0]
+        cheapest_additive_price = price_list_additives[
+            index_of_smallest_nonzero_additives
+        ]
+        cheapest_additive = list(price_dict_BO_additives.keys())[
+            index_of_smallest_nonzero_additives
+        ]
+        sorted_non_zero_prices_additives = np.sort(non_zero_prices_additives)
+        if not len(sorted_non_zero_prices_additives) > 1:
+            print("Only one additive left")
+
+        if cheapest_additive_price > SAVED_BUDGET:
+            print("No additive can be bought with the current budget")
+            print("Ask your boss for more $$$")
+
+    else:
+        print("All additives have been bought")
+
+    SUCCESS = False
+    for indices in index_set:
+        NEW_LIGANDS = LIGANDS_candidate_BO[indices]
+        NEW_ADDITIVES = ADDITIVES_candidate_BO[indices]
+
+        suggested_costs_all_ligands, _ = compute_price_acquisition_ligands(
+            NEW_LIGANDS, price_dict_BO_ligands
+        )
+        suggested_costs_all_additives, _ = compute_price_acquisition_ligands(
+            NEW_ADDITIVES, price_dict_BO_additives
+        )
+
+        BATCH_COST = suggested_costs_all_ligands + suggested_costs_all_additives
+        print("Batch cost: ", BATCH_COST, "Saved budget: ", SAVED_BUDGET)
+        if BATCH_COST <= SAVED_BUDGET:
+            X, y = update_X_y(
+                X,
+                y,
+                X_candidate_BO[indices],
+                y_candidate_BO,
+                indices,
+            )
+            y_best_BO = check_better(y, y_best_BO)
+            y_better_BO.append(y_best_BO)
+
+            print("Batch cost1: ", BATCH_COST)
+
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
+            X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
+            y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
+            LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+            ADDITIVES_candidate_BO = np.delete(ADDITIVES_candidate_BO, indices, axis=0)
+            price_dict_BO_ligands = update_price_dict_ligands(
+                price_dict_BO_ligands, NEW_LIGANDS
+            )
+            price_dict_BO_additives = update_price_dict_ligands(
+                price_dict_BO_additives, NEW_ADDITIVES
+            )
+            SUCCESS = True
+            break
+
+    if not SUCCESS:
+        print(
+            "Measure combinations of ligands and additives that were not explored but ingredients were bought"
+        )
+
+        index_of_zero_ligands = np.where(price_list_ligands == 0)[0]
+        index_of_zero_additives = np.where(price_list_additives == 0)[0]
+
+        free_ligands = np.array(list(price_dict_BO_ligands.keys()))[
+            index_of_zero_ligands
+        ]
+        free_additives = np.array(list(price_dict_BO_additives.keys()))[
+            index_of_zero_additives
+        ]
+
+        # find where free ligands in the candidates are
+        free_ligand_indices = np.array(
+            [
+                i
+                for i, ligand in enumerate(LIGANDS_candidate_BO)
+                if ligand in free_ligands
+            ]
+        )
+
+        # find where free additives in the candidates are
+        free_additive_indices = np.array(
+            [
+                i
+                for i, additive in enumerate(ADDITIVES_candidate_BO)
+                if additive in free_additives
+            ]
+        )
+
+        # find where both free ligands and additives in the candidates are
+        free_ligand_additive_indices = np.intersect1d(
+            free_ligand_indices, free_additive_indices
+        )
+
+        if len(free_ligand_additive_indices) >= BATCH_SIZE:
+            suggested_costs_all_ligands, _ = compute_price_acquisition_ligands(
+                LIGANDS_candidate_BO[free_ligand_additive_indices], price_dict_BO_ligands
+            )
+
+            suggested_costs_all_additives, _ = compute_price_acquisition_ligands(
+                ADDITIVES_candidate_BO[free_ligand_additive_indices], price_dict_BO_additives
+            )
+
+            index, _ = opt_gibbon(
+                model, X_candidate_BO[free_ligand_additive_indices], bounds_norm, q=5
+            )
+            y_best_BO = check_better(y, y_best_BO)
+            y_better_BO.append(y_best_BO)
+
+            BATCH_COST = 0
+            print("Batch cost4: ", BATCH_COST)
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+            model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
+            X_candidate_BO = np.delete(
+                X_candidate_BO, free_ligand_additive_indices[index], axis=0
+            )
+            y_candidate_BO = np.delete(
+                y_candidate_BO, free_ligand_additive_indices[index], axis=0
+            )
+            LIGANDS_candidate_BO = np.delete(
+                LIGANDS_candidate_BO, free_ligand_additive_indices[index], axis=0
+            )
+            ADDITIVES_candidate_BO = np.delete(
+                ADDITIVES_candidate_BO, free_ligand_additive_indices[index], axis=0
+            )
+
+        else:
+            print(
+                "All affordable ligands have been bought and no more free measurements possible. So saving money for next iteration."
+            )
+            y_better_BO.append(y_best_BO)
+            BATCH_COST = 0
+            print("Batch cost5: ", BATCH_COST)
+            running_costs_BO.append(running_costs_BO[-1] + BATCH_COST)
+
+    # Update BO data for next iteration
+    SAVED_BUDGET = SAVED_BUDGET + (MAX_BATCH_COST - BATCH_COST)
+    BO_data["SAVED_BUDGET"] = SAVED_BUDGET
+    BO_data["model"] = model
+    BO_data["X"] = X
+    BO_data["y"] = y
+    BO_data["y_candidate_BO"] = y_candidate_BO
+    BO_data["X_candidate_BO"] = X_candidate_BO
+    BO_data["y_best_BO"] = y_best_BO
+    BO_data["y_better_BO"] = y_better_BO
+    BO_data["LIGANDS_candidate_BO"] = LIGANDS_candidate_BO
+    BO_data["ADDITIVES_candidate_BO"] = ADDITIVES_candidate_BO
+    BO_data["price_dict_BO_ligands"] = price_dict_BO_ligands
+    BO_data["price_dict_BO_additives"] = price_dict_BO_additives
     BO_data["running_costs_BO"] = running_costs_BO
     BO_data["N_train"] = len(X)
     BO_data["scaler_y"] = scaler_y
@@ -1223,12 +1453,12 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
     NEW_LIGANDS = LIGANDS_candidate_BO[indices]
     NEW_ADDITIVES = ADDITIVES_candidate_BO[indices]
 
-    suggested_costs_all, price_per_ligand = compute_price_acquisition_ligands(
+    suggested_costs_all, _ = compute_price_acquisition_ligands(
         NEW_LIGANDS, price_dict_BO_ligands
     )
     (
         suggested_costs_all_additives,
-        price_per_additive,
+        _,
     ) = compute_price_acquisition_ligands(NEW_ADDITIVES, price_dict_BO_additives)
 
     suggested_costs_all += suggested_costs_all_additives

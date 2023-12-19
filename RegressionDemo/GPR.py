@@ -1,69 +1,32 @@
 import numpy as np
-import torch
 from BO import update_model
-from utils import check_entries, convert2pytorch
 from datasets import Evaluation_data
 from exp_configs_1 import benchmark
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+
+
 import matplotlib.pyplot as plt
 
-TEST_OPTION = 1
 
-if TEST_OPTION == 1:
-    exp_config = benchmark[0]
+exp_config = benchmark[0]
 
-    DATASET = Evaluation_data(
-        exp_config["dataset"],
-        exp_config["ntrain"],
-        "random",
-        init_strategy=exp_config["init_strategy"],
-    )
-    bounds_norm = DATASET.bounds_norm
+DATASET = Evaluation_data(
+    exp_config["dataset"],
+    exp_config["ntrain"],
+    "random",
+    init_strategy=exp_config["init_strategy"],
+)
+bounds_norm = DATASET.bounds_norm
 
-    (
-        X_init,
-        y_init,
-        costs_init,
-        X_candidate,
-        y_candidate,
-        costs_candidate,
-    ) = DATASET.get_init_holdout_data(777)
-else:
-    try:
-        import deepchem as dc
-    except ImportError:
-        print("Deepchem not installed. Please install deepchem to run this test.")
-        raise
-
-    featurizer = dc.feat.CircularFingerprint(size=512)
-
-    tasks, datasets, transformers = dc.molnet.load_sampl(
-        featurizer=featurizer, splitter="random", transformers=[]
-    )
-    train_dataset, valid_dataset, test_dataset = datasets
-
-    # Extract training data from DeepChem dataset, and convert to NumPy arrays
-    X_train = train_dataset.X
-
-    bounds_norm =  torch.tensor([[0] * 512, [1] * 512])
-    bounds_norm = bounds_norm.to(dtype=torch.float32)
-
-    if not check_entries(X_train):
-        X_train = MinMaxScaler().fit_transform(X_train)
-
-    y_train = train_dataset.y[:, 0].reshape(-1, 1)
-
-    # pdb.set_trace()
-    # Split the data into training and test sets
-    X_init, X_candidate, y_init, y_candidate = train_test_split(
-        X_train, y_train, test_size=0.2, random_state=42
-    )
-
-    X_init, y_init = convert2pytorch(X_init, y_init)
-    X_candidate, y_candidate = convert2pytorch(X_candidate, y_candidate)
+(
+    X_init,
+    y_init,
+    costs_init,
+    X_candidate,
+    y_candidate,
+    costs_candidate,
+) = DATASET.get_init_holdout_data(777)
 
 
 fit_y = False
