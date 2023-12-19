@@ -4,9 +4,11 @@ from datasets import Evaluation_data
 from exp_configs_1 import benchmark
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
-
-
 import matplotlib.pyplot as plt
+import random
+
+np.random.seed(777)
+random.seed(777)
 
 
 exp_config = benchmark[0]
@@ -53,18 +55,28 @@ else:
 y_pred = y_pred.flatten()
 y_candidate = y_candidate.numpy().flatten()
 
-plt.errorbar(y_candidate, y_pred, yerr=y_std,marker=None,  fmt=",", alpha=0.6)
-plt.plot(y_candidate, y_candidate, color="black", alpha=0.5)
-plt.scatter(y_candidate, y_pred,c=y_std, alpha=0.6)
-#add colorbar with 
-plt.xlabel("EXPERIMENT")
-plt.ylabel("PREDICTION")
 
-
-# compute r2 using sklearn and RMSE
 r2 = r2_score(y_pred, y_candidate)
 mae = mean_absolute_error(y_candidate, y_pred)
+
 print("r2 = ", r2)
 print("N = ", len(X_init), "MAE = ", mae)
 
-plt.savefig("correlation.png")
+
+fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+ax.set_title("GPR")
+ax.errorbar(y_candidate, y_pred, yerr=y_std, marker=None, fmt=",", alpha=0.3)
+ax.plot(y_candidate, y_candidate, color="black", alpha=0.2)
+ax.scatter(y_candidate, y_pred, alpha=0.6)
+# Setting the axis limits
+ax.set_xlim(0, 102)
+ax.set_ylim(0, 102)
+ax.text(
+    5, 95, f"R² score: {r2:.2f}", fontsize=12
+)  # Adjust position and fontsize as needed
+ax.text(5, 90, f"MAE: {mae:.2f}", fontsize=12)  # Adjust position and fontsize as needed
+ax.grid(True, which="both", linestyle="--", linewidth=0.5)
+ax.tick_params(axis="both", which="major", labelsize=12)
+ax.set_xlabel("Experiment", fontsize=12)
+ax.set_ylabel("Prediction", fontsize=12)
+plt.savefig("correlation.pdf")
