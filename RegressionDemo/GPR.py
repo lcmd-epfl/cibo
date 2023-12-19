@@ -57,7 +57,6 @@ plt.errorbar(y_candidate, y_pred, yerr=y_std,marker=None,  fmt=",", alpha=0.6)
 plt.plot(y_candidate, y_candidate, color="black", alpha=0.5)
 plt.scatter(y_candidate, y_pred,c=y_std, alpha=0.6)
 #add colorbar with 
-plt.colorbar()
 plt.xlabel("EXPERIMENT")
 plt.ylabel("PREDICTION")
 
