@@ -18,7 +18,6 @@ from experiments import (
     BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE,
 )
 from datasets import Evaluation_data
-import pdb
 
 SEED = 111
 random.seed(SEED)
@@ -27,7 +26,6 @@ torch.manual_seed(SEED)
 
 if __name__ == "__main__":
     print("Starting experiments")
-    # Modify such that maximal cost gets doubled every iteration
     RESULTS = []
 
     for exp_config in benchmark:

@@ -8,7 +8,7 @@ from experiments import (
     BO_CASE_2B_STEP,
     RS_STEP_2B,
     #  TODO: implement!!!
-    BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP,
+    BO_AWARE_SCAN_FAST_CASE_2B_SAVED_BUDGET_STEP,
 )
 from utils import (
     create_aligned_transposed_price_table,
@@ -16,11 +16,11 @@ from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     save_pkl,
-    create_data_dict_BO_2A,
-    create_data_dict_RS_2A,
+    create_data_dict_BO_2B,
+    create_data_dict_RS_2B,
 )
 from datasets import Evaluation_data
-
+import pdb
 
 SEED = 111
 random.seed(SEED)
@@ -29,7 +29,6 @@ torch.manual_seed(SEED)
 
 if __name__ == "__main__":
     print("Starting experiments")
-
     RESULTS = []
 
     for exp_config in benchmark:
@@ -50,8 +49,6 @@ if __name__ == "__main__":
         SURROGATE = exp_config["surrogate"]
         MAX_BATCH_COST = exp_config["max_batch_cost"]
         COST_AWARE_BO = exp_config["cost_aware"]
-        AQCFCT = exp_config["acq_func"]
-
         budget_scheduler = Budget_schedule(exp_config["buget_schedule"])
 
         for run in range(N_RUNS):
@@ -63,15 +60,16 @@ if __name__ == "__main__":
             (
                 X_init,
                 y_init,
-                costs_init,
                 X_candidate,
                 y_candidate,
-                costs_candidate,
-                LIGANDS_init,
+                LIGANDS_INIT,
                 LIGANDS_candidate,
-                price_dict,
+                ADDITIVES_INIT,
+                ADDITIVES_candidate,
+                price_dict_ligands,
+                price_dict_additives,
             ) = DATASET.get_init_holdout_data(SEED)
-            print(create_aligned_transposed_price_table(price_dict))
+            
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
@@ -86,11 +84,17 @@ if __name__ == "__main__":
             running_costs_BO = [0]
             running_costs_RANDOM = [0]
 
-            price_dict_BO = cp.deepcopy(price_dict)
-            price_dict_RANDOM = cp.deepcopy(price_dict)
+            price_dict_BO_ligands = cp.deepcopy(price_dict_ligands)
+            price_dict_RANDOM_ligands = cp.deepcopy(price_dict_ligands)
+
+            price_dict_BO_additives = cp.deepcopy(price_dict_additives)
+            price_dict_RANDOM_additives = cp.deepcopy(price_dict_additives)
 
             LIGANDS_candidate_BO = cp.deepcopy(LIGANDS_candidate)
             LIGANDS_candidate_RANDOM = cp.deepcopy(LIGANDS_candidate)
+
+            ADDITIVES_candidate_BO = cp.deepcopy(ADDITIVES_candidate)
+            ADDITIVES_candidate_RANDOM = cp.deepcopy(ADDITIVES_candidate)
 
             y_better_BO = []
             y_better_RANDOM = []
@@ -98,8 +102,12 @@ if __name__ == "__main__":
             y_better_BO.append(y_best)
             y_better_RANDOM.append(y_best)
             y_best_BO, y_best_RANDOM = y_best, y_best
+            print("Ligands")
+            print(create_aligned_transposed_price_table(price_dict_BO_ligands))
+            print("Additives")
+            print(create_aligned_transposed_price_table(price_dict_BO_additives))
 
-            BO_data = create_data_dict_BO_2A(
+            BO_data = create_data_dict_BO_2B(
                 model,
                 y_best_BO,
                 scaler_y,
@@ -109,22 +117,26 @@ if __name__ == "__main__":
                 y_candidate_BO,
                 LIGANDS_candidate_BO,
                 y_better_BO,
-                price_dict_BO,
+                price_dict_BO_ligands,
+                price_dict_BO_additives,
+                ADDITIVES_candidate_BO,
                 running_costs_BO,
                 bounds_norm,
                 BATCH_SIZE,
                 MAX_BATCH_COST,
                 SURROGATE,
-                AQCFCT
+                exp_config["acq_func"],
             )
             BO_data["SAVED_BUDGET"] = MAX_BATCH_COST
             BO_data["INCREASE_FACTOR"] = True
 
-            RANDOM_data = create_data_dict_RS_2A(
+            RANDOM_data = create_data_dict_RS_2B(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
                 LIGANDS_candidate_RANDOM,
-                price_dict_RANDOM,
+                ADDITIVES_candidate_RANDOM,
+                price_dict_RANDOM_ligands,
+                price_dict_RANDOM_additives,
                 BATCH_SIZE,
                 MAX_BATCH_COST,
                 y_better_RANDOM,
@@ -133,12 +145,12 @@ if __name__ == "__main__":
 
             for i in range(NITER):
                 if COST_AWARE_BO == False:
-                    BO_data = BO_CASE_2A_STEP(BO_data)
+                    BO_data = BO_data = BO_CASE_2B_STEP(BO_data)
                 else:
                     BO_data["step_nr"] = budget_scheduler.get_factor(i)
-                    BO_data = BO_AWARE_SCAN_FAST_CASE_2_SAVED_BUDGET_STEP(BO_data)
+                    BO_data = BO_AWARE_SCAN_FAST_CASE_2B_SAVED_BUDGET_STEP(BO_data)
 
-                RANDOM_data = RS_STEP_2A(RANDOM_data)
+                RANDOM_data = RS_STEP_2B(RANDOM_data)
 
                 print("--------------------")
                 print(
@@ -153,7 +165,6 @@ if __name__ == "__main__":
                         BO_data["N_train"],
                     )
                 )
-                print(create_aligned_transposed_price_table(price_dict_BO))
 
             y_better_BO_ALL.append(BO_data["y_better_BO"])
             y_better_RANDOM_ALL.append(RANDOM_data["y_better_RANDOM"])
@@ -174,10 +185,7 @@ if __name__ == "__main__":
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
-            name="costs_{}_{}.png".format(
-                exp_config["dataset"],
-                exp_config["label"]
-            ),
+            name="costs_{}_{}.png".format(exp_config["dataset"], exp_config["label"]),
         )
 
         RESULTS.append(
