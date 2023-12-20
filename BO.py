@@ -30,14 +30,15 @@ from utils import (
 warnings.filterwarnings("ignore")
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Set device: Apple/NVIDIA/CPU
+if torch.backends.mps.is_available():
+    device = torch.device("mps")
+elif torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
 dtype = torch.float
-
-
-tkwargs = {
-    "dtype": torch.double,
-    "device": torch.device("cpu"),
-}
 
 
 def batch_tanimoto_sim(
