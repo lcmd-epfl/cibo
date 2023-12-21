@@ -391,7 +391,7 @@ def compute_price_acquisition_ligands_price_per_acqfct_B1(
     return price_per_ligand_additive
 
 
-def function_cost_B(
+def function_cost_B_denominator(
     NEW_LIGANDS, NEW_ADDITIVES, price_dict_ligands, price_dict_additives
 ):
     """
@@ -408,6 +408,47 @@ def function_cost_B(
     for ligand, additive in zip(NEW_LIGANDS, NEW_ADDITIVES):
         denominator = 1 + check_dict_ligands[ligand] + check_dict_additives[additive]
         price_per_ligand_additive.append(denominator)
+        check_dict_ligands[ligand] = 0
+        check_dict_additives[additive] = 0
+
+    return price_per_ligand_additive
+
+
+def function_cost_B_minus(
+    NEW_LIGANDS, NEW_ADDITIVES, price_dict_ligands, price_dict_additives, acq_values
+):
+    """
+    Only used for gibbon_search_modified_all_per_price!
+
+    Computes the price for the batch. When a ligand is already in the inventory
+    it will have a price of 1 to make sure the acfct value is not divided by 0.
+    """
+    acq_values_max = max(cp.deepcopy(acq_values).flatten())
+    check_dict_ligands = cp.deepcopy(price_dict_ligands)
+    check_dict_additives = cp.deepcopy(price_dict_additives)
+
+
+    combined_dict = {**check_dict_ligands, **check_dict_additives}
+
+    # Find the maximum value in the combined dictionary
+    max_combined_value = np.mean(np.array((list((combined_dict.values())))))
+
+    # Calculate the scaling factor
+    scaling_factor = acq_values_max / max_combined_value
+
+    # Scale the values in check_dict_ligands
+    for key in check_dict_ligands:
+        check_dict_ligands[key] *= scaling_factor
+
+    # Scale the values in check_dict_additives
+    for key in check_dict_additives:
+        check_dict_additives[key] *= scaling_factor
+
+    #p#db.set_trace()
+    price_per_ligand_additive = []
+    for ligand, additive in zip(NEW_LIGANDS, NEW_ADDITIVES):
+        minus = check_dict_ligands[ligand] + check_dict_additives[additive]
+        price_per_ligand_additive.append(minus)
         check_dict_ligands[ligand] = 0
         check_dict_additives[additive] = 0
 
@@ -614,7 +655,7 @@ def create_data_dict_BO_2A(
     BATCH_SIZE,
     MAX_BATCH_COST,
     SURROGATE,
-    AQCFCT
+    AQCFCT,
 ):
     """
     Create a dictionary with all the data needed for the BO in scenario 2.
@@ -661,7 +702,7 @@ def create_data_dict_BO_2B(
     BATCH_SIZE,
     MAX_BATCH_COST,
     SURROGATE,
-    AQCFCT
+    AQCFCT,
 ):
     BO_data = {
         "model": model,
@@ -730,7 +771,7 @@ def create_data_dict_BO_1(
     BATCH_SIZE,
     MAX_BATCH_COST,
     SURROGATE,
-    AQCFCT
+    AQCFCT,
 ):
     """
     For scenario 1
