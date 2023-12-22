@@ -1,0 +1,375 @@
+Precatalyst,N-H nucleophile ,N-H nucleophile addition method,N-H nucleophile Inlet Injection (uL),N-H nucleophile concentration (M),N-H nucleophile equivalents,Aryl triflate concentration (M),Precatalyst loading in mol%,Internal Standard Concentration 1-fluoronaphthalene (g/L),Base,Base concentration (M),Base equivalents,Make-Up Solvent ID,Quench Outlet Injection (uL),Temperature (degC),Residence Time Actual (s),Residence Time Actual (min),Reaction Yield,Conversion,right censored performance
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,2.50,2.7,2-MeTHF,15,65,1325,22,62,71,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,1.75,1.9,2-MeTHF,15,65,375,6,1,4,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,2.50,2.7,2-MeTHF,15,100,1296,22,21,26,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TEA,0.96,1.1,2-MeTHF,15,30,595,10,0,2,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,0.99,1.1,2-MeTHF,15,65,1347,22,55,61,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,1.00,1.1,2-MeTHF,15,30,76,1,1,3,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,2.50,2.7,2-MeTHF,15,30,75,1,0,0,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,2.50,2.7,2-MeTHF,15,100,78,1,99,100,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,0.99,1.1,2-MeTHF,15,100,374,6,7,10,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,2.50,2.7,2-MeTHF,15,100,343,6,6,9,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,0.99,1.1,2-MeTHF,15,100,76,1,47,51,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,0.99,1.1,2-MeTHF,15,30,1110,19,1,4,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,1.75,1.9,2-MeTHF,15,30,73,1,23,25,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TEA,2.55,2.8,2-MeTHF,15,30,335,6,1,4,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,1.00,1.1,2-MeTHF,15,100,1301,22,42,47,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,2.50,2.7,2-MeTHF,15,30,1119,19,0,3,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TEA,2.55,2.8,2-MeTHF,15,65,75,1,0,2,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TEA,0.96,1.1,2-MeTHF,15,65,75,1,0,1,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TEA,1.75,1.9,2-MeTHF,15,100,1307,22,1,8,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,2.50,2.7,2-MeTHF,15,100,579,10,43,45,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TEA,2.55,2.8,2-MeTHF,15,100,677,11,5,7,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,2.50,2.7,2-MeTHF,15,100,592,10,8,11,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,2.50,2.7,2-MeTHF,15,100,672,11,73,78,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,2.50,2.7,2-MeTHF,15,30,77,1,1,0,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,2.50,2.7,2-MeTHF,15,30,74,1,12,16,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,2.50,2.7,2-MeTHF,15,30,75,1,0,2,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,TMG,1.49,1.6,2-MeTHF,15,100,1106,18,10,14,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,1.53,1.7,2-MeTHF,15,100,1247,21,44,50,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,1.54,1.7,2-MeTHF,15,100,1247,21,90,97,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,1.52,1.7,2-MeTHF,15,30,1251,21,0,4,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,1.64,1.8,2-MeTHF,15,30,1225,20,27,30,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,2.14,2.4,2-MeTHF,15,100,79,1,78,86,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,DBU,1.41,1.6,2-MeTHF,15,99,1203,20,42,47,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,1.64,1.8,2-MeTHF,15,100,1261,21,96,100,0
+EPhos,Aniline,Liquid handler,0,1.20,1.3,0.91,1.03,10,BTMG,2.50,2.8,2-MeTHF,15,100,1225,20,82,93,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,2.00,2.2,2-MeTHF,19,30,329,5,4,42,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,2.00,2.2,2-MeTHF,19,100,73,1,96,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,1.00,1.1,2-MeTHF,19,48,75,1,3,17,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,2.00,2.2,2-MeTHF,19,100,673,11,77,82,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,1.01,1.1,2-MeTHF,19,30,108,2,7,13,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,2.00,2.2,2-MeTHF,19,100,1089,18,101,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,1.00,1.1,2-MeTHF,19,100,1209,20,100,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,1.01,1.1,2-MeTHF,19,65,1062,18,9,12,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,1.00,1.1,2-MeTHF,19,30,378,6,9,13,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,1.50,1.6,2-MeTHF,19,65,326,5,92,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,1.52,1.7,2-MeTHF,19,100,74,1,3,4,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,2.00,2.2,2-MeTHF,19,30,1291,22,85,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,1.00,1.1,2-MeTHF,19,100,75,1,92,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,1.00,1.1,2-MeTHF,19,30,1256,21,84,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,2.03,2.2,2-MeTHF,19,65,1279,21,9,8,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,1.51,1.6,2-MeTHF,19,30,1119,19,7,15,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,2.03,2.2,2-MeTHF,19,30,74,1,1,1,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,1.00,1.1,2-MeTHF,19,100,320,5,26,79,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,2.00,2.2,2-MeTHF,19,65,76,1,10,11,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,1.00,1.1,2-MeTHF,19,100,1275,21,103,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,1.01,1.1,2-MeTHF,19,100,1065,18,13,15,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,2.00,2.2,2-MeTHF,19,100,1218,20,90,93,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,2.00,2.2,2-MeTHF,19,100,1251,21,100,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,2.00,2.2,2-MeTHF,19,100,1290,22,86,90,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,1.00,1.1,2-MeTHF,19,100,1428,24,102,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,1.00,1.1,2-MeTHF,19,100,1179,20,101,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TEA,1.01,1.1,2-MeTHF,19,100,1401,23,12,13,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,2.00,2.2,2-MeTHF,19,63,1163,19,95,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,2.00,2.2,2-MeTHF,19,63,1243,21,32,37,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,2.00,2.2,2-MeTHF,19,63,1322,22,83,88,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,1.44,1.6,2-MeTHF,19,100,504,8,98,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,1.41,1.5,2-MeTHF,19,100,493,8,99,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,1.89,2.1,2-MeTHF,19,100,552,9,97,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,TMG,2.00,2.2,2-MeTHF,19,100,456,8,80,87,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,DBU,1.00,1.1,2-MeTHF,19,100,460,8,98,100,0
+tBuXPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.95,11,BTMG,2.00,2.2,2-MeTHF,19,100,454,8,99,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,2.00,2.2,2-MeTHF,21,30,369,6,37,33,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,2.00,2.2,2-MeTHF,21,100,75,1,103,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.00,1.1,2-MeTHF,21,48,66,1,4,6,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.99,2.2,2-MeTHF,21,100,682,11,98,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,2.00,2.2,2-MeTHF,21,100,1250,21,99,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.04,1.1,2-MeTHF,21,30,74,1,17,20,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,1.00,1.1,2-MeTHF,21,100,1274,21,102,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.04,1.1,2-MeTHF,21,65,1251,21,2,5,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,1.00,1.1,2-MeTHF,21,30,358,6,51,58,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,1.50,1.6,2-MeTHF,21,65,320,5,97,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.51,1.7,2-MeTHF,21,100,75,1,2,4,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,2.00,2.2,2-MeTHF,21,30,1241,21,102,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,1.00,1.1,2-MeTHF,21,100,76,1,101,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,1.00,1.1,2-MeTHF,21,30,1292,22,103,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.97,2.2,2-MeTHF,21,65,1062,18,3,6,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.51,1.7,2-MeTHF,21,30,1272,21,8,4,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.04,1.1,2-MeTHF,21,30,75,1,1,0,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.97,2.2,2-MeTHF,21,30,74,1,1,1,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.00,1.1,2-MeTHF,21,100,327,5,93,96,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.99,2.2,2-MeTHF,21,65,74,1,4,0,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.97,2.2,2-MeTHF,21,100,391,7,7,10,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,2.00,2.2,2-MeTHF,21,100,477,8,103,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.99,2.2,2-MeTHF,21,100,473,8,100,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,1.05,1.1,2-MeTHF,21,100,533,9,103,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.81,2.0,2-MeTHF,21,100,477,8,101,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,1.00,1.1,2-MeTHF,21,100,526,9,100,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TEA,1.04,1.1,2-MeTHF,21,100,449,7,6,9,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,1.00,1.1,2-MeTHF,21,57,1277,21,42,41,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.99,2.2,2-MeTHF,21,63,1072,18,35,35,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,BTMG,1.53,1.7,2-MeTHF,21,100,386,6,100,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,DBU,1.41,1.6,2-MeTHF,21,100,348,6,103,100,0
+tBuBrettPhos,Aniline,Online injection at reactor inlet,6,1.50,1.6,0.91,0.94,11,TMG,1.45,1.6,2-MeTHF,21,100,416,7,92,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,0.99,1.1,2-MeTHF,19,30,1258,21,97,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,1.00,1.1,2-MeTHF,19,65,75,1,21,22,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TEA,1.02,1.1,2-MeTHF,19,65,1071,18,7,9,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,2.00,2.2,2-MeTHF,19,100,1263,21,94,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,2.00,2.2,2-MeTHF,19,100,74,1,98,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,1.00,1.1,2-MeTHF,19,30,75,1,93,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TEA,2.03,2.2,2-MeTHF,19,100,320,5,23,30,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TEA,2.03,2.2,2-MeTHF,19,30,1366,23,15,17,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,1.50,1.6,2-MeTHF,19,65,341,6,95,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,2.00,2.2,2-MeTHF,19,65,1071,18,99,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,2.00,2.2,2-MeTHF,19,30,382,6,5,7,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TEA,1.02,1.1,2-MeTHF,19,100,76,1,6,10,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,2.00,2.2,2-MeTHF,19,65,75,1,16,19,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,1.50,1.7,2-MeTHF,19,30,90,1,57,63,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,2.00,2.2,2-MeTHF,19,30,75,1,96,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,1.00,1.1,2-MeTHF,19,100,1279,21,96,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,1.00,1.1,2-MeTHF,19,30,328,5,6,8,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,1.50,1.6,2-MeTHF,19,100,1180,20,99,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,0.99,1.1,2-MeTHF,19,100,321,5,96,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,1.37,1.5,2-MeTHF,19,100,1215,20,100,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TEA,1.91,2.1,2-MeTHF,19,100,1351,23,21,24,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,1.48,1.6,2-MeTHF,19,100,1301,22,99,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,1.44,1.6,2-MeTHF,19,100,1216,20,95,98,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,1.45,1.6,2-MeTHF,19,100,1275,21,97,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,2.00,2.2,2-MeTHF,19,30,1370,23,8,9,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,DBU,1.55,1.7,2-MeTHF,19,100,1309,22,99,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,BTMG,1.00,1.1,2-MeTHF,19,89,1093,18,93,100,0
+AlPhos,Aniline,Online injection at reactor inlet,4,1.50,1.6,0.91,0.94,11,TMG,1.00,1.1,2-MeTHF,19,89,1393,23,94,100,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,2.00,2.1,DMSO,15,30,83,1,2,2,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,2.00,2.1,DMSO,15,65,1402,23,7,14,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,100,497,8,15,22,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,TMG,0.99,1.0,DMSO,15,100,80,1,4,8,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,1.01,1.0,DMSO,15,30,77,1,1,4,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,1.50,1.6,DMSO,15,100,78,1,9,14,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,30,475,8,9,21,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,1.50,1.6,DMSO,15,30,1414,24,2,6,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,TMG,1.51,1.6,DMSO,15,65,497,8,2,8,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,0.99,1.0,DMSO,15,100,1378,23,26,38,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,0.99,1.0,DMSO,15,30,484,8,8,16,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,TMG,0.99,1.0,DMSO,15,30,1607,27,0,7,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,2.01,2.1,DMSO,15,65,79,1,3,9,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,1.01,1.0,DMSO,15,65,1668,28,16,22,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,100,1442,24,24,41,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,2.01,2.1,DMSO,15,100,464,8,15,28,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,48,79,1,1,6,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,TMG,2.00,2.1,DMSO,15,100,80,1,4,7,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,TMG,2.00,2.1,DMSO,15,30,1331,22,0,22,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,100,323,5,21,27,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,TMG,0.99,1.0,DMSO,15,100,395,7,8,14,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,2.01,2.1,DMSO,15,100,312,5,12,20,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,1.01,1.0,DMSO,15,100,417,7,12,20,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,100,1554,26,23,31,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,2.00,2.1,DMSO,15,100,1515,25,5,17,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,2.01,2.1,DMSO,15,100,1652,28,10,20,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,1.40,1.5,DMSO,15,81,542,9,11,16,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,1.41,1.5,DMSO,15,81,629,10,20,27,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,1.38,1.4,DMSO,15,81,591,10,8,14,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,100,1833,31,11,18,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,MTBD,1.01,1.0,DMSO,15,100,1454,24,9,19,0
+tBuXPhos,Benzamide,Liquid handler,0,1.20,1.2,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,100,334,6,17,24,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,2.00,2.1,DMSO,15,30,89,1,2,5,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,2.00,2.1,DMSO,15,65,1461,24,90,90,1
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,100,500,8,56,67,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,TMG,0.99,1.0,DMSO,15,100,75,1,4,6,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,1.01,1.0,DMSO,15,30,79,1,1,3,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,1.50,1.6,DMSO,15,100,77,1,70,73,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,30,526,9,5,13,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,1.50,1.6,DMSO,15,30,1742,29,2,2,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,TMG,1.51,1.6,DMSO,15,65,423,7,2,2,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,BTMG,0.99,1.0,DMSO,15,100,1719,29,94,91,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,BTMG,0.99,1.0,DMSO,15,30,490,8,3,5,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,TMG,0.99,1.0,DMSO,15,30,1601,27,0,1,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,2.01,2.1,DMSO,15,65,83,1,3,3,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,1.01,1.0,DMSO,15,65,1597,27,51,55,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,100,1438,24,90,90,1
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,2.01,2.1,DMSO,15,100,466,8,90,90,1
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,48,75,1,1,0,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,TMG,2.00,2.1,DMSO,15,100,80,1,3,7,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,TMG,2.00,2.1,DMSO,15,30,1748,29,0,4,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,BTMG,2.00,2.1,DMSO,15,100,621,10,98,100,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,TMG,0.99,1.0,DMSO,15,100,726,12,19,25,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,100,878,15,90,90,1
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,2.00,2.1,DMSO,15,100,637,11,97,99,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,BTMG,1.41,1.5,DMSO,15,86,592,10,98,100,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,MTBD,1.38,1.4,DMSO,15,87,675,11,90,90,1
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,1.40,1.5,DMSO,15,86,743,12,54,56,0
+tBuBrettPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.05,11,DBU,1.00,1.0,DMSO,15,91,739,12,50,52,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,2.00,2.1,DMSO,15,30,77,1,5,15,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,DBU,1.00,1.0,DMSO,15,100,491,8,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,TMG,0.99,1.0,DMSO,15,100,80,1,3,10,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,1.01,1.1,DMSO,15,30,76,1,4,10,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,1.50,1.6,DMSO,15,100,80,1,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,2.00,2.1,DMSO,15,30,469,8,34,44,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,2.00,2.1,DMSO,15,65,1690,28,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,DBU,1.50,1.6,DMSO,15,30,1449,24,11,18,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,TMG,1.51,1.6,DMSO,15,65,497,8,3,8,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,0.99,1.0,DMSO,15,30,493,8,19,29,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,TMG,0.99,1.0,DMSO,15,30,1106,18,1,5,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,DBU,2.01,2.1,DMSO,15,65,78,1,14,22,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,1.01,1.1,DMSO,15,65,1128,19,67,83,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,2.00,2.1,DMSO,15,100,1367,23,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,DBU,2.01,2.1,DMSO,15,100,451,8,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,DBU,1.00,1.0,DMSO,15,48,78,1,2,7,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,TMG,2.00,2.1,DMSO,15,100,76,1,4,12,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,TMG,2.00,2.1,DMSO,15,30,1439,24,1,6,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,0.99,1.0,DMSO,15,100,1163,19,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,1.50,1.6,DMSO,15,100,77,1,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,2.00,2.1,DMSO,15,30,1527,25,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,TMG,2.00,2.1,DMSO,15,100,1625,27,35,48,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,0.99,1.0,DMSO,15,100,1621,27,90,90,1
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,MTBD,2.00,2.1,DMSO,15,30,1342,22,57,75,0
+AlPhos,Benzamide,Liquid handler,0,1.20,1.3,0.96,1.03,11,BTMG,2.00,2.1,DMSO,15,73,663,11,67,100,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,30,80,1,14,19,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,65,1491,25,95,95,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTMG,0.99,1.1,2-MeTHF,15,100,520,9,11,12,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,DBU,1.00,1.1,2-MeTHF,15,100,79,1,1,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.00,1.1,2-MeTHF,15,30,76,1,10,9,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.40,1.5,2-MeTHF,15,100,80,1,99,99,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,MTBD,1.80,2.0,2-MeTHF,15,30,528,9,3,1,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTMG,1.40,1.5,2-MeTHF,15,30,1414,24,2,7,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,DBU,1.40,1.5,2-MeTHF,15,65,724,12,1,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,MTBD,1.01,1.1,2-MeTHF,15,100,1431,24,4,4,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,MTBD,1.01,1.1,2-MeTHF,15,30,477,8,2,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,DBU,1.00,1.1,2-MeTHF,15,30,1390,23,0,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,65,77,1,3,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.00,1.1,2-MeTHF,15,65,1671,28,82,90,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,MTBD,1.80,2.0,2-MeTHF,15,100,1565,26,2,2,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,100,516,9,21,23,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTMG,0.99,1.1,2-MeTHF,15,48,80,1,1,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,DBU,1.80,2.0,2-MeTHF,15,100,79,1,1,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,DBU,1.80,2.0,2-MeTHF,15,30,1578,26,0,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,100,791,13,94,99,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,100,285,5,100,99,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,DBU,1.80,2.0,2-MeTHF,15,100,284,5,1,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,MTBD,1.01,1.1,2-MeTHF,15,100,331,6,5,6,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,100,290,5,21,17,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,100,1362,23,101,100,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.00,1.1,2-MeTHF,15,100,310,5,83,83,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.35,1.5,2-MeTHF,15,69,430,7,91,100,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.34,1.5,2-MeTHF,15,96,1657,28,97,100,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,75,74,1,94,95,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.47,1.6,2-MeTHF,15,83,1574,26,98,100,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,0.99,10,BTTP,1.50,1.6,2-MeTHF,15,83,1745,29,100,100,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.01,1.1,0.92,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,100,1620,27,24,26,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.01,1.1,0.92,0.99,10,DBU,1.80,2.0,2-MeTHF,15,100,1410,24,0,3,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.01,1.1,0.92,0.99,10,DBU,1.00,1.1,2-MeTHF,15,100,1636,27,1,0,0
+tBuXPhos,Phenethylamine,Liquid handler,0,1.01,1.1,0.92,0.99,10,BTMG,0.99,1.1,2-MeTHF,15,100,1403,23,7,8,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.39,1.5,2-MeTHF,15,30,75,1,4,7,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.01,1.1,2-MeTHF,15,65,1442,24,9,11,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,100,1562,26,100,99,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,DBU,1.80,2.0,2-MeTHF,15,30,429,7,2,4,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,DBU,1.00,1.1,2-MeTHF,15,65,81,1,1,3,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,MTBD,1.80,2.0,2-MeTHF,15,30,1442,24,6,9,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,DBU,1.80,2.0,2-MeTHF,15,65,79,1,2,2,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,100,89,1,51,49,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.00,1.1,2-MeTHF,15,100,1536,26,84,86,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,65,1370,23,50,53,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,30,77,1,22,24,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,MTBD,0.99,1.1,2-MeTHF,15,30,1669,28,6,7,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,DBU,1.00,1.1,2-MeTHF,15,30,411,7,1,1,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.00,1.1,2-MeTHF,15,30,77,1,15,17,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.01,1.1,2-MeTHF,15,100,77,1,26,24,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,DBU,1.40,1.5,2-MeTHF,15,100,1662,28,16,15,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,MTBD,0.99,1.1,2-MeTHF,15,100,515,9,27,44,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.40,1.5,2-MeTHF,15,65,432,7,97,99,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,MTBD,1.80,2.0,2-MeTHF,15,100,526,9,58,60,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.67,1.8,2-MeTHF,15,100,410,7,87,87,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,DBU,1.41,1.5,2-MeTHF,15,100,443,7,14,16,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,MTBD,1.49,1.6,2-MeTHF,15,100,404,7,34,49,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.36,1.5,2-MeTHF,15,100,421,7,98,100,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,91,346,6,68,69,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,MTBD,1.80,2.0,2-MeTHF,15,91,325,5,38,36,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,91,277,5,98,100,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,48,418,7,62,64,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,48,359,6,14,15,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,82,614,10,66,66,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.80,2.0,2-MeTHF,15,82,514,9,97,100,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,92,768,13,90,94,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.33,1.5,2-MeTHF,15,97,568,9,98,100,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTMG,1.80,2.0,2-MeTHF,15,92,811,14,92,96,0
+tBuBrettPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.91,0.99,10,BTTP,1.40,1.5,2-MeTHF,15,94,587,10,99,100,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,MTBD,1.80,2.0,2-MeTHF,15,100,75,1,99,94,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,DBU,1.80,2.0,2-MeTHF,15,65,75,1,3,3,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,MTBD,1.01,1.1,2-MeTHF,15,100,78,1,65,70,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTTP,1.80,2.0,2-MeTHF,15,100,544,9,92,95,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,MTBD,1.01,1.1,2-MeTHF,15,65,1542,26,71,78,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTTP,1.00,1.1,2-MeTHF,15,100,492,8,82,91,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,DBU,1.00,1.1,2-MeTHF,15,65,77,1,8,8,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTMG,1.80,2.0,2-MeTHF,15,30,77,1,6,6,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,DBU,1.80,2.0,2-MeTHF,15,30,395,7,5,5,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTMG,1.40,1.5,2-MeTHF,15,65,498,8,31,37,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTMG,1.80,2.0,2-MeTHF,15,100,1712,29,97,93,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,DBU,1.00,1.1,2-MeTHF,15,30,540,9,3,3,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTTP,1.00,1.1,2-MeTHF,15,30,1601,27,84,88,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTMG,0.99,1.1,2-MeTHF,15,100,1376,23,75,86,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,DBU,1.40,1.5,2-MeTHF,15,100,1380,23,29,38,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTTP,1.80,2.0,2-MeTHF,15,30,1675,28,93,98,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,MTBD,1.39,1.5,2-MeTHF,15,30,75,1,14,17,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTMG,0.99,1.1,2-MeTHF,15,30,75,1,5,7,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,MTBD,1.80,2.0,2-MeTHF,15,65,1624,27,95,93,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,DBU,1.19,1.3,2-MeTHF,15,100,1702,28,42,53,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTTP,1.40,1.5,2-MeTHF,15,100,1442,24,97,96,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,MTBD,1.53,1.7,2-MeTHF,15,100,1650,27,93,96,0
+AlPhos,Phenethylamine,Liquid handler,0,1.20,1.3,0.92,1.05,10,BTMG,1.45,1.6,2-MeTHF,15,100,1595,27,98,92,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.80,2.0,2-MeTHF,45,30,79,1,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.80,2.0,2-MeTHF,45,65,1748,29,2,11,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,0.99,1.1,2-MeTHF,45,100,500,8,3,18,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.00,1.1,2-MeTHF,45,100,93,2,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.00,1.1,2-MeTHF,45,30,95,2,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.40,1.5,2-MeTHF,45,100,93,2,0,7,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,MTBD,1.80,2.0,2-MeTHF,45,30,378,6,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,1.40,1.5,2-MeTHF,45,30,1299,22,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.40,1.5,2-MeTHF,45,65,403,7,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,MTBD,1.01,1.1,2-MeTHF,45,100,1277,21,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,MTBD,1.01,1.1,2-MeTHF,45,30,398,7,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.00,1.1,2-MeTHF,45,30,1301,22,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,1.80,2.0,2-MeTHF,45,65,95,2,0,17,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,MTBD,1.80,2.0,2-MeTHF,45,100,1293,22,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.00,1.1,2-MeTHF,45,65,1322,22,1,13,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,1.80,2.0,2-MeTHF,45,100,393,7,2,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,0.99,1.1,2-MeTHF,45,48,97,2,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.80,2.0,2-MeTHF,45,100,90,2,0,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.80,2.0,2-MeTHF,45,30,1266,21,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,MTBD,1.80,2.0,2-MeTHF,45,100,492,8,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.80,2.0,2-MeTHF,45,100,497,8,6,29,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.80,2.0,2-MeTHF,45,100,489,8,1,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,1.80,2.0,2-MeTHF,45,100,494,8,2,0,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,1.80,2.0,2-MeTHF,45,45,401,7,0,28,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.80,2.0,2-MeTHF,45,45,400,7,1,29,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.80,2.0,2-MeTHF,45,45,401,7,1,25,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTMG,0.99,1.1,2-MeTHF,45,100,317,5,1,2,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,DBU,1.80,2.0,2-MeTHF,45,100,1289,21,0,19,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.80,2.0,2-MeTHF,45,100,1301,22,10,36,0
+tBuBrettPhos,Morpholine,Liquid handler,0,1.21,1.3,0.92,1.02,10,BTTP,1.80,2.0,2-MeTHF,45,100,1300,22,12,50,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,1.80,2.0,2-MeTHF,45,100,91,2,21,71,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,1.80,2.0,2-MeTHF,45,48,578,10,1,15,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.01,1.1,2-MeTHF,45,65,93,2,0,27,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.01,1.1,2-MeTHF,45,30,1532,26,0,26,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.80,2.0,2-MeTHF,45,65,93,2,1,27,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.00,1.1,2-MeTHF,45,100,580,10,31,64,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.39,1.5,2-MeTHF,45,100,576,10,51,98,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,1.40,1.5,2-MeTHF,45,30,92,2,0,0,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,1.80,2.0,2-MeTHF,45,100,2045,34,44,78,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,0.99,1.1,2-MeTHF,45,100,2036,34,39,70,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.80,2.0,2-MeTHF,45,30,2024,34,1,35,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.40,1.5,2-MeTHF,45,48,2045,34,26,45,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.80,2.0,2-MeTHF,45,30,97,2,1,34,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.80,2.0,2-MeTHF,45,100,589,10,32,58,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,0.99,1.1,2-MeTHF,45,30,586,10,0,29,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.00,1.1,2-MeTHF,45,30,94,2,1,7,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,0.99,1.1,2-MeTHF,45,100,93,2,8,45,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.38,1.5,2-MeTHF,45,100,2022,34,47,98,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,1.35,1.5,2-MeTHF,45,100,2038,34,38,72,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.32,1.4,2-MeTHF,45,100,1895,32,35,48,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.01,1.1,2-MeTHF,45,74,2040,34,60,78,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.00,1.1,2-MeTHF,45,74,2037,34,62,77,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,1.08,1.2,2-MeTHF,45,75,2029,34,64,82,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTMG,0.99,1.1,2-MeTHF,45,70,1833,31,64,80,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,BTTP,1.00,1.1,2-MeTHF,45,70,2042,34,73,97,0
+AlPhos,Morpholine,Liquid handler,0,1.21,1.3,0.91,1.98,10,MTBD,1.11,1.2,2-MeTHF,45,73,2002,33,69,98,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,0.92,1.0,0.91,1.95,10,DBU,3.00,3.3,2-MeTHF,15,100,383,6,12,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,2.75,3.0,0.91,1.95,10,DBU,1.00,1.1,2-MeTHF,15,100,77,1,5,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,2.75,3.0,0.91,1.95,10,DBU,2.01,2.2,2-MeTHF,15,100,1195,20,8,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,0.92,1.0,0.91,1.95,10,Triethylamine,3.00,3.3,2-MeTHF,15,30,1112,19,0,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,2.75,3.0,0.91,1.95,10,MTBD,3.00,3.3,2-MeTHF,15,30,1314,22,0,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,0.92,1.0,0.91,1.95,10,MTBD,1.50,1.6,2-MeTHF,15,100,1117,19,1,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,2.75,3.0,0.91,1.95,10,Triethylamine,1.00,1.1,2-MeTHF,15,30,74,1,0,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,0.92,1.0,0.91,1.95,10,MTBD,1.01,1.1,2-MeTHF,15,30,77,1,0,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,2.75,3.0,0.91,1.95,10,DBU,1.00,1.1,2-MeTHF,15,30,1295,22,5,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,1.83,2.0,0.91,1.95,10,MTBD,3.00,3.3,2-MeTHF,15,100,82,1,0,,0
+tBuBrettPhos (Preliminary),Morpholine,Liquid handler,0,0.92,1.0,0.91,1.95,10,DBU,1.00,1.1,2-MeTHF,15,100,98,2,5,,0
