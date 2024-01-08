@@ -1425,6 +1425,7 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
     scaler_y = BO_data["scaler_y"]
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
+    cost_mod = BO_data["cost_mod"]
 
     (
         index_set_rearranged,
@@ -1441,6 +1442,7 @@ def BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data):
         price_dict_BO_ligands=price_dict_BO_ligands,
         price_dict_BO_additives=price_dict_BO_additives,
         acq_func=acq_func,
+        cost_mod=cost_mod
     )
 
     indices = index_set_rearranged[0]

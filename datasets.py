@@ -4,7 +4,6 @@ import torch
 import random
 from utils import FingerprintGenerator, inchi_to_smiles, convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
-import pdb
 from data.buchwald import buchwald_prices
 
 
@@ -321,21 +320,6 @@ class Evaluation_data:
                 self.costs = np.array(all_ligand_prices).reshape(-1, 1)
 
                 # make best point price 1
-
-            elif self.dataset == "ebdo_direct_arylation":
-                self.ligand_prices = {}
-                for ind, unique_ligand in enumerate(
-                    self.feauture_labels["names"]["ligands"]
-                ):
-                    self.ligand_prices[unique_ligand] = np.random.randint(2)
-
-                self.ligand_prices[self.worst_ligand] = 0
-                self.ligand_prices[self.best_ligand] = 1
-
-                all_ligand_prices = []
-                for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
-                    all_ligand_prices.append(self.ligand_prices[ligand])
-                self.costs = np.array(all_ligand_prices).reshape(-1, 1)
 
             elif self.dataset == "buchwald":
                 self.ligand_prices = {}
