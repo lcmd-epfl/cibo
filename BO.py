@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import warnings
-
+import pdb
 import gpytorch
 from gpytorch.kernels import Kernel
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
@@ -21,10 +21,7 @@ from sklearn.ensemble import RandomForestRegressor
 from botorch_ext import optimize_acqf_discrete_modified
 
 # specific import for the modified GIBBON function
-from utils import (
-    function_cost,
-    function_cost_B,
-)
+from utils import function_cost, function_cost_B_denominator, function_cost_B_minus
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -663,6 +660,7 @@ def opt_acqfct_cost_B(
     price_dict_BO_ligands,
     price_dict_BO_additives,
     acq_func="GIBBON",
+    cost_mod="minus",
 ):
     """
     Same as `opt_acqfct_cost`, but for the case of two cost functions i.e. ligands and additives.
@@ -685,24 +683,36 @@ def opt_acqfct_cost_B(
         ligand_set.append(LIGANDS_candidate_BO[subset])
         additivies_set.append(ADDITIVES_candidate_BO[subset])
 
-    price_rescaling_factors = []
-    for ligands, additives in zip(ligand_set, additivies_set):
-        cost_curr = function_cost_B(
-            ligands, additives, price_dict_BO_ligands, price_dict_BO_additives
-        )
-        price_rescaling_factors.append(cost_curr)
+    if cost_mod == "denominator":
+        price_rescaling_factors = []
+        for ligands, additives in zip(ligand_set, additivies_set):
+            cost_curr = function_cost_B_denominator(
+                ligands, additives, price_dict_BO_ligands, price_dict_BO_additives
+            )
+            price_rescaling_factors.append(cost_curr)
 
-    price_rescaling_factors = np.array(price_rescaling_factors)
-    acq_values_per_price = acq_values / price_rescaling_factors
-    row_sums_2 = acq_values_per_price.sum(axis=1)
+        price_rescaling_factors = np.array(price_rescaling_factors)
+        acq_values_adjusted = acq_values / price_rescaling_factors
+    elif cost_mod == "minus":
+        price_rescaling_factors = []
+        for ligands, additives in zip(ligand_set, additivies_set):
+            cost_curr = function_cost_B_minus(
+                ligands, additives, price_dict_BO_ligands, price_dict_BO_additives, acq_values
+            )
+            price_rescaling_factors.append(cost_curr)
+
+        price_rescaling_factors = np.array(price_rescaling_factors)
+        acq_values_adjusted = acq_values - price_rescaling_factors
+
+    row_sums_2 = acq_values_adjusted.sum(axis=1)
     sorted_indices = np.argsort(row_sums_2)[::-1]
 
     index_set_rearranged = index_set[sorted_indices]
-    acq_values_per_price = acq_values_per_price[sorted_indices]
+    acq_values_adjusted = acq_values_adjusted[sorted_indices]
     acq_values = acq_values[sorted_indices]
     candidates_rearranged = candidates[sorted_indices]
 
-    return index_set_rearranged, acq_values_per_price, candidates_rearranged
+    return index_set_rearranged, acq_values_adjusted, candidates_rearranged
 
 
 def opt_gibbon(
