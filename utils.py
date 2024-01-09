@@ -327,13 +327,35 @@ def compute_price_acquisition_ligands_price_per_acqfct(NEW_LIGANDS, price_dict):
     return price_per_ligand
 
 
-def function_cost(NEW_LIGANDS, price_dict):
+def function_cost_denominator(NEW_LIGANDS, price_dict):
     check_dict_ligands = cp.deepcopy(price_dict)
 
     price_per_ligand = []
     for ligand in NEW_LIGANDS:
         denominator = 1 + check_dict_ligands[ligand]
         price_per_ligand.append(denominator)
+        check_dict_ligands[ligand] = 0
+
+    price_per_ligand = np.array(price_per_ligand)
+
+    return price_per_ligand
+
+
+def function_cost_minus(NEW_LIGANDS, price_dict, acq_values):
+    acq_values_max = max(cp.deepcopy(acq_values).flatten())
+    check_dict_ligands = cp.deepcopy(price_dict)
+
+    max_value = np.mean(np.array((list((check_dict_ligands.values())))))
+
+    scaling_factor = acq_values_max / max_value
+
+    for key in check_dict_ligands:
+        check_dict_ligands[key] *= scaling_factor
+
+    price_per_ligand = []
+    for ligand in NEW_LIGANDS:
+        minus = check_dict_ligands[ligand]
+        price_per_ligand.append(minus)
         check_dict_ligands[ligand] = 0
 
     price_per_ligand = np.array(price_per_ligand)
@@ -427,7 +449,6 @@ def function_cost_B_minus(
     check_dict_ligands = cp.deepcopy(price_dict_ligands)
     check_dict_additives = cp.deepcopy(price_dict_additives)
 
-
     combined_dict = {**check_dict_ligands, **check_dict_additives}
 
     # Find the maximum value in the combined dictionary
@@ -444,7 +465,7 @@ def function_cost_B_minus(
     for key in check_dict_additives:
         check_dict_additives[key] *= scaling_factor
 
-    #p#db.set_trace()
+    # p#db.set_trace()
     price_per_ligand_additive = []
     for ligand, additive in zip(NEW_LIGANDS, NEW_ADDITIVES):
         minus = check_dict_ligands[ligand] + check_dict_additives[additive]
@@ -453,6 +474,120 @@ def function_cost_B_minus(
         check_dict_additives[additive] = 0
 
     return price_per_ligand_additive
+
+
+def function_cost_C_minus(
+    precatalysts,
+    bases,
+    solvents,
+    price_dict_BO_precatalysts,
+    price_dict_BO_bases,
+    price_dict_BO_solvents,
+    acq_values,
+):
+    """
+    Only used for gibbon_search_modified_all_per_price!
+
+    Computes the price for the batch. When a ligand is already in the inventory
+    it will have a price of 1 to make sure the acfct value is not divided by 0.
+    """
+    acq_values_max = max(cp.deepcopy(acq_values).flatten())
+    check_dict_precatalysts = cp.deepcopy(price_dict_BO_precatalysts)
+    check_dict_bases = cp.deepcopy(price_dict_BO_bases)
+    check_dict_solvents = cp.deepcopy(price_dict_BO_solvents)
+
+    combined_dict = {
+        **check_dict_precatalysts,
+        **check_dict_bases,
+        **check_dict_solvents,
+    }
+
+    # Find the maximum value in the combined dictionary
+    max_combined_value = np.mean(np.array((list((combined_dict.values())))))
+
+    # Calculate the scaling factor
+    scaling_factor = acq_values_max / max_combined_value
+
+    # Scale the values in check_dict_ligands
+    for key in check_dict_precatalysts:
+        check_dict_precatalysts[key] *= scaling_factor
+
+    # Scale the values in check_dict_additives
+    for key in check_dict_bases:
+        check_dict_bases[key] *= scaling_factor
+
+    # Scale the values in check_dict_additives
+    for key in check_dict_solvents:
+        check_dict_solvents[key] *= scaling_factor
+
+    # p#db.set_trace()
+    price_per_precatalyst_base_solvent = []
+    for precatalyst, base, solvent in zip(precatalysts, bases, solvents):
+        minus = (
+            check_dict_precatalysts[precatalyst]
+            + check_dict_bases[base]
+            + check_dict_solvents[solvent]
+        )
+        price_per_precatalyst_base_solvent.append(minus)
+        check_dict_precatalysts[precatalyst] = 0
+        check_dict_bases[base] = 0
+        check_dict_solvents[solvent] = 0
+
+    return price_per_precatalyst_base_solvent
+
+
+def function_cost_C_denominator(
+    precatalysts,
+    bases,
+    solvents,
+    price_dict_BO_precatalysts,
+    price_dict_BO_bases,
+    price_dict_BO_solvents,
+    acq_values,
+):
+    acq_values_max = max(cp.deepcopy(acq_values).flatten())
+    check_dict_precatalysts = cp.deepcopy(price_dict_BO_precatalysts)
+    check_dict_bases = cp.deepcopy(price_dict_BO_bases)
+    check_dict_solvents = cp.deepcopy(price_dict_BO_solvents)
+
+    combined_dict = {
+        **check_dict_precatalysts,
+        **check_dict_bases,
+        **check_dict_solvents,
+    }
+
+    # Find the maximum value in the combined dictionary
+    max_combined_value = np.mean(np.array((list((combined_dict.values())))))
+
+    # Calculate the scaling factor
+    scaling_factor = acq_values_max / max_combined_value
+
+    # Scale the values in check_dict_ligands
+    for key in check_dict_precatalysts:
+        check_dict_precatalysts[key] *= scaling_factor
+
+    # Scale the values in check_dict_additives
+    for key in check_dict_bases:
+        check_dict_bases[key] *= scaling_factor
+
+    # Scale the values in check_dict_additives
+    for key in check_dict_solvents:
+        check_dict_solvents[key] *= scaling_factor
+
+    price_per_precatalyst_base_solvent = []
+    for precatalyst, base, solvent in zip(precatalysts, bases, solvents):
+        denominator = (
+            1
+            + check_dict_precatalysts[precatalyst]
+            + check_dict_bases[base]
+            + check_dict_solvents[solvent]
+        )
+        price_per_precatalyst_base_solvent.append(denominator)
+        check_dict_precatalysts[precatalyst] = 0
+        check_dict_bases[base] = 0
+        check_dict_solvents[solvent] = 0
+
+    return price_per_precatalyst_base_solvent
 
 
 def compute_price_acquisition_ligands_price_per_acqfct2(NEW_LIGANDS, price_dict):
@@ -727,6 +862,87 @@ def create_data_dict_BO_2B(
     }
 
     return BO_data
+
+
+def create_data_dict_BO_2C(
+    model,
+    y_best_BO,
+    scaler_y,
+    X,
+    y,
+    X_candidate_BO,
+    y_candidate_BO,
+    y_better_BO,
+    price_dict_BO_precatalysts,
+    price_dict_BO_bases,
+    price_dict_BO_solvents,
+    PRECATALYSTS_candidate_BO,
+    BASES_candidate_BO,
+    SOLVENTS_candidate_BO,
+    running_costs_BO,
+    bounds_norm,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+    SURROGATE,
+    AQCFCT,
+):
+    BO_data = {
+        "model": model,
+        "y_best_BO": y_best_BO,
+        "scaler_y": scaler_y,
+        "X": X,
+        "y": y,
+        "N_train": len(X),
+        "X_candidate_BO": X_candidate_BO,
+        "y_candidate_BO": y_candidate_BO,
+        "y_better_BO": y_better_BO,
+        "price_dict_BO_precatalysts": price_dict_BO_precatalysts,
+        "price_dict_BO_bases": price_dict_BO_bases,
+        "price_dict_BO_solvents": price_dict_BO_solvents,
+        "PRECATALYSTS_candidate_BO": PRECATALYSTS_candidate_BO,
+        "BASES_candidate_BO": BASES_candidate_BO,
+        "SOLVENTS_candidate_BO": SOLVENTS_candidate_BO,
+        "running_costs_BO": running_costs_BO,
+        "bounds_norm": bounds_norm,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+        "surrogate": SURROGATE,
+        "acq_func": AQCFCT,
+    }
+
+    return BO_data
+
+
+def create_data_dict_RS_2C(
+    y_candidate_RANDOM,
+    y_best_RANDOM,
+    PRECATALYSTS_candidate_RANDOM,
+    BASES_candidate_RANDOM,
+    SOLVENTS_candidate_RANDOM,
+    price_dict_RANDOM_precatalysts,
+    price_dict_RANDOM_bases,
+    price_dict_RANDOM_solvents,
+    BATCH_SIZE,
+    MAX_BATCH_COST,
+    y_better_RANDOM,
+    running_costs_RANDOM,
+):
+    RANDOM_data = {
+        "y_candidate_RANDOM": y_candidate_RANDOM,
+        "y_best_RANDOM": y_best_RANDOM,
+        "PRECATALYSTS_candidate_RANDOM": PRECATALYSTS_candidate_RANDOM,
+        "BASES_candidate_RANDOM": BASES_candidate_RANDOM,
+        "SOLVENTS_candidate_RANDOM": SOLVENTS_candidate_RANDOM,
+        "price_dict_RANDOM_precatalysts": price_dict_RANDOM_precatalysts,
+        "price_dict_RANDOM_bases": price_dict_RANDOM_bases,
+        "price_dict_RANDOM_solvents": price_dict_RANDOM_solvents,
+        "BATCH_SIZE": BATCH_SIZE,
+        "MAX_BATCH_COST": MAX_BATCH_COST,
+        "y_better_RANDOM": y_better_RANDOM,
+        "running_costs_RANDOM": running_costs_RANDOM,
+    }
+
+    return RANDOM_data
 
 
 def create_data_dict_RS_2B(

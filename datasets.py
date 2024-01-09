@@ -5,6 +5,8 @@ import random
 from utils import FingerprintGenerator, inchi_to_smiles, convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
 from data.buchwald import buchwald_prices
+from data.baumgartner import baumgartner2019_prices
+import pdb
 
 
 def index_of_second_smallest(arr):
@@ -256,8 +258,6 @@ class Evaluation_data:
                 self.price_dict_ligands,
             ) = buchwald_prices()
 
-            # pdb.set_trace()
-
             self.cheapest_additive = np.array(list(self.price_dict_additives.keys()))[
                 index_of_second_smallest(
                     np.array(list(self.price_dict_additives.values()))
@@ -278,6 +278,115 @@ class Evaluation_data:
                     self.data["ligand_smiles"] == self.cheapest_ligand
                 ].tolist()
             )
+
+        elif self.dataset == "baumgartner":
+            data, self.all_price_dicts = baumgartner2019_prices()
+            self.data = data[
+                "Phenethylamine"
+            ]  # Benzamide, Phenethylamine, Aniline, Morpholine
+
+            self.data = self.data.sample(frac=1).reset_index(drop=True)
+            data_copy = self.data.copy()
+            data_copy.drop("yield", axis=1, inplace=True)
+            # check for duplicates
+            duplicates = data_copy.duplicated().any()
+
+            if duplicates:
+                print("There are duplicates in the dataset.")
+                exit()
+
+            # Compounds used
+            col_0_precatalyst = self.ftzr.featurize(self.data["precatalyst_smiles"])
+            col_1_solvent = self.ftzr.featurize(self.data["solvent_smiles"])
+            col_2_base = self.ftzr.featurize(self.data["base_smiles"])
+
+            # More Reaction conditions
+            col_3_nuc_inj = self.data["N-H nucleophile Inlet Injection (uL)"].values
+            col_4_nuc_conc = self.data["N-H nucleophile concentration (M)"].values
+            col_5_aryl_tri_conc = self.data["Aryl triflate concentration (M)"].values
+            col_6_precat_loading = self.data["Precatalyst loading in mol%"].values
+            col_7_int_std_conc = self.data[
+                "Internal Standard Concentration 1-fluoronaphthalene (g/L)"
+            ].values
+            col_8_base_conc = self.data["Base concentration (M)"].values
+            col_9_quench = self.data["Quench Outlet Injection (uL)"].values
+            col_10_temp = self.data["Temperature (degC)"].values
+
+            self.X = np.concatenate(
+                [
+                    col_0_precatalyst,
+                    col_1_solvent,
+                    col_2_base,
+                    col_3_nuc_inj.reshape(-1, 1),
+                    col_4_nuc_conc.reshape(-1, 1),
+                    col_5_aryl_tri_conc.reshape(-1, 1),
+                    col_6_precat_loading.reshape(-1, 1),
+                    col_7_int_std_conc.reshape(-1, 1),
+                    col_8_base_conc.reshape(-1, 1),
+                    col_9_quench.reshape(-1, 1),
+                    col_10_temp.reshape(-1, 1),
+                ],
+                axis=1,
+            )
+
+            self.y = self.data["yield"].to_numpy()
+            self.all_precatalysts = self.data["precatalyst_smiles"].to_numpy()
+            self.all_solvents = self.data["solvent_smiles"].to_numpy()
+            self.all_bases = self.data["base_smiles"].to_numpy()
+
+            unique_precatalysts = np.unique(self.data["precatalyst_smiles"])
+            unique_solvents = np.unique(self.data["solvent_smiles"])
+            unique_bases = np.unique(self.data["base_smiles"])
+
+            max_yield_per_precatalyst = np.array(
+                [
+                    max(
+                        self.data[
+                            self.data["precatalyst_smiles"] == unique_precatalyst
+                        ]["yield"]
+                    )
+                    for unique_precatalyst in unique_precatalysts
+                ]
+            )
+            # pdb.set_trace()
+            self.worst_precatalyst = unique_precatalysts[
+                np.argmin(max_yield_per_precatalyst)
+            ]
+
+            self.where_worst_precatalyst = np.array(
+                self.data.index[
+                    self.data["precatalyst_smiles"] == self.worst_precatalyst
+                ].tolist()
+            )
+
+            max_yield_per_bases = np.array(
+                [
+                    max(self.data[self.data["base_smiles"] == unique_base]["yield"])
+                    for unique_base in unique_bases
+                ]
+            )
+
+            self.worst_bases = unique_bases[np.argmin(max_yield_per_bases)]
+            self.where_worst_bases = np.array(
+                self.data.index[self.data["base_smiles"] == self.worst_bases].tolist()
+            )
+
+            self.feauture_labels = {
+                "names": {
+                    "precatalysts": unique_precatalysts,
+                    "solvents": unique_solvents,
+                    "bases": unique_bases,
+                },
+                "ordered_smiles": {
+                    "precatalysts": self.data["precatalyst_smiles"],
+                    "solvents": self.data["solvent_smiles"],
+                    "bases": self.data["base_smiles"],
+                },
+            }
+
+            self.price_dict_precatalyst = self.all_price_dicts["precatalyst"]
+            self.price_dict_solvent = self.all_price_dicts["solvent"]
+            self.price_dict_base = self.all_price_dicts["base"]
 
         elif self.dataset == "TwoDimFct":
             self.data = TwoDimFct()
@@ -340,7 +449,6 @@ class Evaluation_data:
                 for unique_ligand, price in zip(self.X, self.costs):
                     self.ligand_prices[ind] = price[0]
                     ind += 1
-                    # pdb.set_trace()
 
         elif self.prices == "update_all_when_bought":
             if self.dataset == "buchwald":
@@ -351,6 +459,12 @@ class Evaluation_data:
                     self.price_dict_ligands,
                 )
 
+            elif self.dataset == "baumgartner":
+                return (
+                    self.price_dict_precatalyst,
+                    self.price_dict_solvent,
+                    self.price_dict_base,
+                )
         else:
             print("Price model not implemented.")
             exit()
@@ -641,11 +755,7 @@ class Evaluation_data:
                 indices_init = np.array(
                     list(set(self.where_worst_ligand) & set(self.where_worst_additive))
                 )
-                # pdb.set_trace()
-                # indices_init = indices_init[:30]
 
-                # indices_init = indices_init[: 5]
-                # pdb.set_trace()
                 indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
                 np.random.shuffle(indices_init)
                 np.random.shuffle(indices_holdout)
@@ -678,6 +788,63 @@ class Evaluation_data:
                     self.price_dict_additives,
                 )
 
+            elif self.dataset == "baumgartner":
+                indices_init = np.array(
+                    list(
+                        set(self.where_worst_precatalyst) & set(self.where_worst_bases)
+                    )
+                )
+
+                # self.where_worst_precatalyst[: self.init_size]
+                # self.lf.where_worst_bases
+                indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+
+                np.random.shuffle(indices_holdout)
+
+                X_init, y_init = self.X[indices_init], self.y[indices_init]
+                X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+
+                self.price_dict_precatalyst[self.worst_precatalyst] = 0
+                self.price_dict_base[self.worst_bases] = 0
+
+                # solvent included by that
+                self.worst_solvents = np.unique(
+                    self.feauture_labels["ordered_smiles"]["solvents"][
+                        indices_init
+                    ].values
+                )
+
+                for solv in self.worst_solvents:
+                    self.price_dict_solvent[solv] = 0
+
+                PRECATALYSTS_INIT = self.all_precatalysts[indices_init]
+                PRECATALYSTS_HOLDOUT = self.all_precatalysts[indices_holdout]
+
+                BASES_INIT = self.all_bases[indices_init]
+                BASES_HOLDOUT = self.all_bases[indices_holdout]
+
+                SOLVENTS_INIT = self.all_solvents[indices_init]
+                SOLVENTS_HOLDOUT = self.all_solvents[indices_holdout]
+
+                X_init, y_init = convert2pytorch(X_init, y_init)
+                X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+                return (
+                    X_init,
+                    y_init,
+                    X_holdout,
+                    y_holdout,
+                    PRECATALYSTS_INIT,
+                    PRECATALYSTS_HOLDOUT,
+                    BASES_INIT,
+                    BASES_HOLDOUT,
+                    SOLVENTS_INIT,
+                    SOLVENTS_HOLDOUT,
+                    self.price_dict_precatalyst,
+                    self.price_dict_base,
+                    self.price_dict_solvent,
+                )
+
         else:
             print("Init strategy not implemented.")
             exit()
@@ -698,7 +865,6 @@ class TwoDimFct:
         random_results += np.random.normal(0, 0.2, len(random_results))
 
         random_cost = self.smooth_cost_function(random_x, random_y)
-        # pdb.set_trace()
         self.data = pd.DataFrame(
             {
                 "x": random_x,
@@ -707,10 +873,8 @@ class TwoDimFct:
                 "cost": random_cost,
             }
         )
-        # pdb.set_trace()
 
-
-    def objective(self,x, y):
+    def objective(self, x, y):
         return -(x**2 + y**2)
 
     def smooth_cost_function(self, x, y):
@@ -729,8 +893,16 @@ class TwoDimFct:
 
 
 if __name__ == "__main__":
+    # DATASET = Evaluation_data(
+    #    "buchwald", 200, "update_all_when_bought", init_strategy="worst_ligand_and_more"
+    # )
+    # DATASET.get_init_holdout_data(111)
+
     DATASET = Evaluation_data(
-        "buchwald", 200, "update_all_when_bought", init_strategy="worst_ligand_and_more"
+        "baumgartner",
+        200,
+        "update_all_when_bought",
+        init_strategy="worst_ligand_and_more",
     )
 
     DATASET.get_init_holdout_data(111)

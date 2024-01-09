@@ -5,7 +5,7 @@ import math
 
 def buchwald_prices():
     # load the Buchwald_prices.csv
-    data = pd.read_csv(
+    price_data = pd.read_csv(
         "https://raw.githubusercontent.com/janweinreich/rules_of_acquisition/main/data/ahneman2018_prices.csv"
     )
     # create a price dictionary for each compound type
@@ -14,11 +14,11 @@ def buchwald_prices():
     price_dict_base = {}
     price_dict_ligand = {}
 
-    # select all additives from  the data
-    additives = data[data.type == "additive"]
-    aryl_halides = data[data.type == "aryl_halide"]
-    bases = data[data.type == "base"]
-    ligands = data[data.type == "ligand"]
+    # select all additives from  the price_data
+    additives = price_data[price_data.type == "additive"]
+    aryl_halides = price_data[price_data.type == "aryl_halide"]
+    bases = price_data[price_data.type == "base"]
+    ligands = price_data[price_data.type == "ligand"]
 
     for smiles, cost in zip(additives.smiles, additives.cost_per_gram):
         price_dict_additives[smiles] = cost
@@ -29,15 +29,12 @@ def buchwald_prices():
         price_dict_aryl_halide[smiles] = cost
 
     price_dict_aryl_halide["zero"] = 0.0
-    
-    
+
     for smiles, cost in zip(bases.smiles, bases.cost_per_gram):
         price_dict_base[smiles] = cost
 
     for smiles, cost in zip(ligands.smiles, ligands.cost_per_gram):
         price_dict_ligand[smiles] = cost
-
-
 
     return (
         price_dict_additives,

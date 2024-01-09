@@ -123,7 +123,7 @@ if __name__ == "__main__":
                 SURROGATE,
                 exp_config["acq_func"],
             )
-            BO_data["cost_mod"] = "denominator"
+            BO_data["cost_mod"] = exp_config["cost_mod"]
 
             RANDOM_data = create_data_dict_RS_2B(
                 y_candidate_RANDOM,

@@ -8,16 +8,17 @@ from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     create_aligned_transposed_price_table,
-    create_data_dict_BO_2B,
-    create_data_dict_RS_2B,
+    create_data_dict_BO_2A,
+    create_data_dict_RS_2A,
     save_pkl,
 )
 from experiments import (
-    BO_CASE_2B_STEP,
-    RS_STEP_2B,
-    BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE,
+    BO_CASE_2A_STEP,
+    RS_STEP_2A,
+    BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE,
 )
 from datasets import Evaluation_data
+import pdb
 
 SEED = 111
 random.seed(SEED)
@@ -26,6 +27,7 @@ torch.manual_seed(SEED)
 
 if __name__ == "__main__":
     print("Starting experiments")
+    # Modify such that maximal cost gets doubled every iteration
     RESULTS = []
 
     for exp_config in benchmark:
@@ -55,20 +57,19 @@ if __name__ == "__main__":
             (
                 X_init,
                 y_init,
+                costs_init,
                 X_candidate,
                 y_candidate,
-                LIGANDS_INIT,
+                costs_candidate,
+                LIGANDS_init,
                 LIGANDS_candidate,
-                ADDITIVES_INIT,
-                ADDITIVES_candidate,
-                price_dict_ligands,
-                price_dict_additives,
+                price_dict,
             ) = DATASET.get_init_holdout_data(SEED)
 
+            print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
-
             X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(
                 y_candidate
             )
@@ -79,17 +80,11 @@ if __name__ == "__main__":
             running_costs_BO = [0]
             running_costs_RANDOM = [0]
 
-            price_dict_BO_ligands = cp.deepcopy(price_dict_ligands)
-            price_dict_RANDOM_ligands = cp.deepcopy(price_dict_ligands)
-
-            price_dict_BO_additives = cp.deepcopy(price_dict_additives)
-            price_dict_RANDOM_additives = cp.deepcopy(price_dict_additives)
+            price_dict_BO = cp.deepcopy(price_dict)
+            price_dict_RANDOM = cp.deepcopy(price_dict)
 
             LIGANDS_candidate_BO = cp.deepcopy(LIGANDS_candidate)
             LIGANDS_candidate_RANDOM = cp.deepcopy(LIGANDS_candidate)
-
-            ADDITIVES_candidate_BO = cp.deepcopy(ADDITIVES_candidate)
-            ADDITIVES_candidate_RANDOM = cp.deepcopy(ADDITIVES_candidate)
 
             y_better_BO = []
             y_better_RANDOM = []
@@ -98,12 +93,7 @@ if __name__ == "__main__":
             y_better_RANDOM.append(y_best)
             y_best_BO, y_best_RANDOM = y_best, y_best
 
-            print("Ligands")
-            print(create_aligned_transposed_price_table(price_dict_BO_ligands))
-            print("Additives")
-            print(create_aligned_transposed_price_table(price_dict_BO_additives))
-
-            BO_data = create_data_dict_BO_2B(
+            BO_data = create_data_dict_BO_2A(
                 model,
                 y_best_BO,
                 scaler_y,
@@ -113,9 +103,7 @@ if __name__ == "__main__":
                 y_candidate_BO,
                 LIGANDS_candidate_BO,
                 y_better_BO,
-                price_dict_BO_ligands,
-                price_dict_BO_additives,
-                ADDITIVES_candidate_BO,
+                price_dict_BO,
                 running_costs_BO,
                 bounds_norm,
                 BATCH_SIZE,
@@ -123,16 +111,14 @@ if __name__ == "__main__":
                 SURROGATE,
                 exp_config["acq_func"],
             )
-            
+
             BO_data["cost_mod"] = exp_config["cost_mod"]
 
-            RANDOM_data = create_data_dict_RS_2B(
+            RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
                 LIGANDS_candidate_RANDOM,
-                ADDITIVES_candidate_RANDOM,
-                price_dict_RANDOM_ligands,
-                price_dict_RANDOM_additives,
+                price_dict_RANDOM,
                 BATCH_SIZE,
                 None,
                 y_better_RANDOM,
@@ -141,11 +127,11 @@ if __name__ == "__main__":
 
             for i in range(NITER):
                 if COST_AWARE_BO == False:
-                    BO_data = BO_CASE_2B_STEP(BO_data)
+                    BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
-                    BO_data = BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data)
+                    BO_data = BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data)
 
-                RANDOM_data = RS_STEP_2B(RANDOM_data)
+                RANDOM_data = RS_STEP_2A(RANDOM_data)
 
                 print("--------------------")
                 print(
@@ -159,6 +145,7 @@ if __name__ == "__main__":
                         BO_data["N_train"],
                     )
                 )
+                print(create_aligned_transposed_price_table(price_dict_BO))
 
             y_better_BO_ALL.append(BO_data["y_better_BO"])
             y_better_RANDOM_ALL.append(RANDOM_data["y_better_RANDOM"])

@@ -8,16 +8,17 @@ from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     create_aligned_transposed_price_table,
-    create_data_dict_BO_2B,
-    create_data_dict_RS_2B,
+    create_data_dict_BO_2C,
+    create_data_dict_RS_2C,
     save_pkl,
 )
 from experiments import (
     BO_CASE_2B_STEP,
-    RS_STEP_2B,
-    BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE,
+    RS_STEP_2C,
+    BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE,
 )
 from datasets import Evaluation_data
+import pdb
 
 SEED = 111
 random.seed(SEED)
@@ -57,14 +58,17 @@ if __name__ == "__main__":
                 y_init,
                 X_candidate,
                 y_candidate,
-                LIGANDS_INIT,
-                LIGANDS_candidate,
-                ADDITIVES_INIT,
-                ADDITIVES_candidate,
-                price_dict_ligands,
-                price_dict_additives,
+                PRECATALYSTS_INIT,
+                PRECATALYSTS_candidate,
+                BASES_INIT,
+                BASES_candidate,
+                SOLVENTS_INIT,
+                SOLVENTS_candidate,
+                price_dict_precatalysts,
+                price_dict_bases,
+                price_dict_solvents,
             ) = DATASET.get_init_holdout_data(SEED)
-
+            #pdb.set_trace()
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
@@ -79,17 +83,23 @@ if __name__ == "__main__":
             running_costs_BO = [0]
             running_costs_RANDOM = [0]
 
-            price_dict_BO_ligands = cp.deepcopy(price_dict_ligands)
-            price_dict_RANDOM_ligands = cp.deepcopy(price_dict_ligands)
+            price_dict_BO_precatalysts = cp.deepcopy(price_dict_precatalysts)
+            price_dict_RANDOM_precatalysts = cp.deepcopy(price_dict_precatalysts)
 
-            price_dict_BO_additives = cp.deepcopy(price_dict_additives)
-            price_dict_RANDOM_additives = cp.deepcopy(price_dict_additives)
+            price_dict_BO_bases = cp.deepcopy(price_dict_bases)
+            price_dict_RANDOM_bases = cp.deepcopy(price_dict_bases)
 
-            LIGANDS_candidate_BO = cp.deepcopy(LIGANDS_candidate)
-            LIGANDS_candidate_RANDOM = cp.deepcopy(LIGANDS_candidate)
+            price_dict_BO_solvents = cp.deepcopy(price_dict_solvents)
+            price_dict_RANDOM_solvents = cp.deepcopy(price_dict_solvents)
 
-            ADDITIVES_candidate_BO = cp.deepcopy(ADDITIVES_candidate)
-            ADDITIVES_candidate_RANDOM = cp.deepcopy(ADDITIVES_candidate)
+            PRECATALYSTS_candidate_BO = cp.deepcopy(PRECATALYSTS_candidate)
+            PRECATALYSTS_candidate_RANDOM = cp.deepcopy(PRECATALYSTS_candidate)
+
+            BASES_candidate_BO = cp.deepcopy(BASES_candidate)
+            BASES_candidate_RANDOM = cp.deepcopy(BASES_candidate)
+
+            SOLVENTS_candidate_BO = cp.deepcopy(SOLVENTS_candidate)
+            SOLVENTS_candidate_RANDOM = cp.deepcopy(SOLVENTS_candidate)
 
             y_better_BO = []
             y_better_RANDOM = []
@@ -98,12 +108,14 @@ if __name__ == "__main__":
             y_better_RANDOM.append(y_best)
             y_best_BO, y_best_RANDOM = y_best, y_best
 
-            print("Ligands")
-            print(create_aligned_transposed_price_table(price_dict_BO_ligands))
-            print("Additives")
-            print(create_aligned_transposed_price_table(price_dict_BO_additives))
+            print("PRECATALYSTS")
+            print(create_aligned_transposed_price_table(price_dict_BO_precatalysts))
+            print("BASES")
+            print(create_aligned_transposed_price_table(price_dict_BO_bases))
+            print("SOLVENTS")
+            print(create_aligned_transposed_price_table(price_dict_BO_solvents))
 
-            BO_data = create_data_dict_BO_2B(
+            BO_data = create_data_dict_BO_2C(
                 model,
                 y_best_BO,
                 scaler_y,
@@ -111,11 +123,13 @@ if __name__ == "__main__":
                 y,
                 X_candidate_BO,
                 y_candidate_BO,
-                LIGANDS_candidate_BO,
                 y_better_BO,
-                price_dict_BO_ligands,
-                price_dict_BO_additives,
-                ADDITIVES_candidate_BO,
+                price_dict_BO_precatalysts,
+                price_dict_BO_bases,
+                price_dict_BO_solvents,
+                PRECATALYSTS_candidate_BO,
+                BASES_candidate_BO,
+                SOLVENTS_candidate_BO,
                 running_costs_BO,
                 bounds_norm,
                 BATCH_SIZE,
@@ -123,16 +137,18 @@ if __name__ == "__main__":
                 SURROGATE,
                 exp_config["acq_func"],
             )
-            
+
             BO_data["cost_mod"] = exp_config["cost_mod"]
 
-            RANDOM_data = create_data_dict_RS_2B(
+            RANDOM_data = create_data_dict_RS_2C(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
-                LIGANDS_candidate_RANDOM,
-                ADDITIVES_candidate_RANDOM,
-                price_dict_RANDOM_ligands,
-                price_dict_RANDOM_additives,
+                PRECATALYSTS_candidate_RANDOM,
+                BASES_candidate_RANDOM,
+                SOLVENTS_candidate_RANDOM,
+                price_dict_RANDOM_precatalysts,
+                price_dict_RANDOM_bases,
+                price_dict_RANDOM_solvents,
                 BATCH_SIZE,
                 None,
                 y_better_RANDOM,
@@ -143,11 +159,12 @@ if __name__ == "__main__":
                 if COST_AWARE_BO == False:
                     BO_data = BO_CASE_2B_STEP(BO_data)
                 else:
-                    BO_data = BO_AWARE_SCAN_FAST_CASE_2B_STEP_ACQ_PRICE(BO_data)
+                    BO_data = BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE(BO_data)
 
-                RANDOM_data = RS_STEP_2B(RANDOM_data)
+                RANDOM_data = RS_STEP_2C(RANDOM_data)
 
                 print("--------------------")
+
                 print(
                     "# |{}/{}|\tBO {:.2f}\tRS {:.2f} \tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
                         i + 1,

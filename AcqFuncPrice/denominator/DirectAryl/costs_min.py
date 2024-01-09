@@ -65,7 +65,6 @@ if __name__ == "__main__":
                 LIGANDS_candidate,
                 price_dict,
             ) = DATASET.get_init_holdout_data(SEED)
-
             print(create_aligned_transposed_price_table(price_dict))
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
@@ -112,6 +111,8 @@ if __name__ == "__main__":
                 exp_config["acq_func"],
             )
 
+            BO_data["cost_mod"] = exp_config["cost_mod"]
+            
             RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
