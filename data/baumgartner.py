@@ -1,4 +1,5 @@
 import pandas as pd
+#import matplotlib.pyplot as plt
 
 def baumgartner2019_prices():
     price_data = pd.read_csv(
@@ -60,6 +61,11 @@ def baumgartner2019_prices():
     for nucleophile in nucleophiles:
         dataframes[nucleophile] = data[data["N-H nucleophile "] == nucleophile]
 
+
+    #plt.hist(data["yield"], bins=20)
+    #plt.xlabel("Yield")
+    #plt.ylabel("Count")
+    #plt.show()
     return dataframes, all_price_dicts
 
 

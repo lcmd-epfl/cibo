@@ -13,7 +13,7 @@ from utils import (
     save_pkl,
 )
 from experiments import (
-    BO_CASE_2B_STEP,
+    BO_CASE_2C_STEP,
     RS_STEP_2C,
     BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE,
 )
@@ -39,7 +39,8 @@ if __name__ == "__main__":
             exp_config["ntrain"],
             exp_config["prices"],
             init_strategy=exp_config["init_strategy"],
-        )
+            nucleophile=exp_config["nucleophile"])
+        
         bounds_norm = DATASET.bounds_norm
         N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
@@ -157,7 +158,7 @@ if __name__ == "__main__":
 
             for i in range(NITER):
                 if COST_AWARE_BO == False:
-                    BO_data = BO_CASE_2B_STEP(BO_data)
+                    BO_data = BO_CASE_2C_STEP(BO_data)
                 else:
                     BO_data = BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE(BO_data)
 
@@ -218,5 +219,5 @@ if __name__ == "__main__":
     print("Saving results")
     save_pkl(
         RESULTS,
-        "results.pkl",
+        "results_{}.pkl".format(exp_config["nucleophile"]),
     )

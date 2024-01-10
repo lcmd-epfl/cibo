@@ -34,7 +34,9 @@ def index_of_second_smallest(arr):
 
 
 class Evaluation_data:
-    def __init__(self, dataset, init_size, prices, init_strategy="values"):
+    def __init__(
+        self, dataset, init_size, prices, init_strategy="values", nucleophile=None
+    ):
         self.dataset = dataset
         self.init_strategy = init_strategy
         self.init_size = init_size
@@ -44,6 +46,12 @@ class Evaluation_data:
         self.radius = 2
 
         self.ftzr = FingerprintGenerator(nBits=self.ECFP_size, radius=self.radius)
+
+        if nucleophile is None:
+            self.nucleophile = "Aniline"
+        else:
+            self.nucleophile = nucleophile
+
         self.get_raw_dataset()
 
         rep_size = self.X.shape[1]
@@ -281,9 +289,13 @@ class Evaluation_data:
 
         elif self.dataset == "baumgartner":
             data, self.all_price_dicts = baumgartner2019_prices()
+            self.ECFP_size = 256
+            self.radius = 2
+
+            self.ftzr = FingerprintGenerator(nBits=self.ECFP_size, radius=self.radius)
             self.data = data[
-                "Phenethylamine"
-            ]  # Benzamide, Phenethylamine, Aniline, Morpholine
+                self.nucleophile
+            ]  # Benzamide (g00d), Phenethylamine (good), Aniline (good), Morpholine (meh)
 
             self.data = self.data.sample(frac=1).reset_index(drop=True)
             data_copy = self.data.copy()
@@ -295,36 +307,23 @@ class Evaluation_data:
                 print("There are duplicates in the dataset.")
                 exit()
 
-            # Compounds used
             col_0_precatalyst = self.ftzr.featurize(self.data["precatalyst_smiles"])
             col_1_solvent = self.ftzr.featurize(self.data["solvent_smiles"])
             col_2_base = self.ftzr.featurize(self.data["base_smiles"])
-
-            # More Reaction conditions
-            col_3_nuc_inj = self.data["N-H nucleophile Inlet Injection (uL)"].values
-            col_4_nuc_conc = self.data["N-H nucleophile concentration (M)"].values
-            col_5_aryl_tri_conc = self.data["Aryl triflate concentration (M)"].values
-            col_6_precat_loading = self.data["Precatalyst loading in mol%"].values
-            col_7_int_std_conc = self.data[
-                "Internal Standard Concentration 1-fluoronaphthalene (g/L)"
-            ].values
             col_8_base_conc = self.data["Base concentration (M)"].values
-            col_9_quench = self.data["Quench Outlet Injection (uL)"].values
             col_10_temp = self.data["Temperature (degC)"].values
+            col_11_base_eq = self.data["Base equivalents"].values
+            col_12_residence_time = self.data["Residence Time Actual (s)"].values
 
             self.X = np.concatenate(
                 [
                     col_0_precatalyst,
                     col_1_solvent,
                     col_2_base,
-                    col_3_nuc_inj.reshape(-1, 1),
-                    col_4_nuc_conc.reshape(-1, 1),
-                    col_5_aryl_tri_conc.reshape(-1, 1),
-                    col_6_precat_loading.reshape(-1, 1),
-                    col_7_int_std_conc.reshape(-1, 1),
                     col_8_base_conc.reshape(-1, 1),
-                    col_9_quench.reshape(-1, 1),
                     col_10_temp.reshape(-1, 1),
+                    col_11_base_eq.reshape(-1, 1),
+                    col_12_residence_time.reshape(-1, 1),
                 ],
                 axis=1,
             )
@@ -348,7 +347,7 @@ class Evaluation_data:
                     for unique_precatalyst in unique_precatalysts
                 ]
             )
-            # pdb.set_trace()
+
             self.worst_precatalyst = unique_precatalysts[
                 np.argmin(max_yield_per_precatalyst)
             ]
@@ -590,72 +589,6 @@ class Evaluation_data:
 
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
-        elif self.init_strategy == "half":
-            idx_max_y = np.argmax(self.y)
-
-            # Step 2: Retrieve the corresponding vector in X
-            X_max_y = self.X[idx_max_y]
-
-            # Step 3: Compute the distance between each row in X and X_max_y
-            # Using Euclidean distance as an example
-            distances = np.linalg.norm(self.X - X_max_y, axis=1)
-            self.init_size = int(len(distances) / 2)
-            indices_init = np.argsort(distances)[::-1][: self.init_size]
-
-            # Step 5: Get the 100 entries corresponding to these indices from X and y
-            X_init = self.X[indices_init]
-            y_init = self.y[indices_init]
-
-            # Step 6: Get the remaining entries
-            indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
-
-            np.random.shuffle(indices_holdout)
-            X_holdout = self.X[indices_holdout]
-            y_holdout = self.y[indices_holdout]
-
-            self.costs = 0
-            costs_init = np.zeros_like(y_init).reshape(-1, 1)
-            # create an array of len y_holdout with 50 percent 0 and 50 percent 1
-            costs_holdout = np.random.randint(2, size=len(y_holdout)).reshape(-1, 1)
-            costs_holdout[np.argmax(y_holdout)] = np.array([1])
-
-            X_init, y_init = convert2pytorch(X_init, y_init)
-            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
-
-            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
-
-        elif self.init_strategy == "furthest":
-            """
-            Select molecules furthest away the representation of the global optimum.
-            """
-            idx_max_y = np.argmax(self.y)
-
-            # Step 2: Retrieve the corresponding vector in X
-            X_max_y = self.X[idx_max_y]
-
-            # Step 3: Compute the distance between each row in X and X_max_y
-            # Using Euclidean distance as an example
-            distances = np.linalg.norm(self.X - X_max_y, axis=1)
-
-            # Step 4: Sort these distances and get the indices of the 100 largest distances
-            indices_init = np.argsort(distances)[::-1][: self.init_size]
-
-            # Step 5: Get the 100 entries corresponding to these indices from X and y
-            X_init = self.X[indices_init]
-            y_init = self.y[indices_init]
-
-            # Step 6: Get the remaining entries
-            indices_holdout = np.setdiff1d(np.arange(self.X.shape[0]), indices_init)
-            np.random.shuffle(indices_holdout)
-            X_holdout = self.X[indices_holdout]
-            y_holdout = self.y[indices_holdout]
-            costs_init = self.costs[indices_init]
-            costs_holdout = self.costs[indices_holdout]
-
-            X_init, y_init = convert2pytorch(X_init, y_init)
-            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
-
-            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
         elif self.init_strategy == "worst_ligand":
             indices_init = self.where_worst_ligand[: self.init_size]
@@ -893,11 +826,7 @@ class TwoDimFct:
 
 
 if __name__ == "__main__":
-    # DATASET = Evaluation_data(
-    #    "buchwald", 200, "update_all_when_bought", init_strategy="worst_ligand_and_more"
-    # )
-    # DATASET.get_init_holdout_data(111)
-
+    
     DATASET = Evaluation_data(
         "baumgartner",
         200,

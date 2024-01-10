@@ -34,7 +34,7 @@ bounds_norm = DATASET.bounds_norm
 fit_y = False
 
 model, scaler_y = update_model(
-    X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y, FIT_METHOD=True
+    X_init, y_init, bounds_norm, kernel_type="Linear", fit_y=fit_y, FIT_METHOD=True
 )
 
 
@@ -59,6 +59,9 @@ y_candidate = y_candidate.numpy().flatten()
 r2 = r2_score(y_pred, y_candidate)
 mae = mean_absolute_error(y_candidate, y_pred)
 
+
+print("train size = ", len(X_init))
+print("test size = ", len(X_candidate))
 print("r2 = ", r2)
 print("N = ", len(X_init), "MAE = ", mae)
 
@@ -70,6 +73,8 @@ if exp_config["dataset"] == "BMS":
     dataset = "C-H Acrylation"
 elif exp_config["dataset"] == "buchwald":
     dataset = "Buchwald"
+elif exp_config["dataset"] == "baumgartner":
+    dataset = "Baumgartner"
 else:
     raise ValueError("Unknown dataset")
 
