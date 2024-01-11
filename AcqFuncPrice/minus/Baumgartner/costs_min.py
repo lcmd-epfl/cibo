@@ -219,5 +219,5 @@ if __name__ == "__main__":
     print("Saving results")
     save_pkl(
         RESULTS,
-        "results_{}.pkl".format(exp_config["nucleophile"]),
+        "results.pkl",
     )

@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import warnings
-import pdb
 import gpytorch
 from gpytorch.kernels import Kernel
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
