@@ -24,16 +24,16 @@ BO_COA_COSTS = np.mean(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0)
 BO_YIELD = np.mean(np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0)
 BO_COSTS = np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
 
-
+pdb.set_trace()
 plt.style.use("seaborn-poster")  # Apply a global aesthetic style.
 
 fig1, ax1 = plt.subplots(2, 1, figsize=(7, 7))
 
-ax1[0].plot(ITERATIONS, BO_COA_YIELD, label="BO-COA", color="red", marker="o", ls="--")
-ax1[1].plot(ITERATIONS, BO_COA_COSTS, label="BO-COA", color="red", marker="o", ls="--")
+ax1[0].plot(ITERATIONS, BO_COA_YIELD, label="BO-COA", color="red", marker="o", ls="--", alpha=0.5)
+ax1[1].plot(ITERATIONS, BO_COA_COSTS, label="BO-COA", color="red", marker="o", ls="--", alpha=0.5)
 
-ax1[0].plot(ITERATIONS, BO_YIELD, label="BO", color="blue", marker="o", ls="--")
-ax1[1].plot(ITERATIONS, BO_COSTS, label="BO", color="blue", marker="o", ls="--")
+ax1[0].plot(ITERATIONS, BO_YIELD, label="BO", color="blue", marker="o", ls="--", alpha=0.5)
+ax1[1].plot(ITERATIONS, BO_COSTS, label="BO", color="blue", marker="o", ls="--", alpha=0.5)
 
 
 # make x axis ticks integers

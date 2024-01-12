@@ -8,7 +8,6 @@ import torch
 from sklearn.ensemble import RandomForestRegressor
 from botorch_ext import ForestSurrogate
 import random
-import pdb
 
 np.random.seed(777)
 random.seed(777)
@@ -57,6 +56,8 @@ if exp_config["dataset"] == "BMS":
     dataset = "C-H Acrylation"
 elif exp_config["dataset"] == "buchwald":
     dataset = "Buchwald"
+elif exp_config["dataset"] == "baumgartner":
+    dataset = "Baumgartner"
 else:
     raise ValueError("Unknown dataset")
 
