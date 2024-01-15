@@ -1,0 +1,51 @@
+Renaming of functions
+
+
+- DirectArylation
+
+
+
+
+
+    create_data_dict_BO_2A           - data_dict_BO_LIGAND
+    create_data_dict_RS_2A           - data_dict_RS_LIGAND
+
+
+    BO_CASE_2A_STEP                             - BO_LIGAND      +
+    BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE    - BO_COI_LIGAND  +
+    RS_STEP_2A                                  - RS_LIGAND +
+
+
+
+
+
+
+
+    opt_qNEI                                    - NEI_acqfct + 
+    gibbon_search                               - GIBBON_acqfct + 
+
+
+
+
+
+    opt_acqfct_cost                             - acqfct_COI_LIGAND + 
+
+
+
+
+
+
+
+
+- Baumgartner
+
+
+
+BO_CASE_2C_STEP                                 - BO_LIGAND_BASE_SOLVENT + 
+BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE       - BO_COI_LIGAND_BASE_SOLVENT + 
+RS_STEP_2C                                      - RS_LIGAND_BASE_SOLVENT + 
+
+
+
+
+opt_acqfct_cost_C                   - acqfct_COI_LIGAND_BASE_SOLVENT
