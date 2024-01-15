@@ -1,0 +1,46 @@
+name,smiles,quantity (g),price (CHF),mw,cost_per_gram,cost_per_mol,type,source
+XPhos,CC(C)C1=CC(C(C)C)=CC(C(C)C)=C1C2=C(P(C3CCCCC3)C4CCCCC4)C=CC=C2,1,63.4,476.72,63.4,30224.048,ligand,sigma aldrich
+t-BuXPhos,CC(C)C(C=C(C(C)C)C=C1C(C)C)=C1C2=CC=CC=C2P(C(C)(C)C)C(C)(C)C,1,65.2,424.64,65.2,27686.528,ligand,sigma aldrich
+t-BuBrettPhos,CC(C)C1=CC(C(C)C)=CC(C(C)C)=C1C2=C(P(C(C)(C)C)C(C)(C)C)C(OC)=CC=C2OC,1,548,484.69,548,265610.12,ligand,sigma aldrich
+AdBrettPhos,CC(C1=C(C2=C(OC)C=CC(OC)=C2P(C34CC5CC(C4)CC(C5)C3)C67CC8CC(C7)CC(C8)C6)C(C(C)C)=CC(C(C)C)=C1)C,1,1120,640.92,1120,717830.4,ligand,sigma aldrich
+5-phenylisoxazole,o1nccc1c2ccccc2,1,81.1,145.16,81.1,11772.476,additive,sigma aldrich
+ethyl-3-methylisoxazole-5-carboxylate,CCOC(=O)c1onc(C)c1,1,176.66,155.15,176.66,27408.799,additive,sigma aldrich
+ethyl-5-methylisoxazole-3-carboxylate,CCOC(=O)c1cc(C)on1,1,36.76,155.15,36.76,5703.314,additive,fisher scientific
+4-phenylisoxazole,o1cc(cn1)c2ccccc2,1,838.68,145.16,838.68,121742.7888,additive,sigma aldrich
+3-phenylisoxazole,o1ccc(n1)c2ccccc2,1,364,145.16,364,52838.24,additive,sigma aldrich
+3-methylisoxazole,Cc1ccon1,1,483.52,83.09,483.52,40175.6768,additive,sigma aldrich
+"5-Phenyl-1,2,4-oxadiazole",c1ccc(-c2ncno2)cc1,1,80.47,192.236,80.47,15469.23092,additive,fisher scientific
+5-methylisoxazole,Cc1oncc1,1,101.4,83.09,101.4,8425.326,additive,sigma aldrich
+benzo[c]isoxazole,o1cc2ccccc2n1,1,36.1,119.12,36.1,4300.232,additive,sigma aldrich
+"3,5-dimethylisoxazole",Cc1onc(C)c1,1,83.6,97.12,83.6,8119.232,additive,sigma aldrich
+methyl-isoxazole-5-carboxylate,COC(=O)c1oncc1,5,285.11,127.1,57.022,7247.4962,additive,sigma aldrich
+ethyl-isoxazole-3-carboxylate,CCOC(=O)c1ccon1,1,71.46,141.13,71.46,10085.1498,additive,sigma aldrich
+ethyl-5-methylisoxazole-4-carboxylate,CCOC(=O)c1cnoc1C,2,33.07,155.153,16.535,2565.454855,additive,fisher scientific
+ethyl-isoxazole-4-carboxylate,CCOC(=O)c1conc1,1,238.44,141.13,238.44,33651.0372,additive,sigma aldrich
+benzo[d]isoxazole,o1ncc2ccccc12,5.87,136,119.12,23.16865417,2759.850085,additive,sigma aldrich
+ethyl-3-methoxyisoxazole-5-carboxylate,CCOC(=O)c1onc(OC)c1,1,138.6,171.15,138.6,23721.39,additive,Chemie Brunschwig AG - fluorochem
+3-methyl-5-phenylisoxazole,Cc1cc(on1)c2ccccc2,1,28.2,159.18,28.2,4488.876,additive,Chemie Brunschwig AG - fluorochem
+"N,N-dibenzylisoxazol-3-amine",C(N(Cc1ccccc1)c2ccon2)c3ccccc3,1,53.44,264.33,53.44,14125.7952,additive,made-up
+methyl-5-(furan-2-yl)isoxazole-3-carboxylate,COC(=O)c1cc(on1)c2occc2,1,126,193.16,126,24338.16,additive,sigma aldrich
+"5-(2,6-difluorophenyl)isoxazole",Fc1cccc(F)c1c2oncc2,1,252.04,181.14,252.04,45654.5256,additive,sigma aldrich
+"N,N-dibenzylisoxazol-5-amine",C(N(Cc1ccccc1)c2oncc2)c3ccccc3,1,143.2,264.33,143.2,37852.056,additive,made-up
+5-methyl-3-(1H-pyrrol-1-yl)isoxazole,Cc1onc(c1)n2cccc2,1,395.98,148.16,395.98,58668.3968,additive,sigma aldrich
+methyl-5-(thiophen-2-yl)isoxazole-3-carboxylate,COC(=O)c1cc(on1)c2sccc2,1,216,209.22,216,45191.52,additive,sigma aldrich
+P2Et,CN(C)P(N(C)C)(N(C)C)=NP(N(C)C)(N(C)C)=NCC,1.02,136,339.4,133.3333333,45253.33333,base,sigma aldrich
+BTMG,CN(C)/C(N(C)C)=N\C(C)(C)C,4.2,182,171.28,43.33333333,7422.133333,base,sigma aldrich
+MTBD,CN1CCCN2CCCN=C12,1.067,139,153.22,130.2717901,19960.24367,base,sigma aldrich
+1-chloro-4-(trifluoromethyl)benzene,FC(F)(F)c1ccc(Cl)cc1,100,34.4,180.55,0.344,62.1092,aryl_halide,sigma aldrich
+1-bromo-4-(trifluoromethyl)benzene,FC(F)(F)c1ccc(Br)cc1,5,72.9,225.01,14.58,3280.6458,aryl_halide,sigma aldrich
+1-iodo-4-(trifluoromethyl)benzene,FC(F)(F)c1ccc(I)cc1,1,77,272.01,77,20944.77,aryl_halide,sigma aldrich
+1-chloro-4-methoxybenzene,COc1ccc(Cl)cc1,25,62.8,142.58,2.512,358.16096,aryl_halide,sigma aldrich
+1-bromo-4-methoxybenzene,COc1ccc(Br)cc1,50,35.7,187.03,0.714,133.53942,aryl_halide,sigma aldrich
+1-iodo-4-methoxybenzene,COc1ccc(I)cc1,25,52.7,234.03,2.108,493.33524,aryl_halide,sigma aldrich
+1-chloro-4-ethylbenzene,CCc1ccc(Cl)cc1,5,146,140.61,29.2,4105.812,aryl_halide,sigma aldrich
+1-bromo-4-ethylbenzene,CCc1ccc(Br)cc1,10,46.64,185.064,4.664,863.138496,aryl_halide,fisher scientific
+1-ethyl-4-iodobenzene,CCc1ccc(I)cc1,1,94.04,232.06,94.04,21822.9224,aryl_halide,sigma aldrich
+2-chloropyridine,Clc1ccccn1,5,19,113.54,3.8,431.452,aryl_halide,sigma aldrich
+2-bromopyridine,Brc1ccccn1,25,61.3,158,2.452,387.416,aryl_halide,sigma aldrich
+2-iodopyridine,Ic1ccccn1,5,199,205,39.8,8159,aryl_halide,sigma aldrich
+3-chloropyridine,Clc1cccnc1,25,69.8,113.54,2.792,317.00368,aryl_halide,sigma aldrich
+3-bromopyridine,Brc1cccnc1,5,42.9,158,8.58,1355.64,aryl_halide,sigma aldrich
+3-iodopyridine,Ic1cccnc1,1,61.2,205,61.2,12546,aryl_halide,sigma aldrich
