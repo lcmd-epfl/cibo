@@ -8,16 +8,16 @@ from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     create_aligned_transposed_price_table,
-    data_dict_BO_LIGAND,
-    data_dict_RS_LIGAND,
+    create_data_dict_BO_2C,
+    create_data_dict_RS_2C,
     save_pkl,
 )
 from experiments import (
-    BO_LIGAND,
-    BO_COI_LIGAND,
-    RS_LIGAND,
+    BO_CASE_2C_STEP,
+    RS_STEP_2C,
+    BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE,
 )
-from data.datasets import Evaluation_data
+from datasets import Evaluation_data
 import pdb
 
 SEED = 111
@@ -27,7 +27,6 @@ torch.manual_seed(SEED)
 
 if __name__ == "__main__":
     print("Starting experiments")
-    # Modify such that maximal cost gets doubled every iteration
     RESULTS = []
 
     for exp_config in benchmark:
@@ -40,7 +39,8 @@ if __name__ == "__main__":
             exp_config["ntrain"],
             exp_config["prices"],
             init_strategy=exp_config["init_strategy"],
-        )
+            nucleophile=exp_config["nucleophile"])
+        
         bounds_norm = DATASET.bounds_norm
         N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
@@ -57,19 +57,23 @@ if __name__ == "__main__":
             (
                 X_init,
                 y_init,
-                costs_init,
                 X_candidate,
                 y_candidate,
-                costs_candidate,
-                LIGANDS_init,
-                LIGANDS_candidate,
-                price_dict,
+                PRECATALYSTS_INIT,
+                PRECATALYSTS_candidate,
+                BASES_INIT,
+                BASES_candidate,
+                SOLVENTS_INIT,
+                SOLVENTS_candidate,
+                price_dict_precatalysts,
+                price_dict_bases,
+                price_dict_solvents,
             ) = DATASET.get_init_holdout_data(SEED)
-
-            print(create_aligned_transposed_price_table(price_dict))
+            #pdb.set_trace()
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
+
             X_candidate_FULL, y_candidate_FULL = cp.deepcopy(X_candidate), cp.deepcopy(
                 y_candidate
             )
@@ -80,11 +84,23 @@ if __name__ == "__main__":
             running_costs_BO = [0]
             running_costs_RANDOM = [0]
 
-            price_dict_BO = cp.deepcopy(price_dict)
-            price_dict_RANDOM = cp.deepcopy(price_dict)
+            price_dict_BO_precatalysts = cp.deepcopy(price_dict_precatalysts)
+            price_dict_RANDOM_precatalysts = cp.deepcopy(price_dict_precatalysts)
 
-            LIGANDS_candidate_BO = cp.deepcopy(LIGANDS_candidate)
-            LIGANDS_candidate_RANDOM = cp.deepcopy(LIGANDS_candidate)
+            price_dict_BO_bases = cp.deepcopy(price_dict_bases)
+            price_dict_RANDOM_bases = cp.deepcopy(price_dict_bases)
+
+            price_dict_BO_solvents = cp.deepcopy(price_dict_solvents)
+            price_dict_RANDOM_solvents = cp.deepcopy(price_dict_solvents)
+
+            PRECATALYSTS_candidate_BO = cp.deepcopy(PRECATALYSTS_candidate)
+            PRECATALYSTS_candidate_RANDOM = cp.deepcopy(PRECATALYSTS_candidate)
+
+            BASES_candidate_BO = cp.deepcopy(BASES_candidate)
+            BASES_candidate_RANDOM = cp.deepcopy(BASES_candidate)
+
+            SOLVENTS_candidate_BO = cp.deepcopy(SOLVENTS_candidate)
+            SOLVENTS_candidate_RANDOM = cp.deepcopy(SOLVENTS_candidate)
 
             y_better_BO = []
             y_better_RANDOM = []
@@ -93,7 +109,14 @@ if __name__ == "__main__":
             y_better_RANDOM.append(y_best)
             y_best_BO, y_best_RANDOM = y_best, y_best
 
-            BO_data = data_dict_BO_LIGAND(
+            print("PRECATALYSTS")
+            print(create_aligned_transposed_price_table(price_dict_BO_precatalysts))
+            print("BASES")
+            print(create_aligned_transposed_price_table(price_dict_BO_bases))
+            print("SOLVENTS")
+            print(create_aligned_transposed_price_table(price_dict_BO_solvents))
+
+            BO_data = create_data_dict_BO_2C(
                 model,
                 y_best_BO,
                 scaler_y,
@@ -101,9 +124,13 @@ if __name__ == "__main__":
                 y,
                 X_candidate_BO,
                 y_candidate_BO,
-                LIGANDS_candidate_BO,
                 y_better_BO,
-                price_dict_BO,
+                price_dict_BO_precatalysts,
+                price_dict_BO_bases,
+                price_dict_BO_solvents,
+                PRECATALYSTS_candidate_BO,
+                BASES_candidate_BO,
+                SOLVENTS_candidate_BO,
                 running_costs_BO,
                 bounds_norm,
                 BATCH_SIZE,
@@ -114,11 +141,15 @@ if __name__ == "__main__":
 
             BO_data["cost_mod"] = exp_config["cost_mod"]
 
-            RANDOM_data = data_dict_RS_LIGAND(
+            RANDOM_data = create_data_dict_RS_2C(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
-                LIGANDS_candidate_RANDOM,
-                price_dict_RANDOM,
+                PRECATALYSTS_candidate_RANDOM,
+                BASES_candidate_RANDOM,
+                SOLVENTS_candidate_RANDOM,
+                price_dict_RANDOM_precatalysts,
+                price_dict_RANDOM_bases,
+                price_dict_RANDOM_solvents,
                 BATCH_SIZE,
                 None,
                 y_better_RANDOM,
@@ -127,13 +158,14 @@ if __name__ == "__main__":
 
             for i in range(NITER):
                 if COST_AWARE_BO == False:
-                    BO_data = BO_LIGAND(BO_data)
+                    BO_data = BO_CASE_2C_STEP(BO_data)
                 else:
-                    BO_data = BO_COI_LIGAND(BO_data)
+                    BO_data = BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE(BO_data)
 
-                RANDOM_data = RS_LIGAND(RANDOM_data)
+                RANDOM_data = RS_STEP_2C(RANDOM_data)
 
                 print("--------------------")
+
                 print(
                     "# |{}/{}|\tBO {:.2f}\tRS {:.2f} \tSUM(COSTS BO): ${}\tSUM(COSTS RS): ${}\tN_train {}".format(
                         i + 1,
@@ -145,7 +177,6 @@ if __name__ == "__main__":
                         BO_data["N_train"],
                     )
                 )
-                print(create_aligned_transposed_price_table(price_dict_BO))
 
             y_better_BO_ALL.append(BO_data["y_better_BO"])
             y_better_RANDOM_ALL.append(RANDOM_data["y_better_RANDOM"])

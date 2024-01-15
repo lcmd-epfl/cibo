@@ -4,33 +4,8 @@ import torch
 import random
 from utils import FingerprintGenerator, inchi_to_smiles, convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
-from data.buchwald import buchwald_prices
-from data.baumgartner import baumgartner2019_prices
-import pdb
-
-
-def index_of_second_smallest(arr):
-    # Convert to numpy array if not already
-    arr = np.array(arr)
-
-    # Check if array has at least two elements
-    if len(arr) < 2:
-        return None  # Or raise an error
-
-    # Find the index of the minimum value
-    min_index = np.argmin(arr)
-
-    # Temporarily set the minimum value to a very high value
-    original_min = arr[min_index]
-    arr[min_index] = np.inf
-
-    # Find the new minimum, which is the second smallest
-    second_min_index = np.argmin(arr)
-
-    # Revert the change to the original array
-    arr[min_index] = original_min
-
-    return second_min_index
+from data.baumgartner import baumgartner
+import copy as cp
 
 
 class Evaluation_data:
@@ -106,7 +81,6 @@ class Evaluation_data:
             col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
             col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1, 1)
             col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1, 1)
-
             self.X = np.concatenate(
                 [
                     col_0_base,
@@ -117,6 +91,7 @@ class Evaluation_data:
                 ],
                 axis=1,
             )
+            self.experiments = cp.deepcopy(self.X)
 
             self.y = self.data["Yield"].to_numpy()
             self.all_ligands = self.data["Ligand_SMILES"].to_numpy()
@@ -136,7 +111,6 @@ class Evaluation_data:
             )
 
             self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
-
             # make price of worst ligand 0 because already in the inventory
             self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
 
@@ -163,238 +137,26 @@ class Evaluation_data:
                 },
             }
 
-        elif self.dataset == "buchwald":
-            dataset_url = "https://raw.githubusercontent.com/doylelab/rxnpredict/master/data_table.csv"
-            # load url directly into pandas dataframe
-            self.data = pd.read_csv(dataset_url)
-            self.data = self.data.sample(frac=1).reset_index(drop=True)
-            # randomly shuffly df
-            data_copy = self.data.copy()
-            # remove the Yield column from the copy
-            data_copy.drop("yield", axis=1, inplace=True)
-            # check for duplicates
-            duplicates = data_copy.duplicated().any()
-
-            if duplicates:
-                print("There are duplicates in the dataset.")
-                exit()
-
-            col_0_base = self.ftzr.featurize(self.data["base_smiles"])
-            col_1_ligand = self.ftzr.featurize(self.data["ligand_smiles"])
-            col_2_aryl_halide = self.ftzr.featurize(self.data["aryl_halide_smiles"])
-            col_3_additive = self.ftzr.featurize(self.data["additive_smiles"])
-
-            self.X = np.concatenate(
-                [col_0_base, col_1_ligand, col_2_aryl_halide, col_3_additive],
-                axis=1,
-            )
-
-            self.y = self.data["yield"].to_numpy()
-            self.all_ligands = self.data["ligand_smiles"].to_numpy()
-            self.all_bases = self.data["base_smiles"].to_numpy()
-            self.all_aryl_halides = (
-                self.data["aryl_halide_smiles"].fillna("zero").to_numpy()
-            )
-            self.all_additives = self.data["additive_smiles"].fillna("zero").to_numpy()
-            self.unique_bases = np.unique(self.data["base_smiles"])
-            self.unique_ligands = np.unique(self.data["ligand_smiles"])
-            self.unique_aryl_halides = np.unique(
-                self.data["aryl_halide_smiles"].fillna("zero")
-            )
-            self.unique_additives = np.unique(
-                self.data["additive_smiles"].fillna("zero")
-            )
-
-            max_yield_per_ligand = np.array(
-                [
-                    max(self.data[self.data["ligand_smiles"] == unique_ligand]["yield"])
-                    for unique_ligand in self.unique_ligands
-                ]
-            )
-
-            self.worst_ligand = self.unique_ligands[np.argmin(max_yield_per_ligand)]
-            self.worst_base = self.unique_bases[np.argmin(max_yield_per_ligand)]
-            self.worst_aryl_halide = self.unique_aryl_halides[
-                np.argmin(max_yield_per_ligand)
-            ]
-            self.worst_additive = self.unique_additives[np.argmin(max_yield_per_ligand)]
-
-            # make price of worst ligand 0 because already in the inventory
-            self.best_ligand = self.unique_ligands[np.argmax(max_yield_per_ligand)]
-
-            self.where_worst_ligand = np.array(
-                self.data.index[
-                    self.data["ligand_smiles"] == self.worst_ligand
-                ].tolist()
-            )
-
-            self.where_worst_base = np.array(
-                self.data.index[self.data["base_smiles"] == self.worst_base].tolist()
-            )
-
-            self.where_worst_aryl_halide = np.array(
-                self.data.index[
-                    self.data["aryl_halide_smiles"] == self.worst_aryl_halide
-                ].tolist()
-            )
-
-            self.where_worst_additive = np.array(
-                self.data.index[
-                    self.data["additive_smiles"] == self.worst_additive
-                ].tolist()
-            )
-
-            self.feauture_labels = {
-                "names": {
-                    "bases": self.unique_bases,
-                    "ligands": self.unique_ligands,
-                    "aryl_halides": self.unique_aryl_halides,
-                    "additives": self.unique_additives,
-                },
-                "ordered_smiles": {
-                    "bases": self.data["base_smiles"],
-                    "ligands": self.data["ligand_smiles"],
-                    "aryl_halides": self.data["aryl_halide_smiles"].fillna("zero"),
-                    "additives": self.data["additive_smiles"].fillna("zero"),
-                },
-            }
-
-            (
-                self.price_dict_additives,
-                self.price_dict_aryl_halides,
-                self.price_dict_bases,
-                self.price_dict_ligands,
-            ) = buchwald_prices()
-
-            self.cheapest_additive = np.array(list(self.price_dict_additives.keys()))[
-                index_of_second_smallest(
-                    np.array(list(self.price_dict_additives.values()))
-                )
-            ]
-            self.cheapest_ligand = np.array(list(self.price_dict_ligands.keys()))[
-                np.argmin(np.array(list(self.price_dict_ligands.values())))
-            ]
-
-            self.where_cheapest_additive = np.array(
-                self.data.index[
-                    self.data["additive_smiles"] == self.cheapest_additive
-                ].tolist()
-            )
-
-            self.where_cheapest_ligand = np.array(
-                self.data.index[
-                    self.data["ligand_smiles"] == self.cheapest_ligand
-                ].tolist()
-            )
-
         elif self.dataset == "baumgartner":
-            data, self.all_price_dicts = baumgartner2019_prices()
-            self.ECFP_size = 256
-            self.radius = 2
+            baum = baumgartner(nucleophile=self.nucleophile)
+            self.experiments = baum.experiments
+            self.X, self.y = baum.X, baum.y
 
-            self.ftzr = FingerprintGenerator(nBits=self.ECFP_size, radius=self.radius)
-            self.data = data[
-                self.nucleophile
-            ]  # Benzamide (g00d), Phenethylamine (good), Aniline (good), Morpholine (meh)
+            self.all_precatalysts = baum.all_precatalysts
+            self.all_solvents = baum.all_solvents
+            self.all_bases = baum.all_bases
 
-            self.data = self.data.sample(frac=1).reset_index(drop=True)
-            data_copy = self.data.copy()
-            data_copy.drop("yield", axis=1, inplace=True)
-            # check for duplicates
-            duplicates = data_copy.duplicated().any()
+            self.worst_precatalyst = baum.worst_precatalyst
+            self.where_worst_precatalyst = baum.where_worst_precatalyst
 
-            if duplicates:
-                print("There are duplicates in the dataset.")
-                exit()
+            self.worst_bases = baum.worst_bases
+            self.where_worst_bases = baum.where_worst_bases
 
-            col_0_precatalyst = self.ftzr.featurize(self.data["precatalyst_smiles"])
-            col_1_solvent = self.ftzr.featurize(self.data["solvent_smiles"])
-            col_2_base = self.ftzr.featurize(self.data["base_smiles"])
-            col_8_base_conc = self.data["Base concentration (M)"].values
-            col_10_temp = self.data["Temperature (degC)"].values
-            col_11_base_eq = self.data["Base equivalents"].values
-            col_12_residence_time = self.data["Residence Time Actual (s)"].values
+            self.feauture_labels = baum.feauture_labels
 
-            self.X = np.concatenate(
-                [
-                    col_0_precatalyst,
-                    col_1_solvent,
-                    col_2_base,
-                    col_8_base_conc.reshape(-1, 1),
-                    col_10_temp.reshape(-1, 1),
-                    col_11_base_eq.reshape(-1, 1),
-                    col_12_residence_time.reshape(-1, 1),
-                ],
-                axis=1,
-            )
-
-            self.y = self.data["yield"].to_numpy()
-            self.all_precatalysts = self.data["precatalyst_smiles"].to_numpy()
-            self.all_solvents = self.data["solvent_smiles"].to_numpy()
-            self.all_bases = self.data["base_smiles"].to_numpy()
-
-            unique_precatalysts = np.unique(self.data["precatalyst_smiles"])
-            unique_solvents = np.unique(self.data["solvent_smiles"])
-            unique_bases = np.unique(self.data["base_smiles"])
-
-            max_yield_per_precatalyst = np.array(
-                [
-                    max(
-                        self.data[
-                            self.data["precatalyst_smiles"] == unique_precatalyst
-                        ]["yield"]
-                    )
-                    for unique_precatalyst in unique_precatalysts
-                ]
-            )
-
-            self.worst_precatalyst = unique_precatalysts[
-                np.argmin(max_yield_per_precatalyst)
-            ]
-
-            self.where_worst_precatalyst = np.array(
-                self.data.index[
-                    self.data["precatalyst_smiles"] == self.worst_precatalyst
-                ].tolist()
-            )
-
-            max_yield_per_bases = np.array(
-                [
-                    max(self.data[self.data["base_smiles"] == unique_base]["yield"])
-                    for unique_base in unique_bases
-                ]
-            )
-
-            self.worst_bases = unique_bases[np.argmin(max_yield_per_bases)]
-            self.where_worst_bases = np.array(
-                self.data.index[self.data["base_smiles"] == self.worst_bases].tolist()
-            )
-
-            self.feauture_labels = {
-                "names": {
-                    "precatalysts": unique_precatalysts,
-                    "solvents": unique_solvents,
-                    "bases": unique_bases,
-                },
-                "ordered_smiles": {
-                    "precatalysts": self.data["precatalyst_smiles"],
-                    "solvents": self.data["solvent_smiles"],
-                    "bases": self.data["base_smiles"],
-                },
-            }
-
-            self.price_dict_precatalyst = self.all_price_dicts["precatalyst"]
-            self.price_dict_solvent = self.all_price_dicts["solvent"]
-            self.price_dict_base = self.all_price_dicts["base"]
-
-        elif self.dataset == "TwoDimFct":
-            self.data = TwoDimFct()
-            self.data = self.data.data
-            self.data = self.data.sample(frac=1).reset_index(drop=True)
-
-            self.X = self.data[["x", "y"]].to_numpy()
-            self.y = self.data["function_value"].to_numpy()
-            self.costs = self.data["cost"].to_numpy().reshape(-1, 1)
+            self.price_dict_precatalyst = baum.price_dict_precatalyst
+            self.price_dict_solvent = baum.price_dict_solvent
+            self.price_dict_base = baum.price_dict_base
 
         else:
             print("Dataset not implemented.")
@@ -427,38 +189,8 @@ class Evaluation_data:
                     all_ligand_prices.append(self.ligand_prices[ligand])
                 self.costs = np.array(all_ligand_prices).reshape(-1, 1)
 
-                # make best point price 1
-
-            elif self.dataset == "buchwald":
-                self.ligand_prices = {}
-                for ind, unique_ligand in enumerate(
-                    self.feauture_labels["names"]["ligands"]
-                ):
-                    self.ligand_prices[unique_ligand] = ind + 1
-
-                all_ligand_prices = []
-                for ligand in self.feauture_labels["ordered_smiles"]["ligands"]:
-                    all_ligand_prices.append(self.ligand_prices[ligand])
-                self.costs = np.array(all_ligand_prices).reshape(-1, 1)
-
-            elif self.dataset == "TwoDimFct":
-                self.ligand_prices = {}
-                ind = 0
-
-                for unique_ligand, price in zip(self.X, self.costs):
-                    self.ligand_prices[ind] = price[0]
-                    ind += 1
-
         elif self.prices == "update_all_when_bought":
-            if self.dataset == "buchwald":
-                return (
-                    self.price_dict_additives,
-                    self.price_dict_aryl_halides,
-                    self.price_dict_bases,
-                    self.price_dict_ligands,
-                )
-
-            elif self.dataset == "baumgartner":
+            if self.dataset == "baumgartner":
                 return (
                     self.price_dict_precatalyst,
                     self.price_dict_solvent,
@@ -520,50 +252,6 @@ class Evaluation_data:
                     index_others,
                     self.ligand_prices,
                 )
-        elif self.init_strategy == "TwoDim":
-            target_point = np.array([0, 0.5])
-
-            # Calculate the Euclidean distances
-            distances = np.sqrt(np.sum((self.X - target_point) ** 2, axis=1))
-
-            # Find the index of the minimum distance
-            closest_index = np.argmin(distances)
-
-            X_init, y_init, costs_init = (
-                self.X[closest_index],
-                self.y[closest_index],
-                self.costs[closest_index],
-            )
-
-            index_others = np.setdiff1d(np.arange(len(self.y)), closest_index)
-            # randomly shuffle the data
-            index_others = np.random.permutation(index_others)
-
-            X_holdout, y_holdout, costs_holdout = (
-                self.X[index_others],
-                self.y[index_others],
-                self.costs[index_others],
-            )
-
-            # reshape to 2d array
-            X_init = X_init.reshape(1, -1)
-            X_holdout = X_holdout.reshape(-1, 2)
-            y_init = y_init.reshape(1, -1)
-            y_holdout = y_holdout.reshape(-1, 1)
-            X_init, y_init = convert2pytorch(X_init, y_init)
-            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
-
-            self.ligand_prices[closest_index] = 0
-
-            return (
-                X_init,
-                y_init,
-                X_holdout,
-                y_holdout,
-                closest_index,
-                index_others,
-                self.ligand_prices,
-            )
 
         elif self.init_strategy == "random":
             """
@@ -588,7 +276,6 @@ class Evaluation_data:
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
-
 
         elif self.init_strategy == "worst_ligand":
             indices_init = self.where_worst_ligand[: self.init_size]
@@ -680,47 +367,6 @@ class Evaluation_data:
                     price_dict_init,
                 )
 
-            elif self.dataset == "buchwald":
-                # TODO: implement this for buchwald
-                # indices_init = np.array(
-                #    list(set(self.where_worst_ligand) & set(self.where_worst_additive))
-                # )
-                indices_init = np.array(
-                    list(set(self.where_worst_ligand) & set(self.where_worst_additive))
-                )
-
-                indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
-                np.random.shuffle(indices_init)
-                np.random.shuffle(indices_holdout)
-
-                X_init, y_init = self.X[indices_init], self.y[indices_init]
-                X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
-
-                self.price_dict_ligands[self.worst_ligand] = 0
-                self.price_dict_additives[self.worst_additive] = 0
-
-                LIGANDS_INIT = self.all_ligands[indices_init]
-                LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
-
-                ADDITIVES_INIT = self.all_additives[indices_init]
-                ADDITIVES_HOLDOUT = self.all_additives[indices_holdout]
-
-                X_init, y_init = convert2pytorch(X_init, y_init)
-                X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
-
-                return (
-                    X_init,
-                    y_init,
-                    X_holdout,
-                    y_holdout,
-                    LIGANDS_INIT,
-                    LIGANDS_HOLDOUT,
-                    ADDITIVES_INIT,
-                    ADDITIVES_HOLDOUT,
-                    self.price_dict_ligands,
-                    self.price_dict_additives,
-                )
-
             elif self.dataset == "baumgartner":
                 indices_init = np.array(
                     list(
@@ -728,8 +374,6 @@ class Evaluation_data:
                     )
                 )
 
-                # self.where_worst_precatalyst[: self.init_size]
-                # self.lf.where_worst_bases
                 indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
 
                 np.random.shuffle(indices_holdout)
@@ -783,50 +427,7 @@ class Evaluation_data:
             exit()
 
 
-class TwoDimFct:
-    def __init__(self, n_samples=1000):
-        self.n_samples = n_samples
-
-        # Define range for input
-        r_min, r_max = -5.0, 5.0
-        # Sample input range uniformly at 0.1 increments
-        random_x = np.random.uniform(r_min, r_max, 1000)
-        random_y = np.random.uniform(r_min, r_max, 1000)
-        # Compute targets
-        random_results = self.objective(random_x, random_y)
-        # add noise to the results
-        random_results += np.random.normal(0, 0.2, len(random_results))
-
-        random_cost = self.smooth_cost_function(random_x, random_y)
-        self.data = pd.DataFrame(
-            {
-                "x": random_x,
-                "y": random_y,
-                "function_value": random_results,
-                "cost": random_cost,
-            }
-        )
-
-    def objective(self, x, y):
-        return -(x**2 + y**2)
-
-    def smooth_cost_function(self, x, y):
-        radius = np.sqrt(x**2 + y**2)
-        peak_radius = 2
-        ring_width = 0.5
-
-        angle = np.arctan2(y, x)
-        gap_angle = np.pi / 6
-
-        in_gap = (angle >= -gap_angle) & (angle <= gap_angle)  # Element-wise comparison
-        cost = np.exp(-((radius - peak_radius) ** 2) / (2 * ring_width**2))
-        cost[in_gap] = 0  # Set cost to 0 within the gap
-
-        return cost
-
-
 if __name__ == "__main__":
-    
     DATASET = Evaluation_data(
         "baumgartner",
         200,

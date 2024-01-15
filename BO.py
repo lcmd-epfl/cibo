@@ -21,11 +21,7 @@ from botorch_ext import optimize_acqf_discrete_modified
 
 # specific import for the modified GIBBON function
 from utils import (
-    function_cost_denominator,
     function_cost_minus,
-    function_cost_B_denominator,
-    function_cost_B_minus,
-    function_cost_C_denominator,
     function_cost_C_minus,
 )
 
@@ -588,7 +584,7 @@ def opt_acqfct(
     return index_set, acq_values, candidates
 
 
-def opt_acqfct_cost(
+def acqfct_COI_LIGAND(
     X_train,
     model,
     X_candidate_BO,
@@ -639,16 +635,6 @@ def opt_acqfct_cost(
     for subset in index_set:
         ligand_set.append(LIGANDS_candidate_BO[subset])
 
-    if cost_mod == "denominator":
-        price_rescaling_factors = []
-        for ligands in ligand_set:
-            price_rescaling_factors.append(
-                function_cost_denominator(ligands, price_dict_BO)
-            )
-
-        price_rescaling_factors = np.array(price_rescaling_factors)
-        acq_values_per_price = acq_values / price_rescaling_factors
-
     if cost_mod == "minus":
         price_rescaling_factors = []
         for ligands in ligand_set:
@@ -669,77 +655,7 @@ def opt_acqfct_cost(
     return index_set_rearranged, acq_values_per_price, candidates_rearranged
 
 
-def opt_acqfct_cost_B(
-    X_train,
-    model,
-    X_candidate_BO,
-    bounds_norm,
-    q,
-    LIGANDS_candidate_BO,
-    ADDITIVES_candidate_BO,
-    price_dict_BO_ligands,
-    price_dict_BO_additives,
-    acq_func="GIBBON",
-    cost_mod="minus",
-):
-    """
-    Same as `opt_acqfct_cost`, but for the case of two cost functions i.e. ligands and additives.
-    """
-
-    index_set, acq_values, candidates = opt_acqfct(
-        X_train,
-        model,
-        X_candidate_BO,
-        bounds_norm,
-        q,
-        sequential=False,
-        maximize=True,
-        n_best=300,
-        acq_func=acq_func,
-    )
-
-    ligand_set, additivies_set = [], []
-    for subset in index_set:
-        ligand_set.append(LIGANDS_candidate_BO[subset])
-        additivies_set.append(ADDITIVES_candidate_BO[subset])
-
-    if cost_mod == "denominator":
-        price_rescaling_factors = []
-        for ligands, additives in zip(ligand_set, additivies_set):
-            cost_curr = function_cost_B_denominator(
-                ligands, additives, price_dict_BO_ligands, price_dict_BO_additives
-            )
-            price_rescaling_factors.append(cost_curr)
-
-        price_rescaling_factors = np.array(price_rescaling_factors)
-        acq_values_adjusted = acq_values / price_rescaling_factors
-    elif cost_mod == "minus":
-        price_rescaling_factors = []
-        for ligands, additives in zip(ligand_set, additivies_set):
-            cost_curr = function_cost_B_minus(
-                ligands,
-                additives,
-                price_dict_BO_ligands,
-                price_dict_BO_additives,
-                acq_values,
-            )
-            price_rescaling_factors.append(cost_curr)
-
-        price_rescaling_factors = np.array(price_rescaling_factors)
-        acq_values_adjusted = acq_values - price_rescaling_factors
-
-    row_sums_2 = acq_values_adjusted.sum(axis=1)
-    sorted_indices = np.argsort(row_sums_2)[::-1]
-
-    index_set_rearranged = index_set[sorted_indices]
-    acq_values_adjusted = acq_values_adjusted[sorted_indices]
-    acq_values = acq_values[sorted_indices]
-    candidates_rearranged = candidates[sorted_indices]
-
-    return index_set_rearranged, acq_values_adjusted, candidates_rearranged
-
-
-def opt_acqfct_cost_C(
+def acqfct_COI_LIGAND_BASE_SOLVENT(
     X_train,
     model,
     X_candidate_BO,
@@ -773,26 +689,7 @@ def opt_acqfct_cost_C(
         base_set.append(BASES_candidate_BO[subset])
         solvent_set.append(SOLVENTS_candidate_BO[subset])
 
-    if cost_mod == "denominator":
-        price_rescaling_factors = []
-        for precatalysts, bases, solvents in zip(
-            precatalyst_set, base_set, solvent_set
-        ):
-            cost_curr = function_cost_C_denominator(
-                precatalysts,
-                bases,
-                solvents,
-                price_dict_BO_precatalysts,
-                price_dict_BO_bases,
-                price_dict_BO_solvents,
-                acq_values,
-            )
-            price_rescaling_factors.append(cost_curr)
-
-        price_rescaling_factors = np.array(price_rescaling_factors)
-        acq_values_adjusted = acq_values / price_rescaling_factors
-
-    elif cost_mod == "minus":
+    if cost_mod == "minus":
         price_rescaling_factors = []
         for precatalysts, bases, solvents in zip(
             precatalyst_set, base_set, solvent_set
@@ -880,7 +777,7 @@ def opt_gibbon(
     return indices, candidates
 
 
-def gibbon_search(
+def GIBBON_acqfct(
     model, X_candidate_BO, bounds_norm, q, sequential=False, maximize=True
 ):
     """
@@ -924,7 +821,7 @@ def gibbon_search(
     return indices, candidates
 
 
-def opt_qNEI(
+def NEI_acqfct(
     model, X_candidate_BO, bounds_norm, X_train, q, sequential=False, maximize=True
 ):
     """

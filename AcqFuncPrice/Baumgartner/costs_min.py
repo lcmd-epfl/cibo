@@ -13,11 +13,11 @@ from utils import (
     save_pkl,
 )
 from experiments import (
-    BO_CASE_2C_STEP,
-    RS_STEP_2C,
-    BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE,
+    BO_LIGAND_BASE_SOLVENT,
+    RS_LIGAND_BASE_SOLVENT,
+    BO_COI_LIGAND_BASE_SOLVENT,
 )
-from datasets import Evaluation_data
+from data.datasets import Evaluation_data
 import pdb
 
 SEED = 111
@@ -39,8 +39,9 @@ if __name__ == "__main__":
             exp_config["ntrain"],
             exp_config["prices"],
             init_strategy=exp_config["init_strategy"],
-            nucleophile=exp_config["nucleophile"])
-        
+            nucleophile=exp_config["nucleophile"],
+        )
+
         bounds_norm = DATASET.bounds_norm
         N_RUNS = exp_config["n_runs"]
         NITER = exp_config["n_iter"]
@@ -69,7 +70,7 @@ if __name__ == "__main__":
                 price_dict_bases,
                 price_dict_solvents,
             ) = DATASET.get_init_holdout_data(SEED)
-            #pdb.set_trace()
+            # pdb.set_trace()
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
@@ -158,11 +159,11 @@ if __name__ == "__main__":
 
             for i in range(NITER):
                 if COST_AWARE_BO == False:
-                    BO_data = BO_CASE_2C_STEP(BO_data)
+                    BO_data = BO_LIGAND_BASE_SOLVENT(BO_data)
                 else:
-                    BO_data = BO_AWARE_SCAN_FAST_CASE_2C_STEP_ACQ_PRICE(BO_data)
+                    BO_data = BO_COI_LIGAND_BASE_SOLVENT(BO_data)
 
-                RANDOM_data = RS_STEP_2C(RANDOM_data)
+                RANDOM_data = RS_LIGAND_BASE_SOLVENT(RANDOM_data)
 
                 print("--------------------")
 

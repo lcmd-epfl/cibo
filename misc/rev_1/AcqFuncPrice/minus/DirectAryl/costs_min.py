@@ -8,16 +8,16 @@ from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     create_aligned_transposed_price_table,
-    data_dict_BO_LIGAND,
-    data_dict_RS_LIGAND,
+    create_data_dict_BO_2A,
+    create_data_dict_RS_2A,
     save_pkl,
 )
 from experiments import (
-    BO_LIGAND,
-    BO_COI_LIGAND,
-    RS_LIGAND,
+    BO_CASE_2A_STEP,
+    RS_STEP_2A,
+    BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE,
 )
-from data.datasets import Evaluation_data
+from datasets import Evaluation_data
 import pdb
 
 SEED = 111
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             y_better_RANDOM.append(y_best)
             y_best_BO, y_best_RANDOM = y_best, y_best
 
-            BO_data = data_dict_BO_LIGAND(
+            BO_data = create_data_dict_BO_2A(
                 model,
                 y_best_BO,
                 scaler_y,
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
             BO_data["cost_mod"] = exp_config["cost_mod"]
 
-            RANDOM_data = data_dict_RS_LIGAND(
+            RANDOM_data = create_data_dict_RS_2A(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
                 LIGANDS_candidate_RANDOM,
@@ -127,11 +127,11 @@ if __name__ == "__main__":
 
             for i in range(NITER):
                 if COST_AWARE_BO == False:
-                    BO_data = BO_LIGAND(BO_data)
+                    BO_data = BO_CASE_2A_STEP(BO_data)
                 else:
-                    BO_data = BO_COI_LIGAND(BO_data)
+                    BO_data = BO_AWARE_SCAN_FAST_CASE_2_STEP_ACQ_PRICE(BO_data)
 
-                RANDOM_data = RS_LIGAND(RANDOM_data)
+                RANDOM_data = RS_STEP_2A(RANDOM_data)
 
                 print("--------------------")
                 print(
