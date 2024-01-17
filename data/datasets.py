@@ -1,11 +1,11 @@
 import numpy as np
-import pandas as pd
 import torch
 import random
-from utils import FingerprintGenerator, inchi_to_smiles, convert2pytorch, check_entries
+from utils import convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
 from data.baumgartner import baumgartner
-import copy as cp
+from data.directaryl import directaryl
+import pdb
 
 
 class Evaluation_data:
@@ -16,11 +16,6 @@ class Evaluation_data:
         self.init_strategy = init_strategy
         self.init_size = init_size
         self.prices = prices
-
-        self.ECFP_size = 512
-        self.radius = 2
-
-        self.ftzr = FingerprintGenerator(nBits=self.ECFP_size, radius=self.radius)
 
         if nucleophile is None:
             self.nucleophile = "Aniline"
@@ -50,92 +45,19 @@ class Evaluation_data:
 
         if self.dataset == "BMS":
             # direct arylation reaction
-            dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
-            # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
-            self.data = pd.read_csv(dataset_url)
-            self.data = self.data.sample(frac=1).reset_index(drop=True)
-            # create a copy of the data
-            data_copy = self.data.copy()
-            # remove the Yield column from the copy
-            data_copy.drop("Yield", axis=1, inplace=True)
-            # check for duplicates
-            duplicates = data_copy.duplicated().any()
-            if duplicates:
-                print("There are duplicates in the dataset.")
-                exit()
+            BMS = directaryl()
+            self.data = BMS.data
+            self.experiments = BMS.experiments
+            self.X, self.y = BMS.X, BMS.y
 
-            self.data["Ligand_Cost_fixed"] = np.ceil(
-                self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
-            )
+            self.all_ligands = BMS.all_ligands
+            self.all_bases = BMS.all_bases
+            self.all_solvents = BMS.all_solvents
 
-            self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
-            self.data["Ligand_SMILES"] = inchi_to_smiles(
-                self.data["Ligand_inchi"].values
-            )
-            self.data["Solvent_SMILES"] = inchi_to_smiles(
-                self.data["Solvent_inchi"].values
-            )
-
-            col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
-            col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
-            col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
-            col_3_concentration = self.data["Concentration"].to_numpy().reshape(-1, 1)
-            col_4_temperature = self.data["Temp_C"].to_numpy().reshape(-1, 1)
-            self.X = np.concatenate(
-                [
-                    col_0_base,
-                    col_1_ligand,
-                    col_2_solvent,
-                    col_3_concentration,
-                    col_4_temperature,
-                ],
-                axis=1,
-            )
-            self.experiments = cp.deepcopy(self.X)
-
-            self.y = self.data["Yield"].to_numpy()
-            self.all_ligands = self.data["Ligand_SMILES"].to_numpy()
-            self.all_bases = self.data["Base_SMILES"].to_numpy()
-            self.all_solvents = self.data["Solvent_SMILES"].to_numpy()
-            unique_bases = np.unique(self.data["Base_SMILES"])
-            unique_ligands = np.unique(self.data["Ligand_SMILES"])
-            unique_solvents = np.unique(self.data["Solvent_SMILES"])
-            unique_concentrations = np.unique(self.data["Concentration"])
-            unique_temperatures = np.unique(self.data["Temp_C"])
-
-            max_yield_per_ligand = np.array(
-                [
-                    max(self.data[self.data["Ligand_SMILES"] == unique_ligand]["Yield"])
-                    for unique_ligand in unique_ligands
-                ]
-            )
-
-            self.worst_ligand = unique_ligands[np.argmin(max_yield_per_ligand)]
-            # make price of worst ligand 0 because already in the inventory
-            self.best_ligand = unique_ligands[np.argmax(max_yield_per_ligand)]
-
-            self.where_worst_ligand = np.array(
-                self.data.index[
-                    self.data["Ligand_SMILES"] == self.worst_ligand
-                ].tolist()
-            )
-
-            self.feauture_labels = {
-                "names": {
-                    "bases": unique_bases,
-                    "ligands": unique_ligands,
-                    "solvents": unique_solvents,
-                    "concentrations": unique_concentrations,
-                    "temperatures": unique_temperatures,
-                },
-                "ordered_smiles": {
-                    "bases": self.data["Base_SMILES"],
-                    "ligands": self.data["Ligand_SMILES"],
-                    "solvents": self.data["Solvent_SMILES"],
-                    "concentrations": self.data["Concentration"],
-                    "temperatures": self.data["Temp_C"],
-                },
-            }
+            self.best_ligand = BMS.best_ligand
+            self.worst_ligand = BMS.worst_ligand
+            self.where_worst_ligand = BMS.where_worst_ligand
+            self.feauture_labels = BMS.feauture_labels
 
         elif self.dataset == "baumgartner":
             baum = baumgartner(nucleophile=self.nucleophile)
@@ -145,6 +67,13 @@ class Evaluation_data:
             self.all_precatalysts = baum.all_precatalysts
             self.all_solvents = baum.all_solvents
             self.all_bases = baum.all_bases
+
+            self.cheapest_precatalyst = baum.cheapest_precatalyst
+            self.cheapest_base = baum.cheapest_base
+            self.cheapest_solvent = baum.cheapest_solvent
+            self.where_cheapest_precatalyst_base_solvent_indices = (
+                baum.where_cheapest_precatalyst_base_solvent_indices
+            )
 
             self.worst_precatalyst = baum.worst_precatalyst
             self.where_worst_precatalyst = baum.where_worst_precatalyst
@@ -279,12 +208,15 @@ class Evaluation_data:
 
         elif self.init_strategy == "worst_ligand":
             indices_init = self.where_worst_ligand[: self.init_size]
+            exp_init = self.experiments[indices_init]
             indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+
             np.random.shuffle(indices_init)
             np.random.shuffle(indices_holdout)
 
             X_init, y_init = self.X[indices_init], self.y[indices_init]
             X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+            exp_holdout = self.experiments[indices_holdout]
 
             price_dict_init = self.ligand_prices
             price_dict_init[self.worst_ligand] = 0
@@ -307,6 +239,8 @@ class Evaluation_data:
                 LIGANDS_INIT,
                 LIGANDS_HOLDOUT,
                 price_dict_init,
+                exp_init,
+                exp_holdout,
             )
 
         elif self.init_strategy == "worst_ligand_and_more":
@@ -420,6 +354,53 @@ class Evaluation_data:
                     self.price_dict_precatalyst,
                     self.price_dict_base,
                     self.price_dict_solvent,
+                )
+
+        elif self.init_strategy == "cheapest":
+            if self.dataset == "baumgartner":
+                indices_init = self.where_cheapest_precatalyst_base_solvent_indices
+                indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+
+                np.random.shuffle(indices_holdout)
+
+                experiments_init = self.experiments[indices_init]
+                experiments_holdout = self.experiments[indices_holdout]
+
+                X_init, y_init = self.X[indices_init], self.y[indices_init]
+                X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+
+                self.price_dict_precatalyst[self.cheapest_precatalyst] = 0
+                self.price_dict_base[self.cheapest_base] = 0
+                self.price_dict_solvent[self.cheapest_solvent] = 0
+
+                PRECATALYSTS_INIT = self.all_precatalysts[indices_init]
+                PRECATALYSTS_HOLDOUT = self.all_precatalysts[indices_holdout]
+
+                BASES_INIT = self.all_bases[indices_init]
+                BASES_HOLDOUT = self.all_bases[indices_holdout]
+
+                SOLVENTS_INIT = self.all_solvents[indices_init]
+                SOLVENTS_HOLDOUT = self.all_solvents[indices_holdout]
+
+                X_init, y_init = convert2pytorch(X_init, y_init)
+                X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+                return (
+                    X_init,
+                    y_init,
+                    X_holdout,
+                    y_holdout,
+                    PRECATALYSTS_INIT,
+                    PRECATALYSTS_HOLDOUT,
+                    BASES_INIT,
+                    BASES_HOLDOUT,
+                    SOLVENTS_INIT,
+                    SOLVENTS_HOLDOUT,
+                    self.price_dict_precatalyst,
+                    self.price_dict_base,
+                    self.price_dict_solvent,
+                    experiments_init,
+                    experiments_holdout,
                 )
 
         else:

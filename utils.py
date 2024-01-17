@@ -409,6 +409,8 @@ def data_dict_BO_LIGAND(
     MAX_BATCH_COST,
     SURROGATE,
     AQCFCT,
+    EXP_DONE_BO,
+    EXP_CANDIDATE_BO,
 ):
     """
     Create a dictionary with all the data needed for the BO in scenario 2.
@@ -432,6 +434,8 @@ def data_dict_BO_LIGAND(
         "MAX_BATCH_COST": MAX_BATCH_COST,
         "surrogate": SURROGATE,
         "acq_func": AQCFCT,
+        "EXP_DONE_BO": [],
+        "EXP_CANDIDATE_BO": EXP_CANDIDATE_BO,
     }
 
     return BO_data
@@ -482,7 +486,7 @@ def create_data_dict_BO_2B(
     return BO_data
 
 
-def create_data_dict_BO_2C(
+def data_dict_BO_LIGAND_BASE_SOLVENT(
     model,
     y_best_BO,
     scaler_y,
@@ -503,6 +507,8 @@ def create_data_dict_BO_2C(
     MAX_BATCH_COST,
     SURROGATE,
     AQCFCT,
+    EXP_DONE_BO,
+    EXP_CANDIDATE_BO,
 ):
     BO_data = {
         "model": model,
@@ -526,12 +532,14 @@ def create_data_dict_BO_2C(
         "MAX_BATCH_COST": MAX_BATCH_COST,
         "surrogate": SURROGATE,
         "acq_func": AQCFCT,
+        "EXP_DONE_BO": [],
+        "EXP_CANDIDATE_BO": EXP_CANDIDATE_BO,
     }
 
     return BO_data
 
 
-def create_data_dict_RS_2C(
+def data_dict_RS_LIGAND_BASE_SOLVENT(
     y_candidate_RANDOM,
     y_best_RANDOM,
     PRECATALYSTS_candidate_RANDOM,
@@ -544,6 +552,8 @@ def create_data_dict_RS_2C(
     MAX_BATCH_COST,
     y_better_RANDOM,
     running_costs_RANDOM,
+    EXP_DONE_RANDOM,
+    EXP_CANDIDATE_RANDOM,
 ):
     RANDOM_data = {
         "y_candidate_RANDOM": y_candidate_RANDOM,
@@ -558,6 +568,8 @@ def create_data_dict_RS_2C(
         "MAX_BATCH_COST": MAX_BATCH_COST,
         "y_better_RANDOM": y_better_RANDOM,
         "running_costs_RANDOM": running_costs_RANDOM,
+        "EXP_DONE_RANDOM": [],
+        "EXP_CANDIDATE_RANDOM": EXP_CANDIDATE_RANDOM,
     }
 
     return RANDOM_data
@@ -621,6 +633,8 @@ def data_dict_RS_LIGAND(
     MAX_BATCH_COST,
     y_better_RANDOM,
     running_costs_RANDOM,
+    EXP_DONE_RANDOM,
+    EXP_CANDIDATE_RANDOM,
 ):
     RANDOM_data = {
         "y_candidate_RANDOM": y_candidate_RANDOM,
@@ -631,5 +645,7 @@ def data_dict_RS_LIGAND(
         "MAX_BATCH_COST": MAX_BATCH_COST,
         "y_better_RANDOM": y_better_RANDOM,
         "running_costs_RANDOM": running_costs_RANDOM,
+        "EXP_DONE_RANDOM": [],
+        "EXP_CANDIDATE_RANDOM": EXP_CANDIDATE_RANDOM,
     }
     return RANDOM_data

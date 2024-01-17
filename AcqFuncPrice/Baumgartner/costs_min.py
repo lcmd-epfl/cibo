@@ -2,14 +2,14 @@ import torch
 import numpy as np
 import random
 import copy as cp
-from exp_configs import benchmark
+from config import benchmark
 from BO import update_model
 from utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     create_aligned_transposed_price_table,
-    create_data_dict_BO_2C,
-    create_data_dict_RS_2C,
+    data_dict_BO_LIGAND_BASE_SOLVENT,
+    data_dict_RS_LIGAND_BASE_SOLVENT,
     save_pkl,
 )
 from experiments import (
@@ -29,25 +29,25 @@ if __name__ == "__main__":
     print("Starting experiments")
     RESULTS = []
 
-    for exp_config in benchmark:
-        print("Starting experiment: ", exp_config)
+    for conf in benchmark:
+        print("Starting experiment: ", conf)
         y_better_BO_ALL, y_better_RANDOM_ALL = [], []
         running_costs_BO_ALL, running_costs_RANDOM_ALL = [], []
 
         DATASET = Evaluation_data(
-            exp_config["dataset"],
-            exp_config["ntrain"],
-            exp_config["prices"],
-            init_strategy=exp_config["init_strategy"],
-            nucleophile=exp_config["nucleophile"],
+            conf["dataset"],
+            conf["ntrain"],
+            conf["prices"],
+            init_strategy=conf["init_strategy"],
+            nucleophile=conf["nucleophile"],
         )
 
         bounds_norm = DATASET.bounds_norm
-        N_RUNS = exp_config["n_runs"]
-        NITER = exp_config["n_iter"]
-        BATCH_SIZE = exp_config["batch_size"]
-        SURROGATE = exp_config["surrogate"]
-        COST_AWARE_BO = exp_config["cost_aware"]
+        N_RUNS = conf["n_runs"]
+        NITER = conf["n_iter"]
+        BATCH_SIZE = conf["batch_size"]
+        SURROGATE = conf["surrogate"]
+        COST_AWARE_BO = conf["cost_aware"]
 
         for run in range(N_RUNS):
             SEED = 111 + run
@@ -69,8 +69,10 @@ if __name__ == "__main__":
                 price_dict_precatalysts,
                 price_dict_bases,
                 price_dict_solvents,
+                exp_init,
+                exp_candidate,
             ) = DATASET.get_init_holdout_data(SEED)
-            # pdb.set_trace()
+
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)
@@ -80,7 +82,10 @@ if __name__ == "__main__":
             )
             X_candidate_BO = cp.deepcopy(X_candidate)
             y_candidate_BO = cp.deepcopy(y_candidate)
+
+            exp_candidate_BO = cp.deepcopy(exp_candidate)
             y_candidate_RANDOM = cp.deepcopy(y_candidate).detach().numpy()
+            exp_candidate_RANDOM = cp.deepcopy(exp_candidate)
 
             running_costs_BO = [0]
             running_costs_RANDOM = [0]
@@ -117,7 +122,7 @@ if __name__ == "__main__":
             print("SOLVENTS")
             print(create_aligned_transposed_price_table(price_dict_BO_solvents))
 
-            BO_data = create_data_dict_BO_2C(
+            BO_data = data_dict_BO_LIGAND_BASE_SOLVENT(
                 model,
                 y_best_BO,
                 scaler_y,
@@ -137,12 +142,14 @@ if __name__ == "__main__":
                 BATCH_SIZE,
                 None,
                 SURROGATE,
-                exp_config["acq_func"],
+                conf["acq_func"],
+                exp_init,
+                exp_candidate_BO,
             )
 
-            BO_data["cost_mod"] = exp_config["cost_mod"]
+            BO_data["cost_mod"] = conf["cost_mod"]
 
-            RANDOM_data = create_data_dict_RS_2C(
+            RANDOM_data = data_dict_RS_LIGAND_BASE_SOLVENT(
                 y_candidate_RANDOM,
                 y_best_RANDOM,
                 PRECATALYSTS_candidate_RANDOM,
@@ -155,6 +162,8 @@ if __name__ == "__main__":
                 None,
                 y_better_RANDOM,
                 running_costs_RANDOM,
+                exp_init,
+                exp_candidate_RANDOM,
             )
 
             for i in range(NITER):
@@ -191,30 +200,31 @@ if __name__ == "__main__":
             y_better_BO_ALL,
             y_better_RANDOM_ALL,
             name="yield_{}_{}.png".format(
-                exp_config["dataset"],
-                exp_config["label"],
+                conf["dataset"],
+                conf["label"],
             ),
         )
         plot_costs_BO_vs_RS(
             running_costs_BO_ALL,
             running_costs_RANDOM_ALL,
             name="costs_{}_{}.png".format(
-                exp_config["dataset"],
-                exp_config["label"],
+                conf["dataset"],
+                conf["label"],
             ),
         )
 
         RESULTS.append(
             {
-                "settings": exp_config,
+                "settings": conf,
                 "y_better_BO_ALL": y_better_BO_ALL,
                 "y_better_RANDOM_ALL": y_better_RANDOM_ALL,
                 "running_costs_BO_ALL": running_costs_BO_ALL,
                 "running_costs_RANDOM_ALL": running_costs_RANDOM_ALL,
+                "exp_log": BO_data["EXP_DONE_BO"],
             }
         )
 
-        print("Done with experiment: ", exp_config)
+        print("Done with experiment: ", conf)
 
     print("Done with all experiments")
     print("Saving results")

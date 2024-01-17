@@ -2,7 +2,7 @@ import pandas as pd
 from utils import FingerprintGenerator
 import numpy as np
 import copy as cp
-
+import pdb
 
 
 class baumgartner:
@@ -16,8 +16,6 @@ class baumgartner:
 
         self.data = self.data[self.nucleophile]
         self.data = self.data.sample(frac=1).reset_index(drop=True)
-
-        self.data = self.data.sample(frac=1).reset_index(drop=True)
         data_copy = self.data.copy()
         data_copy.drop("yield", axis=1, inplace=True)
         # check for duplicates
@@ -26,6 +24,35 @@ class baumgartner:
         if duplicates:
             print("There are duplicates in the dataset.")
             exit()
+
+        self.cheapest_precatalyst_base = self.data[
+            (self.data["Precatalyst"] == "tBuXPhos") & (self.data["Base"] == "DBU")
+        ]
+
+        if self.nucleophile == "Morpholine":
+            # for Morpholine, no experiments with tBuXPhos
+            self.cheapest_precatalyst_base = self.data[
+                (self.data["Precatalyst"] == "tBuBrettPhos")
+                & (self.data["Base"] == "DBU")
+            ]
+
+        self.cheapest_precatalyst = np.unique(
+            self.cheapest_precatalyst_base.precatalyst_smiles.values
+        )[0]
+
+        self.cheapest_base = np.unique(
+            self.cheapest_precatalyst_base.base_smiles.values
+        )[0]
+
+        self.cheapest_solvent = np.unique(
+            self.cheapest_precatalyst_base.solvent_smiles
+        )[0]
+
+        self.where_cheapest_precatalyst_base_solvent_indices = self.data[
+            (self.data["precatalyst_smiles"] == self.cheapest_precatalyst)
+            & (self.data["base_smiles"] == self.cheapest_base)
+            & (self.data["solvent_smiles"] == self.cheapest_solvent)
+        ].index.to_numpy()
 
         col_0_precatalyst = self.ftzr.featurize(self.data["precatalyst_smiles"])
         col_1_solvent = self.ftzr.featurize(self.data["solvent_smiles"])
@@ -48,7 +75,19 @@ class baumgartner:
             axis=1,
         )
 
-        self.experiments = cp.deepcopy(self.X)
+        self.experiments = np.concatenate(
+            [
+                self.data["precatalyst_smiles"].to_numpy().reshape(-1, 1),
+                self.data["solvent_smiles"].to_numpy().reshape(-1, 1),
+                self.data["base_smiles"].to_numpy().reshape(-1, 1),
+                self.data["Base concentration (M)"].to_numpy().reshape(-1, 1),
+                self.data["Temperature (degC)"].to_numpy().reshape(-1, 1),
+                self.data["Base equivalents"].to_numpy().reshape(-1, 1),
+                self.data["Residence Time Actual (s)"].to_numpy().reshape(-1, 1),
+                self.data["yield"].to_numpy().reshape(-1, 1),
+            ],
+            axis=1,
+        )
 
         self.y = self.data["yield"].to_numpy()
         self.all_precatalysts = self.data["precatalyst_smiles"].to_numpy()
@@ -60,15 +99,15 @@ class baumgartner:
         unique_bases = np.unique(self.data["base_smiles"])
 
         max_yield_per_precatalyst = np.array(
-                        [
-                            max(
-                                self.data[
-                                    self.data["precatalyst_smiles"] == unique_precatalyst
-                                ]["yield"]
-                            )
-                            for unique_precatalyst in unique_precatalysts
-                        ]
-                    )
+            [
+                max(
+                    self.data[self.data["precatalyst_smiles"] == unique_precatalyst][
+                        "yield"
+                    ]
+                )
+                for unique_precatalyst in unique_precatalysts
+            ]
+        )
 
         self.worst_precatalyst = unique_precatalysts[
             np.argmin(max_yield_per_precatalyst)
@@ -108,7 +147,6 @@ class baumgartner:
         self.price_dict_precatalyst = self.all_price_dicts["precatalyst"]
         self.price_dict_solvent = self.all_price_dicts["solvent"]
         self.price_dict_base = self.all_price_dicts["base"]
-    
 
     def preprocess(self):
         price_data = pd.read_csv(

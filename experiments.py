@@ -14,6 +14,7 @@ from utils import (
     compute_price_acquisition_ligands,
     update_price_dict_ligands,
 )
+import pdb
 
 
 def BO_LIGAND(BO_data):
@@ -36,6 +37,9 @@ def BO_LIGAND(BO_data):
     scaler_y = BO_data["scaler_y"]
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
+
+    EXP_DONE_BO = BO_data["EXP_DONE_BO"]
+    EXP_CANDIDATE_BO = BO_data["EXP_CANDIDATE_BO"]
 
     if acq_func == "NEI":
         indices, candidates = NEI_acqfct(
@@ -62,11 +66,16 @@ def BO_LIGAND(BO_data):
     )
     y_best_BO = check_better(y, y_best_BO)
     y_better_BO.append(y_best_BO)
+
+    EXP_DONE_BO.append(EXP_CANDIDATE_BO[indices])
+    EXP_CANDIDATE_BO = np.delete(EXP_CANDIDATE_BO, indices, axis=0)
+
     running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
     model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
     LIGANDS_candidate_BO = np.delete(LIGANDS_candidate_BO, indices, axis=0)
+
     price_dict_BO = update_price_dict_ligands(price_dict_BO, NEW_LIGANDS)
 
     # Update BO data for next iteration
@@ -82,6 +91,9 @@ def BO_LIGAND(BO_data):
     BO_data["running_costs_BO"] = running_costs_BO
     BO_data["N_train"] = len(X)
     BO_data["scaler_y"] = scaler_y
+
+    BO_data["EXP_DONE_BO"] = EXP_DONE_BO
+    BO_data["EXP_CANDIDATE_BO"] = EXP_CANDIDATE_BO
 
     return BO_data
 
@@ -109,6 +121,9 @@ def BO_LIGAND_BASE_SOLVENT(BO_data):
     scaler_y = BO_data["scaler_y"]
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
+
+    EXP_DONE_BO = BO_data["EXP_DONE_BO"]
+    EXP_CANDIDATE_BO = BO_data["EXP_CANDIDATE_BO"]
 
     if acq_func == "NEI":
         indices, candidates = NEI_acqfct(
@@ -159,6 +174,9 @@ def BO_LIGAND_BASE_SOLVENT(BO_data):
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
 
+    EXP_DONE_BO.append(EXP_CANDIDATE_BO[indices])
+    EXP_CANDIDATE_BO = np.delete(EXP_CANDIDATE_BO, indices, axis=0)
+
     PRECATALYSTS_candidate_BO = np.delete(PRECATALYSTS_candidate_BO, indices, axis=0)
     BASES_candidate_BO = np.delete(BASES_candidate_BO, indices, axis=0)
     SOLVENTS_candidate_BO = np.delete(SOLVENTS_candidate_BO, indices, axis=0)
@@ -191,6 +209,9 @@ def BO_LIGAND_BASE_SOLVENT(BO_data):
     BO_data["N_train"] = len(X)
     BO_data["scaler_y"] = scaler_y
 
+    BO_data["EXP_DONE_BO"] = EXP_DONE_BO
+    BO_data["EXP_CANDIDATE_BO"] = EXP_CANDIDATE_BO
+
     return BO_data
 
 
@@ -202,6 +223,8 @@ def RS_LIGAND(RANDOM_data):
     y_best_RANDOM = RANDOM_data["y_best_RANDOM"]
     y_better_RANDOM = RANDOM_data["y_better_RANDOM"]
     running_costs_RANDOM = RANDOM_data["running_costs_RANDOM"]
+    EXP_DONE_RANDOM = RANDOM_data["EXP_DONE_RANDOM"]
+    EXP_CANDIDATE_RANDOM = RANDOM_data["EXP_CANDIDATE_RANDOM"]
 
     indices_random = np.random.choice(
         np.arange(len(y_candidate_RANDOM)), size=BATCH_SIZE, replace=False
@@ -223,6 +246,9 @@ def RS_LIGAND(RANDOM_data):
     )
     price_dict_RANDOM = update_price_dict_ligands(price_dict_RANDOM, NEW_LIGANDS)
 
+    EXP_DONE_RANDOM.append(EXP_CANDIDATE_RANDOM[indices_random])
+    EXP_CANDIDATE_RANDOM = np.delete(EXP_CANDIDATE_RANDOM, indices_random, axis=0)
+
     # Update all modified quantities and return RANDOM_data
     RANDOM_data["y_candidate_RANDOM"] = y_candidate_RANDOM
     RANDOM_data["LIGANDS_candidate_RANDOM"] = LIGANDS_candidate_RANDOM
@@ -230,6 +256,9 @@ def RS_LIGAND(RANDOM_data):
     RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
     RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
     RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
+
+    RANDOM_data["EXP_DONE_RANDOM"] = EXP_DONE_RANDOM
+    RANDOM_data["EXP_CANDIDATE_RANDOM"] = EXP_CANDIDATE_RANDOM
 
     return RANDOM_data
 
@@ -248,6 +277,9 @@ def RS_LIGAND_BASE_SOLVENT(RANDOM_data):
     y_better_RANDOM = RANDOM_data["y_better_RANDOM"]
 
     running_costs_RANDOM = RANDOM_data["running_costs_RANDOM"]
+
+    EXP_DONE_RANDOM = RANDOM_data["EXP_DONE_RANDOM"]
+    EXP_CANDIDATE_RANDOM = RANDOM_data["EXP_CANDIDATE_RANDOM"]
 
     indices_random = np.random.choice(np.arange(len(y_candidate_RANDOM)), BATCH_SIZE)
 
@@ -273,6 +305,10 @@ def RS_LIGAND_BASE_SOLVENT(RANDOM_data):
         y_best_RANDOM = max(y_candidate_RANDOM[indices_random])[0]
 
     y_better_RANDOM.append(y_best_RANDOM)
+
+    EXP_DONE_RANDOM.append(EXP_CANDIDATE_RANDOM[indices_random])
+    EXP_CANDIDATE_RANDOM = np.delete(EXP_CANDIDATE_RANDOM, indices_random, axis=0)
+
     running_costs_RANDOM.append((running_costs_RANDOM[-1] + suggested_costs_all))
 
     y_candidate_RANDOM = np.delete(y_candidate_RANDOM, indices_random, axis=0)
@@ -306,6 +342,8 @@ def RS_LIGAND_BASE_SOLVENT(RANDOM_data):
     RANDOM_data["y_best_RANDOM"] = y_best_RANDOM
     RANDOM_data["y_better_RANDOM"] = y_better_RANDOM
     RANDOM_data["running_costs_RANDOM"] = running_costs_RANDOM
+    RANDOM_data["EXP_DONE_RANDOM"] = EXP_DONE_RANDOM
+    RANDOM_data["EXP_CANDIDATE_RANDOM"] = EXP_CANDIDATE_RANDOM
 
     return RANDOM_data
 
@@ -327,6 +365,9 @@ def BO_COI_LIGAND(BO_data):
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
     cost_mod = BO_data["cost_mod"]
+
+    EXP_DONE_BO = BO_data["EXP_DONE_BO"]
+    EXP_CANDIDATE_BO = BO_data["EXP_CANDIDATE_BO"]
 
     (
         index_set_rearranged,
@@ -355,6 +396,10 @@ def BO_COI_LIGAND(BO_data):
     )
     y_best_BO = check_better(y, y_best_BO)
     y_better_BO.append(y_best_BO)
+
+    EXP_DONE_BO.append(EXP_CANDIDATE_BO[indices])
+    EXP_CANDIDATE_BO = np.delete(EXP_CANDIDATE_BO, indices, axis=0)
+
     running_costs_BO.append((running_costs_BO[-1] + suggested_costs_all))
     model, scaler_y = update_model(X, y, bounds_norm, surrogate=surrogate)
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
@@ -375,6 +420,9 @@ def BO_COI_LIGAND(BO_data):
     BO_data["running_costs_BO"] = running_costs_BO
     BO_data["N_train"] = len(X)
     BO_data["scaler_y"] = scaler_y
+
+    BO_data["EXP_DONE_BO"] = EXP_DONE_BO
+    BO_data["EXP_CANDIDATE_BO"] = EXP_CANDIDATE_BO
 
     return BO_data
 
@@ -403,6 +451,10 @@ def BO_COI_LIGAND_BASE_SOLVENT(BO_data):
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
     cost_mod = BO_data["cost_mod"]
+
+    EXP_DONE_BO = BO_data["EXP_DONE_BO"]
+    EXP_CANDIDATE_BO = BO_data["EXP_CANDIDATE_BO"]
+
 
     (
         index_set_rearranged,
@@ -458,6 +510,10 @@ def BO_COI_LIGAND_BASE_SOLVENT(BO_data):
     X_candidate_BO = np.delete(X_candidate_BO, indices, axis=0)
     y_candidate_BO = np.delete(y_candidate_BO, indices, axis=0)
 
+    EXP_DONE_BO.append(EXP_CANDIDATE_BO[indices])
+    EXP_CANDIDATE_BO = np.delete(EXP_CANDIDATE_BO, indices, axis=0)
+
+
     PRECATALYSTS_candidate_BO = np.delete(PRECATALYSTS_candidate_BO, indices, axis=0)
     BASES_candidate_BO = np.delete(BASES_candidate_BO, indices, axis=0)
     SOLVENTS_candidate_BO = np.delete(SOLVENTS_candidate_BO, indices, axis=0)
@@ -489,5 +545,8 @@ def BO_COI_LIGAND_BASE_SOLVENT(BO_data):
     BO_data["running_costs_BO"] = running_costs_BO
     BO_data["N_train"] = len(X)
     BO_data["scaler_y"] = scaler_y
+
+    BO_data["EXP_DONE_BO"] = EXP_DONE_BO
+    BO_data["EXP_CANDIDATE_BO"] = EXP_CANDIDATE_BO
 
     return BO_data
