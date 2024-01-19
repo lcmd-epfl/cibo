@@ -2,7 +2,8 @@ import torch
 import numpy as np
 import random
 import copy as cp
-from config import benchmark
+#from config import benchmark
+from exp_configs_worst import benchmark
 from BO import update_model
 from utils import (
     plot_utility_BO_vs_RS,
@@ -72,7 +73,7 @@ if __name__ == "__main__":
                 exp_init,
                 exp_candidate,
             ) = DATASET.get_init_holdout_data(SEED)
-
+            
             X, y = cp.deepcopy(X_init), cp.deepcopy(y_init)
             y_best = float(torch.max(y))
             model, scaler_y = update_model(X, y, bounds_norm, surrogate=SURROGATE)

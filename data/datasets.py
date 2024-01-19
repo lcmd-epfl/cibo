@@ -314,7 +314,7 @@ class Evaluation_data:
 
                 X_init, y_init = self.X[indices_init], self.y[indices_init]
                 X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
-
+                
                 self.price_dict_precatalyst[self.worst_precatalyst] = 0
                 self.price_dict_base[self.worst_bases] = 0
 
@@ -339,6 +339,8 @@ class Evaluation_data:
 
                 X_init, y_init = convert2pytorch(X_init, y_init)
                 X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+                exp_init = self.experiments[indices_init]
+                exp_holdout = self.experiments[indices_holdout]
 
                 return (
                     X_init,
@@ -354,6 +356,8 @@ class Evaluation_data:
                     self.price_dict_precatalyst,
                     self.price_dict_base,
                     self.price_dict_solvent,
+                    exp_init,
+                    exp_holdout,
                 )
 
         elif self.init_strategy == "cheapest":
