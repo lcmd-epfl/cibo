@@ -25,6 +25,8 @@ BO_YIELD = np.mean(np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0)
 BO_COSTS = np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
 
 
+BO_COI_COSTS, BO_COSTS = BO_COI_COSTS + 24.0, BO_COSTS + 24.0
+
 plt.style.use("seaborn-poster")  # Apply a global aesthetic style.
 
 fig1, ax1 = plt.subplots(2, 1, figsize=(7, 7))
@@ -103,6 +105,7 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
     else:
         BO_COSTS += 65.2 + 2.8
         BO_COA_COSTS += 65.2 + 2.8
+        pdb.set_trace()
 
     ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
@@ -212,7 +215,7 @@ ax2[0, j].plot(
 ax2[0, j].plot(
     ITERATIONS,
     BO_COA_YIELD,
-    label="BO-COA",
+    label="BO-COI",
     color="red",
     marker="o",
     ls="--",
@@ -244,5 +247,3 @@ ax2[0, 0].legend(loc="lower right", fontsize=16, frameon=False)
 
 plt.tight_layout()
 plt.savefig("Baumgartner_cheapest.pdf")
-
-pdb.set_trace()

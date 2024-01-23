@@ -31,7 +31,7 @@ class directaryl:
         self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
         self.data["Ligand_SMILES"] = inchi_to_smiles(self.data["Ligand_inchi"].values)
         self.data["Solvent_SMILES"] = inchi_to_smiles(self.data["Solvent_inchi"].values)
-
+        #pdb.set_trace()
         col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
         col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
         col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
