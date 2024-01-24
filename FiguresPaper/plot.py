@@ -198,7 +198,7 @@ BO_COA_COSTS = (
     + 459.0
     + 0.5730027548
 )
-
+pdb.set_trace()
 ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
 
