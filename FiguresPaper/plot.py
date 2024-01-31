@@ -102,10 +102,10 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
     if nucleophile == "Morpholine":
         BO_COSTS += 548 + 2.8
         BO_COA_COSTS += 548 + 2.8
+        pdb.set_trace()
     else:
         BO_COSTS += 65.2 + 2.8
         BO_COA_COSTS += 65.2 + 2.8
-        pdb.set_trace()
 
     ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
