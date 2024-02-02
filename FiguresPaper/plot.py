@@ -102,11 +102,18 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
     if nucleophile == "Morpholine":
         BO_COSTS += 548 + 2.8
         BO_COA_COSTS += 548 + 2.8
-        pdb.set_trace()
+        # pdb.set_trace()
+        ax2[1, j].axvline(x=8, color="grey", linestyle="--", alpha=0.5)
     else:
         BO_COSTS += 65.2 + 2.8
         BO_COA_COSTS += 65.2 + 2.8
 
+    if nucleophile == "Benzamide":
+        ax2[1, j].axvline(x=3, color="grey", linestyle="--", alpha=0.5)
+
+
+    if nucleophile == "Phenethylamine":
+        ax2[1, j].axvline(x=3, color="grey", linestyle="--", alpha=0.5)
     ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
     ax2[0, j].set_title(f"{nucleophile}", fontweight="bold")
@@ -131,7 +138,8 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
             ls="--",
             alpha=0.5,
         )
-
+        # plot horizontal grey dotted line at 70 % yield
+        ax2[0, j].axhline(y=70, color="grey", linestyle="--", alpha=0.5)
         # ax2[1, j].set_ylabel(r"$\sum \rm cost ~ [\$]$")
         ax2[1, j].plot(
             ITERATIONS,
@@ -198,7 +206,7 @@ BO_COA_COSTS = (
     + 459.0
     + 0.5730027548
 )
-pdb.set_trace()
+# pdb.set_trace()
 ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
 
@@ -244,6 +252,8 @@ ax2[1, j].plot(
 )
 
 ax2[0, 0].legend(loc="lower right", fontsize=16, frameon=False)
-
+ax2[0, 0].axhline(y=70, color="grey", linestyle="--", alpha=0.5)
+# vertical line at 20 iterations
+ax2[1, 0].axvline(x=4, color="grey", linestyle="--", alpha=0.5)
 plt.tight_layout()
 plt.savefig("Baumgartner_cheapest.pdf")
