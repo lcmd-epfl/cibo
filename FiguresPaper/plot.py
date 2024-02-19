@@ -3,10 +3,18 @@ import numpy as np
 from utils import *
 import matplotlib.colors as mcolors
 from matplotlib.ticker import MaxNLocator
+import seaborn as sns
 
 plt.rcParams["font.weight"] = "bold"
 plt.rcParams["axes.labelweight"] = "bold"
-plt.rcParams["axes.linewidth"] = 2
+plt.rcParams["axes.linewidth"] = 10
+plt.rcParams["axes.labelsize"] = 20
+plt.rcParams["axes.labelweight"] = "bold"
+plt.rcParams["axes.titlesize"] = 20
+# fontsize
+plt.rcParams["xtick.labelsize"] = 32
+# x and y label size
+plt.rcParams["ytick.labelsize"] = 32
 
 
 def generate_color_scale(iterations, cmap_name="coolwarm"):
@@ -27,9 +35,22 @@ BO_COSTS = np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
 
 BO_COI_COSTS, BO_COSTS = BO_COI_COSTS + 24.0, BO_COSTS + 24.0
 
-plt.style.use("seaborn-poster")  # Apply a global aesthetic style.
+sns.set_context("poster")  # This sets the context to "poster", which is similar to using 'seaborn-poster'
+sns.set(style="whitegrid")  # Optionally set a style, "whitegrid" is just an example
 
 fig1, ax1 = plt.subplots(2, 1, figsize=(7, 7))
+
+for i in range(2):  # Row index
+    ax = ax1[i]
+    ax.spines['top'].set_visible(False)    # Make the top axis line for a plot invisible
+    ax.spines['right'].set_visible(False)  # Make the right axis line for a plot invisible
+    # Enhance the visibility of axis lines by increasing their linewidth
+    ax.spines['bottom'].set_linewidth(4)  # Enhance bottom spine
+    ax.spines['left'].set_linewidth(4)    # Enhance left spine
+    #spines color black 
+    ax.spines['bottom'].set_color('black')
+    ax.spines['left'].set_color('black')
+
 
 ax1[0].plot(
     ITERATIONS,
@@ -63,11 +84,13 @@ ax1[0].xaxis.set_major_locator(MaxNLocator(integer=True))
 ax1[1].xaxis.set_major_locator(MaxNLocator(integer=True))
 
 
-ax1[0].set_ylabel("Yield [%]")  # Assuming yield is in percentage.
-ax1[1].set_ylabel(r"$\sum \rm cost ~ [\$]$")
-ax1[1].set_xlabel("Iteration")
-ax1[0].legend(loc="lower right", fontsize=13)
-# ax1[1].legend(loc="lower right", fontsize=13)
+ax1[0].set_ylabel("Yield [%]", fontsize=18)
+ax1[1].set_ylabel(r"$\sum \rm cost ~ [\$]$", fontsize=18)
+ax1[1].set_xlabel("Iteration", fontsize=18)
+ax1[0].legend(loc="lower right", fontsize=18)
+# Increase tick label sizes
+ax1[0].tick_params(axis='both', labelsize=16)  # Adjusts both x and y axis ticks
+ax1[1].tick_params(axis='both', labelsize=16)  # Adjusts both x and y axis ticks
 
 # make tight
 ax1[0].set_xlim([1, 20])
@@ -82,6 +105,18 @@ RESULTS = load_pkl("results_Baumgartner_cheapest.pkl")
 
 
 fig2, ax2 = plt.subplots(2, 4, figsize=(14, 7))
+for i in range(2):  # Row index
+    for j in range(4):  # Column index
+        ax = ax2[i, j]
+        ax.spines['top'].set_visible(False)    # Make the top axis line for a plot invisible
+        ax.spines['right'].set_visible(False)  # Make the right axis line for a plot invisible
+        # Enhance the visibility of axis lines by increasing their linewidth
+        ax.spines['bottom'].set_linewidth(4)  # Enhance bottom spine
+        ax.spines['left'].set_linewidth(4)    # Enhance left spine
+        #spines color black 
+        ax.spines['bottom'].set_color('black')
+        ax.spines['left'].set_color('black')
+
 nulceophiles = [
     "Benzamide",
     "Phenethylamine",
@@ -90,6 +125,15 @@ nulceophiles = [
 # plt.plot()
 plt.show()
 # pdb.set_trace()
+
+
+nucleophiles_legends  = {
+    "Benzamide": "CC-Be",
+    "Phenethylamine": "CC-Ph",
+    "Morpholine": "CC-Mo",
+    "Aniline": "CC-An"
+}
+
 
 for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
     nucleophile = RESULTS[i]["settings"]["nucleophile"]
@@ -103,20 +147,20 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
         BO_COSTS += 548 + 2.8
         BO_COA_COSTS += 548 + 2.8
         # pdb.set_trace()
-        ax2[1, j].axvline(x=8, color="grey", linestyle="--", alpha=0.5)
+        ax2[1, j].axvline(x=8, color="black", linestyle="--", alpha=1.0)
     else:
         BO_COSTS += 65.2 + 2.8
         BO_COA_COSTS += 65.2 + 2.8
 
     if nucleophile == "Benzamide":
-        ax2[1, j].axvline(x=3, color="grey", linestyle="--", alpha=0.5)
-
+        ax2[1, j].axvline(x=3, color="black", linestyle="--", alpha=1.0)
 
     if nucleophile == "Phenethylamine":
-        ax2[1, j].axvline(x=3, color="grey", linestyle="--", alpha=0.5)
+        ax2[1, j].axvline(x=3, color="black", linestyle="--", alpha=1.0)
     ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
-    ax2[0, j].set_title(f"{nucleophile}", fontweight="bold")
+    # ax2[0, j].set_title(f"{nucleophile}", fontweight="bold")
+    ax2[0, j].set_title(f"{nucleophiles_legends[nucleophile]}", fontweight="bold", fontsize=18)
 
     if nucleophile != "Aniline":
         ax2[0, j].plot(
@@ -139,7 +183,7 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
             alpha=0.5,
         )
         # plot horizontal grey dotted line at 70 % yield
-        ax2[0, j].axhline(y=70, color="grey", linestyle="--", alpha=0.5)
+        ax2[0, j].axhline(y=70, color="black", linestyle="--", alpha=1.0)
         # ax2[1, j].set_ylabel(r"$\sum \rm cost ~ [\$]$")
         ax2[1, j].plot(
             ITERATIONS,
@@ -167,12 +211,12 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
         ax2[k, j].set_xticks(np.arange(0, len(ITERATIONS) + 1, 5))
         ax2[k, j].tick_params(axis="both", which="major", labelsize=18)
 
-ax2[0][0].set_ylabel("Yield [%]")  # Assuming yield is in percentage.
+ax2[0][0].set_ylabel("Yield [%]", fontsize=18)
 ax2[0, 0].legend(loc="lower right", fontsize=18, frameon=False)
-ax2[1, 0].set_xlabel("Iteration")
-ax2[1, 1].set_xlabel("Iteration")
-ax2[1, 2].set_xlabel("Iteration")
-ax2[1, 3].set_xlabel("Iteration")
+ax2[1, 0].set_xlabel("Iteration", fontsize=18)
+ax2[1, 1].set_xlabel("Iteration", fontsize=18)
+ax2[1, 2].set_xlabel("Iteration", fontsize=18)
+ax2[1, 3].set_xlabel("Iteration", fontsize=18)
 
 
 RESULTS_ANILINE = load_pkl("results_Baumgartner_worst_Aniline.pkl")
@@ -230,7 +274,7 @@ ax2[0, j].plot(
     alpha=0.5,
 )
 
-ax2[1, j].set_ylabel(r"$\sum \rm cost ~ [\$]$")
+ax2[1, j].set_ylabel(r"$\sum \rm cost ~ [\$]$", fontsize=18)
 ax2[1, j].plot(
     ITERATIONS,
     BO_COSTS,
@@ -252,8 +296,8 @@ ax2[1, j].plot(
 )
 
 ax2[0, 0].legend(loc="lower right", fontsize=16, frameon=False)
-ax2[0, 0].axhline(y=70, color="grey", linestyle="--", alpha=0.5)
+ax2[0, 0].axhline(y=70, color="black", linestyle="--", alpha=1.0)
 # vertical line at 20 iterations
-ax2[1, 0].axvline(x=4, color="grey", linestyle="--", alpha=0.5)
+ax2[1, 0].axvline(x=4, color="black", linestyle="--", alpha=1.0)
 plt.tight_layout()
 plt.savefig("Baumgartner_cheapest.pdf")
