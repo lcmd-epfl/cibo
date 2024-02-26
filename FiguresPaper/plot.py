@@ -21,18 +21,25 @@ def generate_color_scale(iterations, cmap_name="coolwarm"):
     cmap = plt.get_cmap(cmap_name)
     return [mcolors.rgb2hex(cmap(i)) for i in np.linspace(0, 1, iterations)]
 
+PLOT_UNCERTAINTY = False
 
-ITERATIONS = np.arange(31) + 1
+ITERATIONS = np.arange(31) # + 1
 RESULTS = load_pkl("results_DirectAryl.pkl")
 
 
-BO_COI_YIELD = np.mean(np.array(RESULTS[0]["y_better_BO_ALL"]), axis=0)
-BO_COI_COSTS = np.mean(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0)
+BO_COI_YIELD, BO_COI_YIELD_STD = np.mean(np.array(RESULTS[0]["y_better_BO_ALL"]), axis=0), np.std(np.array(RESULTS[0]["y_better_BO_ALL"]), axis=0)
+BO_COI_COSTS, BO_COI_COSTS_STD = np.mean(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0),  np.std(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0)
+# np.array(RESULTS[0]["running_costs_BO_ALL"])[1]
+# np.mean(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0)
 
-BO_YIELD = np.mean(np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0)
-BO_COSTS = np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
+BO_YIELD, BO_YIELD_STD = np.mean(
+    np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0
+), np.std(np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0)
+BO_COSTS,BO_COSTS_STD  = np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0), np.std(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
+# np.array(RESULTS[1]["running_costs_BO_ALL"])[1]
+# np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
 
-
+# pdb.set_trace()
 BO_COI_COSTS, BO_COSTS = BO_COI_COSTS + 24.0, BO_COSTS + 24.0
 
 sns.set_context("poster")  # This sets the context to "poster", which is similar to using 'seaborn-poster'
@@ -55,29 +62,77 @@ for i in range(2):  # Row index
 ax1[0].plot(
     ITERATIONS,
     BO_COI_YIELD,
-    label="BO-COI",
-    color="red",
+    label="CIBO",
+    color="#F28E2B",
     marker="o",
     ls="--",
     alpha=0.5,
+    ms=10,
 )
+
 ax1[1].plot(
     ITERATIONS,
     BO_COI_COSTS,
-    label="BO-COI",
-    color="red",
+    label="CIBO",
+    color="#F28E2B",
     marker="o",
     ls="--",
     alpha=0.5,
+    ms=10,
 )
 
 ax1[0].plot(
-    ITERATIONS, BO_YIELD, label="BO", color="blue", marker="o", ls="--", alpha=0.5
+    ITERATIONS,
+    BO_YIELD,
+    label="BO",
+    color="#4E79A7",
+    marker="^",
+    ls="--",
+    alpha=0.5,
+    ms=8,
 )
 ax1[1].plot(
-    ITERATIONS, BO_COSTS, label="BO", color="blue", marker="o", ls="--", alpha=0.5
+    ITERATIONS,
+    BO_COSTS,
+    label="BO",
+    color="#4E79A7",
+    marker="^",
+    ls="--",
+    alpha=0.5,
+    ms=8,
 )
 
+
+if PLOT_UNCERTAINTY:
+    ax1[0].fill_between(
+        ITERATIONS,
+        BO_COI_YIELD - BO_COI_YIELD_STD,
+        BO_COI_YIELD + BO_COI_YIELD_STD,
+        alpha=0.2,
+        color="red",
+    )
+    ax1[1].fill_between(
+        ITERATIONS,
+        BO_COI_COSTS - BO_COI_COSTS_STD,
+        BO_COI_COSTS + BO_COI_COSTS_STD,
+        alpha=0.2,
+        color="red",
+    )
+    ax1[0].fill_between(
+        ITERATIONS,
+        BO_YIELD - BO_YIELD_STD,
+        BO_YIELD + BO_YIELD_STD,
+        alpha=0.2,
+        color="#4E79A7",
+    )
+
+    ax1[1].fill_between(
+        ITERATIONS,
+        BO_COSTS - BO_COSTS_STD,
+        BO_COSTS + BO_COSTS_STD,
+        alpha=0.2,
+        color="#4E79A7",
+    )
 
 # make x axis ticks integers
 ax1[0].xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -93,8 +148,8 @@ ax1[0].tick_params(axis='both', labelsize=16)  # Adjusts both x and y axis ticks
 ax1[1].tick_params(axis='both', labelsize=16)  # Adjusts both x and y axis ticks
 
 # make tight
-ax1[0].set_xlim([1, 20])
-ax1[1].set_xlim([1, 20])
+ax1[0].set_xlim([0, 20])
+ax1[1].set_xlim([0, 20])
 plt.tight_layout()
 
 plt.savefig("DirectArylation.pdf")
@@ -142,7 +197,7 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
 
     BO_COA_YIELD = np.mean(np.array(RESULTS[i + 1]["y_better_BO_ALL"]), axis=0)
     BO_COA_COSTS = np.mean(np.array(RESULTS[i + 1]["running_costs_BO_ALL"]), axis=0)
-
+    ITERATIONS = np.arange(len(BO_YIELD))# + 1
     if nucleophile == "Morpholine":
         BO_COSTS += 548 + 2.8
         BO_COA_COSTS += 548 + 2.8
@@ -157,9 +212,12 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
 
     if nucleophile == "Phenethylamine":
         ax2[1, j].axvline(x=3, color="black", linestyle="--", alpha=1.0)
-    ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
-    # ax2[0, j].set_title(f"{nucleophile}", fontweight="bold")
+    ax2[0, j].set_ylim([0, 105])
+    ax2[0, j].set_xlim([0, len(ITERATIONS) + 1])    
+    ax2[1, j].set_ylim([0, 2600])
+
+    ax2[0, j].set_title(f"{nucleophile}", fontweight="bold")
     ax2[0, j].set_title(f"{nucleophiles_legends[nucleophile]}", fontweight="bold", fontsize=18)
 
     if nucleophile != "Aniline":
@@ -167,20 +225,22 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
             ITERATIONS,
             BO_YIELD,
             label="BO",
-            color="blue",
-            marker="o",
+            color="#4E79A7",
+            marker="^",
             ls="--",
             alpha=0.5,
+            ms=8,
         )
 
         ax2[0, j].plot(
             ITERATIONS,
             BO_COA_YIELD,
-            label="BO-COI",
-            color="red",
+            label="CIBO",
+            color="#F28E2B",
             marker="o",
             ls="--",
             alpha=0.5,
+            ms=10,
         )
         # plot horizontal grey dotted line at 70 % yield
         ax2[0, j].axhline(y=70, color="black", linestyle="--", alpha=1.0)
@@ -189,20 +249,22 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
             ITERATIONS,
             BO_COSTS,
             label="BO",
-            color="blue",
-            marker="o",
+            color="#4E79A7",
+            marker="^",
             ls="--",
             alpha=0.5,
+            ms=8,
         )
 
         ax2[1, j].plot(
             ITERATIONS,
             BO_COA_COSTS,
-            label="BO-COI",
-            color="red",
+            label="CIBO",
+            color="#F28E2B",
             marker="o",
             ls="--",
             alpha=0.5,
+            ms=10,
         )
     for k in range(2):
         ax2[k, j].xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -258,20 +320,22 @@ ax2[0, j].plot(
     ITERATIONS,
     BO_YIELD,
     label="BO",
-    color="blue",
-    marker="o",
+    color="#4E79A7",
+    marker="^",
     ls="--",
     alpha=0.5,
+    ms=8,
 )
 
 ax2[0, j].plot(
     ITERATIONS,
     BO_COA_YIELD,
-    label="BO-COI",
-    color="red",
+    label="CIBO",
+    color="#F28E2B",
     marker="o",
     ls="--",
     alpha=0.5,
+    ms=10,
 )
 
 ax2[1, j].set_ylabel(r"$\sum \rm cost ~ [\$]$", fontsize=18)
@@ -279,20 +343,22 @@ ax2[1, j].plot(
     ITERATIONS,
     BO_COSTS,
     label="BO",
-    color="blue",
-    marker="o",
+    color="#4E79A7",
+    marker="^",
     ls="--",
     alpha=0.5,
+    ms=8,
 )
 
 ax2[1, j].plot(
     ITERATIONS,
     BO_COA_COSTS,
-    label="BO-COI",
-    color="red",
+    label="CIBO",
+    color="#F28E2B",
     marker="o",
     ls="--",
     alpha=0.5,
+    ms=10,
 )
 
 ax2[0, 0].legend(loc="lower right", fontsize=16, frameon=False)
