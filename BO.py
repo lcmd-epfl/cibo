@@ -867,3 +867,4 @@ def NEI_acqfct(
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
+
