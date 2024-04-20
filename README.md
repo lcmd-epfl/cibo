@@ -11,9 +11,14 @@ Bayesian optimization (BO) of reactions becomes increasingly important for advan
 <img src="cibo-toc_concept_3.png" width="70%" height="60%" />
 
 ## Introduction
-**Bayesian Optimization (BO) taking batch cost into account.** 
+Add a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration.
+<img src="overview.png" width="100%" height="60%" />
 
-Our modified approach adds a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration.
+Overview of standard BO (blue) vs. _cost-informed Bayesian optimization_ (CIBO, orange) for yield optimization.
+
+ (a): BO recommends purchasing more materials. Meanwhile, CIBO balances purchases with their expected improvement of the experiment, at the cost of performing more experiments (here five vs. four). 
+
+(b): A closer look at the two acquisition functions of BO and CIBO for the selection of experiment two. In CIBO, the BO acquisition function is modified to account for the cost by subtracting the latter. Following the blue BO curve, the next experiment to perform uses green and red reactants (corresponding to the costly maximum on the right). Subtracting the price of the experiments results in the orange CIBO curve, which instead suggests the more cost-effective experiment on the left (blue and red reactants).
 
 
 ## Installation
@@ -29,8 +34,7 @@ matplotlib
 sklearn
 numpy
 ```
-Best to create a new envirnment and then
-
+Best to create a new environment (tested with python 3.8.16. and botorch 0.8.1)
 ```
 pip install -r requirements.txt
 ```
@@ -45,7 +49,6 @@ to your `.bashrc` file. Then, run
 ```
 source ~/.bashrc
 ```
-Currently tested with python 3.8.16. and botorch 0.8.1.
 
 
 ## Repository Structure
@@ -53,41 +56,20 @@ Currently tested with python 3.8.16. and botorch 0.8.1.
 ### `RegressionDemo`
 
 
-Perform various regression tasks on the Pd-catalyzed C-H arylation dataset [1] resulting in a scatter plot with errorbars (`correlation.png`). 
+Perform various regression tasks on the Pd-catalyzed C-H arylation dataset resulting in a scatter plot with errorbars (`correlation.png`). 
 All regressors are compatible with `botorch`: 
 
-Gaussian Process Regression: `GPR.py` Try the effect of different kernels: `Tanimoto` kernel performs quite well and is the default choice. Other options include `RBF`, `Matern` and `Linear`.  Random Forest Regression: `ForestReg.py`. XgBoost Regression: `XgBoostREG.py`
-
+Gaussian Process Regression: `GPR.py` Try the effect of different kernels: `Tanimoto` kernel performs quite well and is the default choice.
 
 ### `AcqFuncPrice`
 
-
-Use a modified acquisition function $\alpha_{p_j}^{i}$ with dimension (aquisition function/price) where $p_j$ is the current price of ligand $j$ and $i$ is the index of the batch.
-The original acquisition function (here GIBBON by default) is not modified, but the values are divided by a monotonic increasing function of the price. 
-This allows using different acquisition functions implemented in `botorch`.
-Empirically we find a good choice for the acquisition function value associated to each experiment $i$ as:
+Reproduce figures from the paper: for the two different datasets.
 
 
-If a ligand was already included (by buying 1 g of the substrance ) we divide by $1$. This does not requiere more user input that the price per ligand. After computing all $\alpha_{p}^{i}$ values the batches are reranked and the batch with the largest value
-
-$\sum_{i} \alpha_{p}^{i}$
-
-is selected.
-
-
-
-
-### How do I control and select an experiment?
-
-
-_____________
-
-## Strategies
 
 
 ### `misc`
 - **Content**: Space for experimental or outdated items.
-
 
 
 
@@ -100,5 +82,4 @@ This project is licensed under the MIT License
 
 
 ## References
-[1] Shields, B. J.; Stevens, J.; Li, J.; Parasram, M.; Damani, F.; Alvarado, J. I. M.; Janey, J. M.;
-Adams, R. P.; Doyle, A. G. Nature 2021, 590, 89–96
+[1] ChemArxiv
