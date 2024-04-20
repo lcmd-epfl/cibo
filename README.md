@@ -10,6 +10,8 @@ Bayesian optimization (BO) of reactions becomes increasingly important for advan
 
 <img src="cibo-toc_concept_3.png" width="60%" height="60%" />
 
+CIBO vs BO. BO suggests a direct and steep path with expensive climbing equipment and a higher chance of costs for suffering injuries. CIBO suggests a slightly longer but safer path with lower equipment costs needed for the ascent.
+
 ## Introduction
 Add a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration.
 <img src="overview.png" width="100%" height="60%" />
