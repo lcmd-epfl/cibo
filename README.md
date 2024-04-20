@@ -3,12 +3,12 @@
 ## Motivation
 _Inspired by the Star Trek universe following Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce strategies for cost-efficient BO to find a good cost and yield increase compromise._
 
-<img src="rules_ferengi.png" width="40%" height="40%" />
+<img src="rules_ferengi.png" width="60%" height="40%" />
 
 ## Abstact
 Bayesian optimization (BO) of reactions becomes increasingly important for advancing chemical discovery. Although effective in guiding experimental design, BO does not account for experimentation costs. For example, it may be more cost-effective to measure a reaction with the same ligand multiple times at different temperatures than buying a new one. We present Cost-Informed BO (CIBO), a policy tailored for chemical experimentation to prioritize experiments with lower costs. In contrast to BO, CIBO finds a cost-effective sequence of experiments towards the global optimum, the “mountain peak”. We envision use cases for efficient resource allocation in experimentation planning for traditional or self-driving laboratories.
 
-<img src="cibo-toc_concept_3.png" width="70%" height="60%" />
+<img src="cibo-toc_concept_3.png" width="60%" height="60%" />
 
 ## Introduction
 Add a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration.
