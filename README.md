@@ -1,8 +1,9 @@
 # Cost-Informed Bayesian Reaction Optimization (CIBO) a.k.a. Rules of Acquisition
 
-Related preprint:
 
-https://chemrxiv.org/engage/chemrxiv/article-details/66220e8a21291e5d1d27408d
+
+[PREPRINT:](https://chemrxiv.org/engage/chemrxiv/article-details/66220e8a21291e5d1d27408d)
+
 
 Authors:
 
@@ -55,7 +56,7 @@ pip install -r requirements.txt
 ```
 
 
-After setting up an envirnment with these packages, add
+After setting up an environment with these packages, add
 ```
 git clone git@github.com:lcmd-epfl/cibo.git
 export PYTHONPATH=$PYTHONPATH:$HOME/rules_of_acquisition
@@ -80,12 +81,12 @@ Regression on both datasets resulting in a scatter plot with errorbars (`correla
 
 Gaussian Process Regression: `GPR.py` Try the effect of different kernels: `Tanimoto` kernel performs quite well and is the default choice. Optionally also try Random Forest regression `RFR.py` interfaced with `sklearn`.
 
-To change the dataset `"dataset"`, initialization scheme (`"init_strategy"`) and number of training points `"ntrain"` open the `exp_configs_1.py` file. Other keywords have no effect for these two scripts and are only relevant for the Bayesian optimization runs.
+To change the dataset `"dataset"`, initialization scheme (`"init_strategy"`) and number of training points `"ntrain"` open the `exp_configs_1.py` file. Other keywords have no effect on these two scripts and are only relevant for the Bayesian optimization runs.
 
 ### `AcqFuncPrice`
 
 Reproduce figures from the paper: for the two different datasets `Baumgartner` and `DirectAryl`.
-In both cases the scripts work identically, the main difference is the `config.py` scripts that controll the configurations that should be tested. Therein a list is defined and the experiments are performed subsequently:
+In both cases the scripts work identically, the main difference is the `config.py` scripts that control the configurations that should be tested. Therein a list is defined and the experiments are performed subsequently:
 
 ```
 benchmark = [
@@ -108,7 +109,7 @@ benchmark = [
 ```
 `dataset`: "BMS" for DirectArylation or "baumgartner" for the Baumgarnter dataset.
 
-`init_strategy`: "worst_ligand" when using "BMS" literally means start with the ligand with worst overall yield given all other reaction conditions. "cheapest" when using "baumgartner", start with cheapest commercially availible compounds. "random" is also an option but was not used for the BO/CIBO in the paper
+`init_strategy`: "worst_ligand" when using "BMS" literally means start with the ligand with worst overall yield given all other reaction conditions. "cheapest" when using "baumgartner", start with cheapest commercially available compounds. "random" is also an option but was not used for the BO/CIBO in the paper
 
 `cost_aware`: `True` = CIBO, `False` = BO
 
@@ -130,8 +131,9 @@ benchmark = [
 
 
 
+### FiguresPaper
 
-
+Generate the result plots for the paper.
 
 
 
