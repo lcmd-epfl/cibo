@@ -80,11 +80,57 @@ Regression on both datasets resulting in a scatter plot with errorbars (`correla
 
 Gaussian Process Regression: `GPR.py` Try the effect of different kernels: `Tanimoto` kernel performs quite well and is the default choice. Optionally also try Random Forest regression `RFR.py` interfaced with `sklearn`.
 
-To change the dataset `"dataset"`, initialization scheme (`"init_strategy"`) and number of training points `"ntrain"` open the `exp_configs_1.py` file. The other keywords have no effect for these two scripts and are only relevant for the Bayesian optimization runs.
+To change the dataset `"dataset"`, initialization scheme (`"init_strategy"`) and number of training points `"ntrain"` open the `exp_configs_1.py` file. Other keywords have no effect for these two scripts and are only relevant for the Bayesian optimization runs.
 
 ### `AcqFuncPrice`
 
-Reproduce figures from the paper: for the two different datasets.
+Reproduce figures from the paper: for the two different datasets `Baumgartner` and `DirectAryl`.
+In both cases the scripts work identically, the main difference is the `config.py` scripts that controll the configurations that should be tested. Therein a list is defined and the experiments are performed subsequently:
+
+```
+benchmark = [
+    {
+        "dataset": "BMS",
+        "init_strategy": "worst_ligand",
+        "cost_aware": True,
+        "n_runs": 5,
+        "n_iter": 30,
+        "batch_size": 5,
+        "ntrain": 200,
+        "prices": "update_ligand_when_used",
+        "surrogate": "GP",
+        "acq_func": "NEI",
+        "label": "BMS_COST_GP_NEI",
+        "cost_mod": "minus",
+    }
+    ...
+]
+```
+`dataset`: "BMS" for DirectArylation or "baumgartner" for the Baumgarnter dataset.
+
+`init_strategy`: "worst_ligand" when using "BMS" literally means start with the ligand with worst overall yield given all other reaction conditions. "cheapest" when using "baumgartner", start with cheapest commercially availible compounds. "random" is also an option but was not used for the BO/CIBO in the paper
+
+`cost_aware`: `True` = CIBO, `False` = BO
+
+`n_iter`: number of BO/CIBO iterations
+
+`batch_size`: batchsize for each BO/CIBO iteration
+
+`ntrain`: maximal number of points for initialization.
+
+`prices`: "update_ligand_when_used" was the option used for the paper. After buying any compound keep it in stock, only pay once
+
+`surrogate`: Currently GaussianProcess `GP` and RandomForest `RF` are supported
+
+`acq_func`: Type of acquisition function, tested "Noisy expected improvement" `NEI`
+
+`cost_mod`: Selected modification of the original acquisition function to include the cost. "minus" corresponds to results in paper.
+
+`label`: label used for the output files.
+
+
+
+
 
 
 
