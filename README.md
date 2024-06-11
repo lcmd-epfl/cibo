@@ -1,7 +1,6 @@
 # Cost-Informed Bayesian Reaction Optimization (CIBO) a.k.a. Rules of Acquisition
 
 
-
 [PREPRINT:](https://chemrxiv.org/engage/chemrxiv/article-details/66220e8a21291e5d1d27408d)
 
 
@@ -14,8 +13,6 @@ Waser, and Clemence Corminboeuf
 _Inspired by the Star Trek universe following Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce strategies for cost-efficient BO to find a good cost and yield increase compromise._
 
 <img src="rules_ferengi.png" width="60%" height="40%" />
-
-
 
 
 
@@ -68,6 +65,7 @@ source ~/.bashrc
 
 
 ## Repository Structure
+
 
 ### `data`
 Currently supports two different datasets:
@@ -134,6 +132,18 @@ benchmark = [
 ### FiguresPaper
 
 Generate the result plots for the paper.
+
+
+### Scripts for modified cost-informed BO
+
+`BO.py` contains all functions and classes a fit a surrogate model
+
+`update_model`: Update and return a GP model with new training data from scratch.
+
+`Surrogate_Model`:  Surrogate model class that supports different types of kernels and surrogate methods and model fitting
+
+
+
 
 
 
