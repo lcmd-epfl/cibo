@@ -1,8 +1,6 @@
 import pandas as pd
 from utils import FingerprintGenerator
 import numpy as np
-import copy as cp
-import pdb
 
 
 class baumgartner:

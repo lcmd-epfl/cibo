@@ -18,7 +18,6 @@ from experiments import (
     RS_LIGAND,
 )
 from data.datasets import Evaluation_data
-import pdb
 
 SEED = 111
 random.seed(SEED)

@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-import copy as cp
 from utils import FingerprintGenerator, inchi_to_smiles
-import pdb
 
 class directaryl:
     def __init__(self):

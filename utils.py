@@ -14,7 +14,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import pdb
 
-mpl_use("Agg")  # Set the matplotlib backend for plotting
+#mpl_use("Agg")  # Set the matplotlib backend for plotting
 
 
 # savepkl file

@@ -14,7 +14,6 @@ from utils import (
     compute_price_acquisition_ligands,
     update_price_dict_ligands,
 )
-import pdb
 
 
 def BO_LIGAND(BO_data):
