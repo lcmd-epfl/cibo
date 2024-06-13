@@ -5,7 +5,8 @@ import gpytorch
 from gpytorch.kernels import Kernel
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
-from botorch.fit import fit_gpytorch_model
+# from botorch.fit import fit_gpytorch_model
+from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf_discrete
 from botorch.sampling import SobolQMCNormalSampler
@@ -382,7 +383,8 @@ class Surrogate_Model:
             self.mll = ExactMarginalLogLikelihood(self.gp.likelihood, self.gp)
             self.mll.to(self.X_train_tensor)
             if self.FIT_METHOD:
-                fit_gpytorch_model(self.mll, max_retries=50000)
+                # fit_gpytorch_model(self.mll, max_retries=50000)
+                fit_gpytorch_mll(self.mll, num_retries=50000)
             else:
                 if self.kernel_type == "RBF" or self.kernel_type == "Matern":
                     self.NUM_EPOCHS_GD = 5000
@@ -550,7 +552,8 @@ def opt_acqfct(
             model, X_candidate_BO, maximize=maximize
         )
     elif acq_func == "NEI":
-        sampler = SobolQMCNormalSampler(1024)
+        # sampler = SobolQMCNormalSampler(1024)
+        sampler = SobolQMCNormalSampler(torch.Size([1024]), seed=1234)
         acq_function = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
 
     n_best = len(X_candidate_BO) // q
@@ -867,4 +870,3 @@ def NEI_acqfct(
     indices = find_indices(X_candidate_BO, candidates)
 
     return indices, candidates
-
