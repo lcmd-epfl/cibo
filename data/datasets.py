@@ -5,7 +5,6 @@ from utils import convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
 from data.baumgartner import baumgartner
 from data.directaryl import directaryl
-import pdb
 
 
 class Evaluation_data:
@@ -149,7 +148,6 @@ class Evaluation_data:
                 replace=False,
             )
             index_others = np.setdiff1d(np.arange(len(self.y)), index_worst)
-            # randomly shuffle the data
             index_others = np.random.permutation(index_others)
 
             X_init, y_init, costs_init = (
