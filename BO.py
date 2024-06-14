@@ -552,7 +552,7 @@ def opt_acqfct(
             model, X_candidate_BO, maximize=maximize
         )
     elif acq_func == "NEI":
-        # sampler = SobolQMCNormalSampler(1024)
+        # sampler = SobolQMCNormalSampler(1024) <- worked for a previous version before update of BoTorch
         sampler = SobolQMCNormalSampler(torch.Size([1024]), seed=1234)
         acq_function = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
 
@@ -853,7 +853,7 @@ def NEI_acqfct(
 
     NUM_RESTARTS = 20
     RAW_SAMPLES = 512
-    sampler = SobolQMCNormalSampler(1024)
+    sampler = SobolQMCNormalSampler(torch.Size([1024]), seed=1234)
 
     qLogNEI = qNoisyExpectedImprovement(model, torch.tensor(X_train), sampler)
     candidates, _ = optimize_acqf_discrete(
