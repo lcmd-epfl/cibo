@@ -5,7 +5,6 @@ import gpytorch
 from gpytorch.kernels import Kernel
 from botorch.acquisition.max_value_entropy_search import qLowerBoundMaxValueEntropy
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
-# from botorch.fit import fit_gpytorch_model
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf_discrete
@@ -14,17 +13,14 @@ from gpytorch.kernels import RBFKernel, MaternKernel, ScaleKernel, LinearKernel
 from gpytorch.means import ConstantMean
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from torch.optim import Adam
-from botorch_ext import ForestSurrogate
 from sklearn.ensemble import RandomForestRegressor
 
-# Custom module imports
-from botorch_ext import optimize_acqf_discrete_modified
-
-# specific import for the modified GIBBON function
-from utils import (
+from cibo.botorch_ext import ForestSurrogate, optimize_acqf_discrete_modified
+from cibo.utils import (
     function_cost_minus,
     function_cost_C_minus,
 )
+
 
 # Suppress warnings
 warnings.filterwarnings("ignore")

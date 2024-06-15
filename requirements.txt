@@ -1,7 +1,9 @@
-torch
-gpytorch
-botorch
-rdkit
-matplotlib
-scikit-learn
-numpy
+botorch==0.11.1
+gpytorch==1.11
+matplotlib==3.9.0
+numpy==1.26.4
+pandas==2.2.2
+rdkit==2023.9.6
+scikit_learn==1.4.2
+torch==2.3.1
+xgboost==2.0.3

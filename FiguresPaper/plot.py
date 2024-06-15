@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import *
+
 import matplotlib.colors as mcolors
 from matplotlib.ticker import MaxNLocator
 import seaborn as sns
+
+from cibo.utils import load_pkl
 
 plt.rcParams["font.weight"] = "bold"
 plt.rcParams["axes.labelweight"] = "bold"

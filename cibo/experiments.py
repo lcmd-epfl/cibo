@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from BO import (
+
+from cibo.BO import (
     update_model,
     NEI_acqfct,
     GIBBON_acqfct,
@@ -8,7 +9,7 @@ from BO import (
     acqfct_COI_LIGAND_BASE_SOLVENT,
 )
 
-from utils import (
+from cibo.utils import (
     check_better,
     update_X_y,
     compute_price_acquisition_ligands,

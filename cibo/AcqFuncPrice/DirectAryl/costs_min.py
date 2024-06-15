@@ -3,8 +3,11 @@ import numpy as np
 import random
 import copy as cp
 from config import benchmark
-from BO import update_model
-from utils import (
+
+
+
+from cibo.BO import update_model
+from cibo.utils import (
     plot_utility_BO_vs_RS,
     plot_costs_BO_vs_RS,
     create_aligned_transposed_price_table,
@@ -12,12 +15,12 @@ from utils import (
     data_dict_RS_LIGAND,
     save_pkl,
 )
-from experiments import (
+from cibo.experiments import (
     BO_LIGAND,
     BO_COI_LIGAND,
     RS_LIGAND,
 )
-from data.datasets import Evaluation_data
+from cibo.data.datasets import Evaluation_data
 
 SEED = 111
 random.seed(SEED)

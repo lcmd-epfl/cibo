@@ -1,11 +1,12 @@
 import numpy as np
 import torch
 import random
-from utils import convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
-from data.baumgartner import baumgartner
-from data.directaryl import directaryl
-from data.user_data import user_data
+
+from cibo.utils import convert2pytorch, check_entries
+from cibo.data.baumgartner import baumgartner
+from cibo.data.directaryl import directaryl
+from cibo.data.user_data import user_data
 
 
 class Evaluation_data:

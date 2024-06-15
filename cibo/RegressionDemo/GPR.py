@@ -1,11 +1,15 @@
 import numpy as np
-from BO import update_model
-from datasets import Evaluation_data
-from exp_configs_1 import benchmark
+
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
 import matplotlib.pyplot as plt
 import random
+from exp_configs_1 import benchmark
+
+
+from cibo.BO import update_model
+from cibo.data.datasets import Evaluation_data
+
 
 np.random.seed(777)
 random.seed(777)

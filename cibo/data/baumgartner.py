@@ -1,7 +1,7 @@
 import pandas as pd
-from utils import FingerprintGenerator
 import numpy as np
 
+from cibo.utils import FingerprintGenerator
 
 class baumgartner:
     def __init__(self, nucleophile):
