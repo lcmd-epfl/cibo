@@ -36,32 +36,22 @@ Overview of standard BO (blue) vs. _cost-informed Bayesian optimization_ (CIBO, 
 
 ## Installation
 
-Python dependencies:
-
-```
-torch
-gpytorch
-botorch
-rdkit
-matplotlib
-sklearn
-numpy
-```
-Best to create a new environment (tested with python 3.8.16. and botorch 0.8.1)
-```
-pip install -r requirements.txt
-```
+Best to create a new environment, for instance with
 
 
-After setting up an environment with these packages, add
+
 ```
-git clone git@github.com:lcmd-epfl/cibo.git
-export PYTHONPATH=$PYTHONPATH:$HOME/rules_of_acquisition
+conda create --name cibo python=3.10
 ```
-to your `.bashrc` file. Then, run
+
+then:
+
 ```
-source ~/.bashrc
+pip install .
 ```
+
+That's it!
+
 
 
 ## Repository Structure
