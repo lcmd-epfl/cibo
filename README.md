@@ -12,20 +12,20 @@ Waser, and Clemence Corminboeuf
 ## Motivation
 _Inspired by the Star Trek universe following Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce strategies for cost-efficient BO to find a good cost and yield increase compromise._
 
-<img src="rules_ferengi.png" width="60%" height="40%" />
+<img src="./misc/rules_ferengi.png" width="60%" height="40%" />
 
 
 
 ## Abstact
 Bayesian optimization (BO) of reactions becomes increasingly important for advancing chemical discovery. Although effective in guiding experimental design, BO does not account for experimentation costs. For example, it may be more cost-effective to measure a reaction with the same ligand multiple times at different temperatures than buying a new one. We present Cost-Informed BO (CIBO), a policy tailored for chemical experimentation to prioritize experiments with lower costs. In contrast to BO, CIBO finds a cost-effective sequence of experiments towards the global optimum, the “mountain peak”. We envision use cases for efficient resource allocation in experimentation planning for traditional or self-driving laboratories.
 
-<img src="cibo_muuh.png" width="60%" height="60%" />
+<img src="./misc/cibo_muuh.png" width="50%" height="50%" />
 
 CIBO vs BO. BO suggests a direct and steep path with expensive climbing equipment and a higher chance of costs for suffering injuries. CIBO suggests a slightly longer but safer path with lower equipment costs needed for the ascent.
 
 ## What problem are we solving?
 Add a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration.
-<img src="overview.png" width="100%" height="60%" />
+<img src="./misc/overview.png" width="80%" height="40%" />
 
 Overview of standard BO (blue) vs. _cost-informed Bayesian optimization_ (CIBO, orange) for yield optimization.
 
