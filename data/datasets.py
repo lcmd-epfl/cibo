@@ -5,16 +5,20 @@ from utils import convert2pytorch, check_entries
 from sklearn.preprocessing import MinMaxScaler
 from data.baumgartner import baumgartner
 from data.directaryl import directaryl
+from data.user_data import user_data
 
 
 class Evaluation_data:
     def __init__(
-        self, dataset, init_size, prices, init_strategy="values", nucleophile=None
+        self, dataset, init_size, prices, init_strategy="values", nucleophile=None, csv_file=None
     ):
         self.dataset = dataset
         self.init_strategy = init_strategy
         self.init_size = init_size
         self.prices = prices
+
+
+        self.csv_file = csv_file
 
         if nucleophile is None:
             self.nucleophile = "Aniline"
@@ -58,6 +62,24 @@ class Evaluation_data:
             self.where_worst_ligand = BMS.where_worst_ligand
             self.feauture_labels = BMS.feauture_labels
 
+
+        elif self.dataset == "user_data":
+            user = user_data(csv_file=self.csv_file)
+            self.data = user.data
+            self.experiments = user.experiments
+            self.X, self.y = user.X, user.y
+
+            self.all_ligands = user.all_ligands
+            self.all_bases = user.all_bases
+            self.all_solvents = user.all_solvents
+
+            self.best_ligand = user.best_ligand
+            self.worst_ligand = user.worst_ligand
+            self.where_worst_ligand = user.where_worst_ligand
+            self.feauture_labels = user.feauture_labels
+
+        
+
         elif self.dataset == "baumgartner":
             baum = baumgartner(nucleophile=self.nucleophile)
             self.experiments = baum.experiments
@@ -100,7 +122,7 @@ class Evaluation_data:
                 self.costs[p] = np.array([1])
 
         elif self.prices == "update_ligand_when_used":
-            if self.dataset == "BMS":
+            if self.dataset == "BMS" or self.dataset == "user_data":
                 ligand_price_dict = {}
 
                 # Iterate through the dataframe rows
@@ -242,7 +264,7 @@ class Evaluation_data:
             )
 
         elif self.init_strategy == "worst_ligand_and_more":
-            if self.dataset == "BMS":
+            if self.dataset == "BMS" or self.dataset == "user_data":
                 unique_bases = self.feauture_labels["names"]["bases"]
                 unique_solvents = self.feauture_labels["names"]["solvents"]
                 # start with 2 solvents, 2 bases

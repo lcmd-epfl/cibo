@@ -1,16 +1,15 @@
 import numpy as np
 import pandas as pd
-from utils import FingerprintGenerator, inchi_to_smiles
+from utils import FingerprintGenerator
 
-class directaryl:
-    def __init__(self):
+class user_data:
+    def __init__(self, csv_file="user_data.csv"):
         # direct arylation reaction
         self.ECFP_size = 512
         self.radius = 2
         self.ftzr = FingerprintGenerator(nBits=self.ECFP_size, radius=self.radius)
-        dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
-        # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
-        self.data = pd.read_csv(dataset_url)
+
+        self.data = pd.read_csv(csv_file)
         self.data = self.data.sample(frac=1).reset_index(drop=True)
         # create a copy of the data
         data_copy = self.data.copy()
@@ -22,14 +21,6 @@ class directaryl:
             print("There are duplicates in the dataset.")
             exit()
 
-        self.data["Ligand_Cost_fixed"] = np.ceil(
-            self.data["Ligand_price.mol"].values / self.data["Ligand_MW"].values
-        )
-
-        self.data["Base_SMILES"] = inchi_to_smiles(self.data["Base_inchi"].values)
-        self.data["Ligand_SMILES"] = inchi_to_smiles(self.data["Ligand_inchi"].values)
-        self.data["Solvent_SMILES"] = inchi_to_smiles(self.data["Solvent_inchi"].values)
-        # pdb.set_trace()
         col_0_base = self.ftzr.featurize(self.data["Base_SMILES"])
         col_1_ligand = self.ftzr.featurize(self.data["Ligand_SMILES"])
         col_2_solvent = self.ftzr.featurize(self.data["Solvent_SMILES"])
@@ -99,23 +90,5 @@ class directaryl:
             },
         }
 
-        # create of copy of the dataframe
-        data_copy = self.data.copy()
-        # List of columns to keep
-        columns_to_keep = [
-            "Ligand_Cost_fixed",
-            "Base_SMILES",
-            "Ligand_SMILES",
-            "Solvent_SMILES",
-            "Concentration",
-            "Temp_C",
-            "Yield",
-        ]
-
-        # Drop all columns except the ones in columns_to_keep
-        data_copy = data_copy[columns_to_keep]
-        #save to csv
-        data_copy.to_csv("directaryl.csv", index=False)
-
 if __name__ == "__main__":
-    directaryl()
+    user_data()
