@@ -120,6 +120,13 @@ class user_data2:
 
         self.data = pd.read_csv(csv_file)
 
+
+
+        # check if "cost" is present in the description
+        if "cost" in self.description:
+            self.data["Ligand_Cost_fixed"] = self.data[self.description["cost"]["name"]]
+
+
         self.ligand_smiles_name = self.description["compounds"]["1"]["name"]
         self.target_name = self.description["target"]["name"]
         self.X = self.construct_representation()
