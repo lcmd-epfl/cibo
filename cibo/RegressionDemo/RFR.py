@@ -42,7 +42,7 @@ y_pred = model.posterior(torch.tensor(X_candidate)).mean.flatten()
 y_std = np.sqrt(model.posterior(torch.tensor(X_candidate)).variance).flatten()
 
 
-r2 = r2_score(y_pred, y_candidate)
+r2 = r2_score(y_candidate, y_pred)
 mae = mean_absolute_error(y_candidate, y_pred)
 
 print("r2 = ", r2)

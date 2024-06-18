@@ -60,7 +60,7 @@ y_pred = y_pred.flatten()
 y_candidate = y_candidate.numpy().flatten()
 
 
-r2 = r2_score(y_pred, y_candidate)
+r2 = r2_score(y_candidate, y_pred)
 mae = mean_absolute_error(y_candidate, y_pred)
 
 
