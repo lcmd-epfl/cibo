@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from cibo.utils import convert2pytorch, check_entries
 from cibo.data.baumgartner import baumgartner
 from cibo.data.directaryl import directaryl
-from cibo.data.user_data import user_data
+from cibo.data.user_data import user_data, user_data2
 
 
 class Evaluation_data:
