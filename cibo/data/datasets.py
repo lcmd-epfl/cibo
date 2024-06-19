@@ -6,20 +6,20 @@ from sklearn.preprocessing import MinMaxScaler
 from cibo.utils import convert2pytorch, check_entries
 from cibo.data.baumgartner import baumgartner
 from cibo.data.directaryl import directaryl
-from cibo.data.user_data import user_data, user_data2
+from cibo.data.user_data import user_data
 
 
 class Evaluation_data:
     def __init__(
-        self, dataset, init_size, prices, init_strategy="values", nucleophile=None, csv_file=None
+        self, dataset, init_size, prices, init_strategy="values", nucleophile=None, csv_file=None, description=None
     ):
         self.dataset = dataset
         self.init_strategy = init_strategy
         self.init_size = init_size
         self.prices = prices
 
-
         self.csv_file = csv_file
+        self.description = description
 
         if nucleophile is None:
             self.nucleophile = "Aniline"
@@ -33,12 +33,6 @@ class Evaluation_data:
         self.bounds_norm = self.bounds_norm.to(dtype=torch.float32)
 
         if not check_entries(self.X):
-            print("###############################################")
-            print(
-                "Entries of X are not between 0 and 1. Adding MinMaxScaler to the pipeline."
-            )
-            print("###############################################")
-
             self.scaler_X = MinMaxScaler()
             self.X = self.scaler_X.fit_transform(self.X)
 
@@ -63,23 +57,14 @@ class Evaluation_data:
             self.where_worst_ligand = BMS.where_worst_ligand
             self.feauture_labels = BMS.feauture_labels
 
-
         elif self.dataset == "user_data":
-            user = user_data(csv_file=self.csv_file)
+            if self.description is not None:
+                user = user_data(csv_file=self.csv_file, description=self.description)
+            else:
+                user = user_data(csv_file=self.csv_file)
             self.data = user.data
             self.experiments = user.experiments
             self.X, self.y = user.X, user.y
-
-            self.all_ligands = user.all_ligands
-            self.all_bases = user.all_bases
-            self.all_solvents = user.all_solvents
-
-            self.best_ligand = user.best_ligand
-            self.worst_ligand = user.worst_ligand
-            self.where_worst_ligand = user.where_worst_ligand
-            self.feauture_labels = user.feauture_labels
-
-        
 
         elif self.dataset == "baumgartner":
             baum = baumgartner(nucleophile=self.nucleophile)
@@ -187,21 +172,8 @@ class Evaluation_data:
             X_init, y_init = convert2pytorch(X_init, y_init)
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
-            if self.dataset != "TwoDimFct":
-                return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
-            else:
-                for ind in index_worst:
-                    self.data.loc[ind, "cost"] = 0
-                    self.ligand_prices[ind] = 0
-                return (
-                    X_init,
-                    y_init,
-                    X_holdout,
-                    y_holdout,
-                    index_worst,
-                    index_others,
-                    self.ligand_prices,
-                )
+            return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+
 
         elif self.init_strategy == "random":
             """
@@ -335,7 +307,7 @@ class Evaluation_data:
 
                 X_init, y_init = self.X[indices_init], self.y[indices_init]
                 X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
-                
+
                 self.price_dict_precatalyst[self.worst_precatalyst] = 0
                 self.price_dict_base[self.worst_bases] = 0
 
