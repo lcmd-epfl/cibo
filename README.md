@@ -12,7 +12,7 @@ Waser, and Clemence Corminboeuf
 ## Motivation
 _Inspired by the Star Trek universe following Ferengi's 3rd rule of acquisition - "Never spend more for an acquisition than you have to," and the 74th rule - "Knowledge equals profit," we introduce strategies for cost-efficient BO to find a good cost and yield increase compromise._
 
-<img src="./misc/rules_ferengi.png" width="60%" height="40%" />
+<img src="./misc/rules_ferengi.png" width="40%" height="20%" />
 
 
 
@@ -25,6 +25,7 @@ CIBO vs BO. BO suggests a direct and steep path with expensive climbing equipmen
 
 ## What problem are we solving?
 Add a crucial dimension to the BO: the cost and ease of availability of each compound used at each batch iteration.
+
 <img src="./misc/overview.png" width="80%" height="40%" />
 
 Overview of standard BO (blue) vs. _cost-informed Bayesian optimization_ (CIBO, orange) for yield optimization.
@@ -51,6 +52,41 @@ pip install .
 ```
 
 That's it!
+
+## Tutorial
+Open the file 
+
+
+`tutorial.ipynb` 
+
+To learn how to load the datasets shown in the paper and, more importantly, how to perform a cost-informed Bayesian Optimization with your own data.
+Your data must come in a `CSV` file. For instance, for the direct arylation dataset we would have:
+
+
+```
+from cibo.data.datasets import user_data
+
+description = {
+    "compounds": {
+        "1": {"name": "Ligand_SMILES", "inp_type": "smiles"},
+        "2": {"name": "Base_SMILES", "inp_type": "smiles"},
+        "3": {"name": "Solvent_SMILES", "inp_type": "smiles"},
+    },
+    "parameters": {
+        "1": {"name": "Concentration", "inp_type": "float"},
+        "2": {"name": "Temp_C", "inp_type": "float"},
+    },
+    "cost": {"name": "Ligand_Cost_fixed", "inp_type": "float"},
+    "target": {"name": "Yield", "inp_type": "float"},
+}
+
+data = user_data(csv_file=my_data_path, description=description)
+
+X, y = data.X, data.y
+```
+
+Simply specify the location of your file, the compound columns (you can have arbitrarily many) as well as reaction parameters such as the temperature or the concentration.
+Finally, also specify the costs and which column corresponds to the reaction yield.
 
 
 
