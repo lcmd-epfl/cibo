@@ -365,6 +365,7 @@ def BO_COI_LIGAND(BO_data):
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
     cost_mod = BO_data["cost_mod"]
+    cost_weight = BO_data["cost_weight"]
 
     EXP_DONE_BO = BO_data["EXP_DONE_BO"]
     EXP_CANDIDATE_BO = BO_data["EXP_CANDIDATE_BO"]
@@ -383,6 +384,7 @@ def BO_COI_LIGAND(BO_data):
         price_dict_BO=price_dict_BO,
         acq_func=acq_func,
         cost_mod=cost_mod,
+        cost_weight=cost_weight,
     )
     indices = index_set_rearranged[0]
     candidates = candidates_rearranged[0]

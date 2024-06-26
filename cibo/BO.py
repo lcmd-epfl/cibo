@@ -593,6 +593,7 @@ def acqfct_COI_LIGAND(
     price_dict_BO,
     acq_func="GIBBON",
     cost_mod="minus",
+    cost_weight=1.0,
 ):
     """
     Optimize the acquisition function considering the cost associated with each candidate set.
@@ -642,7 +643,7 @@ def acqfct_COI_LIGAND(
             )
 
         price_rescaling_factors = np.array(price_rescaling_factors)
-        acq_values_per_price = acq_values - price_rescaling_factors
+        acq_values_per_price = acq_values - price_rescaling_factors * cost_weight
 
     row_sums_2 = acq_values_per_price.sum(axis=1)
     sorted_indices = np.argsort(row_sums_2)[::-1]
