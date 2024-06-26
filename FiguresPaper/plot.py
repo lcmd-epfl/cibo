@@ -7,6 +7,8 @@ import seaborn as sns
 
 from cibo.utils import load_pkl
 
+import pdb
+
 plt.rcParams["font.weight"] = "bold"
 plt.rcParams["axes.labelweight"] = "bold"
 plt.rcParams["axes.linewidth"] = 10
@@ -29,8 +31,12 @@ ITERATIONS = np.arange(31) # + 1
 RESULTS = load_pkl("results_DirectAryl.pkl")
 
 
+
+
 BO_COI_YIELD, BO_COI_YIELD_STD = np.mean(np.array(RESULTS[0]["y_better_BO_ALL"]), axis=0), np.std(np.array(RESULTS[0]["y_better_BO_ALL"]), axis=0)
 BO_COI_COSTS, BO_COI_COSTS_STD = np.mean(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0),  np.std(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0)
+
+
 # np.array(RESULTS[0]["running_costs_BO_ALL"])[1]
 # np.mean(np.array(RESULTS[0]["running_costs_BO_ALL"]), axis=0)
 
@@ -38,11 +44,13 @@ BO_YIELD, BO_YIELD_STD = np.mean(
     np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0
 ), np.std(np.array(RESULTS[1]["y_better_BO_ALL"]), axis=0)
 BO_COSTS,BO_COSTS_STD  = np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0), np.std(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
-# np.array(RESULTS[1]["running_costs_BO_ALL"])[1]
-# np.mean(np.array(RESULTS[1]["running_costs_BO_ALL"]), axis=0)
 
-# pdb.set_trace()
-BO_COI_COSTS, BO_COSTS = BO_COI_COSTS + 24.0, BO_COSTS + 24.0
+
+RANDOM_YIELD, RANDOM_YIELD_STD = np.mean(np.array(RESULTS[0]["y_better_RANDOM_ALL"]), axis=0), np.std(np.array(RESULTS[0]["y_better_RANDOM_ALL"]), axis=0)
+RANDOM_COSTS, RANDOM_COSTS_STD = np.mean(np.array(RESULTS[0]["running_costs_RANDOM_ALL"]), axis=0), np.std(np.array(RESULTS[0]["running_costs_RANDOM_ALL"]), axis=0)
+
+BO_COI_COSTS, BO_COSTS, RANDOM_COSTS = BO_COI_COSTS + 24.0, BO_COSTS + 24.0, RANDOM_COSTS + 24.0
+
 
 sns.set_context("poster")  # This sets the context to "poster", which is similar to using 'seaborn-poster'
 sns.set(style="whitegrid")  # Optionally set a style, "whitegrid" is just an example
@@ -99,6 +107,29 @@ ax1[1].plot(
     label="BO",
     color="#4E79A7",
     marker="^",
+    ls="--",
+    alpha=0.5,
+    ms=8,
+)
+
+
+ax1[0].plot(
+    ITERATIONS,
+    RANDOM_YIELD,
+    label="RS",
+    color="green",
+    marker="s",
+    ls="--",
+    alpha=0.5,
+    ms=8,
+)
+
+ax1[1].plot(
+    ITERATIONS,
+    RANDOM_COSTS,
+    label="RS",
+    color="green",
+    marker="s",
     ls="--",
     alpha=0.5,
     ms=8,
@@ -180,7 +211,7 @@ nulceophiles = [
     "Morpholine",
 ]
 # plt.plot()
-plt.show()
+# plt.show()
 # pdb.set_trace()
 
 
@@ -199,15 +230,22 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
 
     BO_COA_YIELD = np.mean(np.array(RESULTS[i + 1]["y_better_BO_ALL"]), axis=0)
     BO_COA_COSTS = np.mean(np.array(RESULTS[i + 1]["running_costs_BO_ALL"]), axis=0)
+
+
+    RANDOM_YIELD = np.mean(np.array(RESULTS[i]["y_better_RANDOM_ALL"]), axis=0)
+    RANDOM_COSTS = np.mean(np.array(RESULTS[i]["running_costs_RANDOM_ALL"]), axis=0)
+
     ITERATIONS = np.arange(len(BO_YIELD))# + 1
     if nucleophile == "Morpholine":
         BO_COSTS += 548 + 2.8
         BO_COA_COSTS += 548 + 2.8
+        RANDOM_COSTS += 548 + 2.8
         # pdb.set_trace()
         ax2[1, j].axvline(x=8, color="black", linestyle="--", alpha=1.0)
     else:
         BO_COSTS += 65.2 + 2.8
         BO_COA_COSTS += 65.2 + 2.8
+        RANDOM_COSTS += 65.2 + 2.8
 
     if nucleophile == "Benzamide":
         ax2[1, j].axvline(x=3, color="black", linestyle="--", alpha=1.0)
@@ -268,6 +306,30 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
             alpha=0.5,
             ms=10,
         )
+
+
+        ax2[0, j].plot(
+            ITERATIONS,
+            RANDOM_YIELD,
+            label="RS",
+            color="green",
+            marker="s",
+            ls="--",
+            alpha=0.5,
+            ms=8,
+        )
+
+
+        ax2[1, j].plot(
+            ITERATIONS,
+            RANDOM_COSTS,
+            label="RS",
+            color="green",
+            marker="s",
+            ls="--",
+            alpha=0.5,
+            ms=8,
+        )
     for k in range(2):
         ax2[k, j].xaxis.set_major_locator(MaxNLocator(integer=True))
         ax2[k, j].set_xlim([0, len(ITERATIONS) + 1])
@@ -314,7 +376,14 @@ BO_COA_COSTS = (
     + 459.0
     + 0.5730027548
 )
-# pdb.set_trace()
+RANDOM_YIELD = np.mean(np.array(RESULTS_ANILINE[i]["y_better_RANDOM_ALL"]), axis=0)
+RANDOM_COSTS = (
+    np.mean(np.array(RESULTS_ANILINE[i]["running_costs_RANDOM_ALL"]), axis=0)
+    + 459.0
+    + 0.5730027548
+)
+
+
 ITERATIONS = np.arange(len(BO_YIELD)) + 1
 
 
@@ -340,6 +409,19 @@ ax2[0, j].plot(
     ms=10,
 )
 
+
+ax2[0, j].plot(
+    ITERATIONS,
+    RANDOM_YIELD,
+    label="RS",
+    color="green",
+    marker="s",
+    ls="--",
+    alpha=0.5,
+    ms=8,
+)
+
+
 ax2[1, j].set_ylabel(r"$\sum \rm cost ~ [\$]$", fontsize=18)
 ax2[1, j].plot(
     ITERATIONS,
@@ -362,6 +444,19 @@ ax2[1, j].plot(
     alpha=0.5,
     ms=10,
 )
+
+
+ax2[1, j].plot(
+    ITERATIONS,
+    RANDOM_COSTS,
+    label="RS",
+    color="green",
+    marker="s",
+    ls="--",
+    alpha=0.5,
+    ms=8,
+)
+
 
 ax2[0, 0].legend(loc="lower right", fontsize=16, frameon=False)
 ax2[0, 0].axhline(y=70, color="black", linestyle="--", alpha=1.0)
