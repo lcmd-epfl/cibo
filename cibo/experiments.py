@@ -365,6 +365,11 @@ def BO_COI_LIGAND(BO_data):
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
     cost_mod = BO_data["cost_mod"]
+
+
+    #checkf cost_weight in dict if not put it to be 1.0
+    if "cost_weight" not in BO_data:
+        BO_data["cost_weight"] = 1.0
     cost_weight = BO_data["cost_weight"]
 
     EXP_DONE_BO = BO_data["EXP_DONE_BO"]
@@ -453,6 +458,9 @@ def BO_COI_LIGAND_BASE_SOLVENT(BO_data):
     surrogate = BO_data["surrogate"]
     acq_func = BO_data["acq_func"]
     cost_mod = BO_data["cost_mod"]
+
+    if "cost_weight" not in BO_data:
+        BO_data["cost_weight"] = 1.0
 
     EXP_DONE_BO = BO_data["EXP_DONE_BO"]
     EXP_CANDIDATE_BO = BO_data["EXP_CANDIDATE_BO"]

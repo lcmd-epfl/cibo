@@ -116,7 +116,7 @@ class directaryl:
         # Drop all columns except the ones in columns_to_keep
         data_copy = data_copy[columns_to_keep]
         #save to csv
-        data_copy.to_csv("directaryl.csv", index=False)
+        #data_copy.to_csv("directaryl.csv", index=False)
 
 if __name__ == "__main__":
     directaryl()
