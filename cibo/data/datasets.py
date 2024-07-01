@@ -9,6 +9,9 @@ from cibo.data.directaryl import directaryl
 from cibo.data.user_data import user_data
 
 
+#random.seed(111)
+#np.random.seed(111)
+
 class Evaluation_data:
     def __init__(
         self, dataset, init_size, prices, init_strategy="values", nucleophile=None, csv_file=None, description=None
@@ -174,7 +177,6 @@ class Evaluation_data:
 
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
 
-
         elif self.init_strategy == "random":
             """
             Randomly select init_size values.
@@ -198,6 +200,57 @@ class Evaluation_data:
             X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
 
             return X_init, y_init, costs_init, X_holdout, y_holdout, costs_holdout
+
+        elif self.init_strategy == "random_ligands":
+            """
+            Randomly select 10 points accross the dataset and set the costs of the corresponding ligands to 0.
+            then randomly select 144 points with these ligands as the initial set. all other ligands should still have the original cost.
+            """
+
+            chance = np.random.choice(
+                np.arange(len(self.y)), size=3, replace=False
+            )
+
+            selected_ligands = np.unique(self.all_ligands[chance])
+
+            # from the self.all_ligands, select the indices of the selected ligands
+            indices_init = np.array(
+                [i for i in np.arange(len(self.y)) if self.all_ligands[i] in selected_ligands]
+            )
+            # select self.init points random from the indices_init
+            indices_init = np.random.choice(
+                indices_init, size=self.init_size, replace=False
+            )
+
+            costs_init = sum(self.ligand_prices[ligand] for ligand in selected_ligands)
+            # make the costs of the selected ligands 0 but to add the cost later on to all methods (BO, CIBO, etc.)
+            for ligand in selected_ligands:
+                self.ligand_prices[ligand] = 0
+
+            costs_holdout = sum(self.ligand_prices[ligand] for ligand in np.unique(self.all_ligands))
+            LIGANDS_INIT = self.all_ligands[indices_init]
+            LIGANDS_HOLDOUT = self.all_ligands
+
+            X_init, y_init = self.X[indices_init], self.y[indices_init]
+            indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+            exp_init = self.experiments[indices_init]
+            exp_holdout = self.experiments[indices_holdout]
+
+            X_init, y_init = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+            
+            return (X_init, 
+                    y_init, 
+                    costs_init, 
+                    X_holdout, 
+                    y_holdout, 
+                    costs_holdout, 
+                    LIGANDS_INIT,
+                    LIGANDS_HOLDOUT,
+                    self.ligand_prices,
+                    exp_init, 
+                    exp_holdout)
 
         elif self.init_strategy == "worst_ligand":
             indices_init = self.where_worst_ligand[: self.init_size]

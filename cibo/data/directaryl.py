@@ -12,7 +12,7 @@ class directaryl:
         dataset_url = "https://raw.githubusercontent.com/doyle-lab-ucla/edboplus/main/examples/publication/BMS_yield_cost/data/PCI_PMI_cost_full.csv"
         # irrelevant: Time_h , Nucleophile,Nucleophile_Equiv, Ligand_Equiv
         self.data = pd.read_csv(dataset_url)
-        self.data = self.data.sample(frac=1).reset_index(drop=True)
+        #self.data = self.data.sample(frac=1).reset_index(drop=True)
         # create a copy of the data
         data_copy = self.data.copy()
         # remove the Yield column from the copy
