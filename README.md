@@ -90,7 +90,9 @@ Finally, also specify the costs and which column corresponds to the reaction yie
 
 ## Reproduce results from paper
 
-For each experiment, the parameters are set with the `config.py` file in the same directory
+For each experiment, the parameters are set with the `config.py` file in the same directory.
+A subfolder `figures` will be created after executing and results will be plotted and saved as
+png in this folder. In addition results are saved in a pkl file `results.pkl`.
 
 ### Initialization with cheapest ligand
 
