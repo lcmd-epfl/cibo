@@ -101,8 +101,6 @@ cd /cibo/AcqFuncPrice/CheapInit/DirectAryl
 python cost_min.py
 ```
 
-## Repository Structure
-
 Figure 5
 ```
 cd /cibo/AcqFuncPrice/CheapInit/Baumgartner
@@ -127,6 +125,9 @@ cd /cibo/AcqFuncPrice/RandomInit
 python cost_min.py
 ```
 
+## Repository Structure
+
+The folder `cibo` has the following subfolders:
 
 ### `data`
 Currently supports two different datasets:
