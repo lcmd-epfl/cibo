@@ -88,9 +88,44 @@ X, y = data.X, data.y
 Simply specify the location of your file, the compound columns (you can have arbitrarily many) as well as reaction parameters such as the temperature or the concentration.
 Finally, also specify the costs and which column corresponds to the reaction yield.
 
+## Reproduce results from paper
 
+For each experiment, the parameters are set with the `config.py` file in the same directory
+
+### Initialization with cheapest ligand
+
+Figure 3: 
+
+```
+cd /cibo/AcqFuncPrice/CheapInit/DirectAryl
+python cost_min.py
+```
 
 ## Repository Structure
+
+Figure 5
+```
+cd /cibo/AcqFuncPrice/CheapInit/Baumgartner
+python cost_min.py
+```
+### Weight factor for including costs
+
+
+Figure S2
+
+```
+cd /cibo/AcqFuncPrice/CostWeight
+python cost_min.py
+```
+
+### Random initialization
+
+Figure S3
+
+```
+cd /cibo/AcqFuncPrice/RandomInit
+python cost_min.py
+```
 
 
 ### `data`
@@ -127,6 +162,7 @@ benchmark = [
         "acq_func": "NEI",
         "label": "BMS_COST_GP_NEI",
         "cost_mod": "minus",
+        "cost_weight" 1.0
     }
     ...
 ]
@@ -152,6 +188,8 @@ benchmark = [
 `cost_mod`: Selected modification of the original acquisition function to include the cost. "minus" corresponds to results in paper.
 
 `label`: label used for the output files.
+
+`cost_weight`: parameter $\lambda$ controls the weighting between yield optimization and reducing the costs of the optimization. For $\lambda=0$ CIBO is equivalent to normal BO, for $\lambda>0$  costs are taken into account, increasing $\lambda$ puts more weight on reducing the costs. If not mentioned otherwise, we set $\lambda = 1.0$ (see SI Section S4 for additional details). Default $\lambda =1.0$
 
 
 
