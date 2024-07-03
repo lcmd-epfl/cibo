@@ -117,22 +117,22 @@ ax1[0].plot(
     ITERATIONS,
     RANDOM_YIELD,
     label="RS",
-    color="green",
+    color="#E0585B",
     marker="",
-    ls="--",
+    ls="-",
     alpha=0.5,
-    ms=8,
+    lw=3,
 )
 
 ax1[1].plot(
     ITERATIONS,
     RANDOM_COSTS,
     label="RS",
-    color="green",
+    color="#E0585B",
     marker="",
-    ls="--",
+    ls="-",
     alpha=0.5,
-    ms=8,
+    lw=3,
 )
 
 
@@ -268,11 +268,11 @@ ax6[0].plot(
     ITERATIONS,
     RANDOM_YIELD,
     label="RS",
-    color="green",
+    color="#E0585B",
     marker="",
-    ls="--",
+    ls="-",
     alpha=0.5,
-    ms=8,
+    lw=3,
 )
 
 
@@ -325,11 +325,11 @@ ax6[1].plot(
     ITERATIONS,
     RANDOM_COSTS,
     label="RS",
-    color="green",
+    color="#E0585B",
     marker="",
-    ls="--",
+    ls="-",
     alpha=0.5,
-    ms=8,
+    lw=3,
 )
 
 
@@ -397,7 +397,6 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
 
     BO_COA_YIELD = np.mean(np.array(RESULTS[i + 1]["y_better_BO_ALL"]), axis=0)
     BO_COA_COSTS = np.mean(np.array(RESULTS[i + 1]["running_costs_BO_ALL"]), axis=0)
-
 
     RANDOM_YIELD = np.mean(np.array(RESULTS[i]["y_better_RANDOM_ALL"]), axis=0)
     RANDOM_COSTS = np.mean(np.array(RESULTS[i]["running_costs_RANDOM_ALL"]), axis=0)
@@ -474,26 +473,24 @@ for i, j in zip([0, 2, 4, 6], [0, 1, 2, 3]):
             ms=10,
         )
 
-
         ax2[0, j].plot(
             ITERATIONS,
             RANDOM_YIELD,
             label="RS",
-            color="green",
-            ls="--",
+            color="#E0585B",
+            ls="-",
             alpha=0.5,
-            ms=8,
+            lw=2,
         )
-
 
         ax2[1, j].plot(
             ITERATIONS,
             RANDOM_COSTS,
             label="RS",
-            color="green",
-            ls="--",
+            color="#E0585B",
+            ls="-",
             alpha=0.5,
-            ms=8,
+            lw=3,
         )
     for k in range(2):
         ax2[k, j].xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -555,9 +552,10 @@ ax2[0, j].plot(
     ITERATIONS,
     RANDOM_YIELD,
     label="RS",
-    color="green",
-    ls="--",
+    color="#E0585B",
+    ls="-",
     alpha=0.5,
+    lw=3,
 )
 ax2[0, j].plot(
     ITERATIONS,
@@ -587,9 +585,10 @@ ax2[1, j].plot(
     ITERATIONS,
     RANDOM_COSTS,
     label="RS",
-    color="green",
-    ls="--",
+    color="#E0585B",
+    ls="-",
     alpha=0.5,
+    lw=3,
 )
 ax2[1, j].plot(
     ITERATIONS,
@@ -653,8 +652,7 @@ BO_COSTS_RANDINT += INITIAL_COSTS_RANDINT
 RANDOM_COSTS_RANDINT += INITIAL_COSTS_RANDINT
 
 
-
-#pdb.set_trace()
+# pdb.set_trace()
 # now plot the results
 fig33, ax33 = plt.subplots(2, 1, figsize=(7, 7))
 
@@ -719,22 +717,22 @@ ax33[0].plot(
     ITERATIONS,
     RANDOM_YIELD_RANDINT,
     label="RS",
-    color="green",
+    color="#E0585B",
     marker="",
-    ls="--",
+    ls="-",
     alpha=0.5,
-    ms=8,
+    lw=3,
 )
 
 ax33[1].plot(
     ITERATIONS,
     RANDOM_COSTS_RANDINT,
     label="RS",
-    color="green",
+    color="#E0585B",
     marker="",
-    ls="--",
+    ls="-",
     alpha=0.5,
-    ms=8,
+    lw=3,
 )
 
 
@@ -779,7 +777,7 @@ ax33[0].fill_between(
     RANDOM_YIELD_RANDINT - RANDOM_YIELD_STD_RANDINT,
     RANDOM_YIELD_RANDINT + RANDOM_YIELD_STD_RANDINT,
     alpha=0.2,
-    color="green",
+    color="#E0585B",
 )
 
 
@@ -788,7 +786,7 @@ ax33[1].fill_between(
     RANDOM_COSTS_RANDINT - RANDOM_COSTS_STD_RANDINT,
     RANDOM_COSTS_RANDINT + RANDOM_COSTS_STD_RANDINT,
     alpha=0.2,
-    color="green",
+    color="#E0585B",
 )
 
 # make x axis ticks integers
