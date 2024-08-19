@@ -48,6 +48,7 @@ conda create --name cibo python=3.10
 then:
 
 ```
+conda activate cibo
 pip install .
 ```
 
@@ -100,13 +101,13 @@ Figure 3:
 
 ```
 cd /cibo/AcqFuncPrice/CheapInit/DirectAryl
-python cost_min.py
+python costs_min.py
 ```
 
 Figure 5
 ```
 cd /cibo/AcqFuncPrice/CheapInit/Baumgartner
-python cost_min.py
+python costs_min.py
 ```
 ### Weight factor for including costs
 
@@ -115,7 +116,7 @@ Figure S2
 
 ```
 cd /cibo/AcqFuncPrice/CostWeight
-python cost_min.py
+python costs_min.py
 ```
 
 ### Random initialization
@@ -124,7 +125,7 @@ Figure S3
 
 ```
 cd /cibo/AcqFuncPrice/RandomInit
-python cost_min.py
+python costs_min.py
 ```
 
 ## Repository Structure
