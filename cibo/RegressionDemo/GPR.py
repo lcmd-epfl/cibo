@@ -38,7 +38,7 @@ bounds_norm = DATASET.bounds_norm
 fit_y = False
 
 model, scaler_y = update_model(
-    X_init, y_init, bounds_norm, kernel_type="Linear", fit_y=fit_y, FIT_METHOD=True
+    X_init, y_init, bounds_norm, kernel_type="Tanimoto", fit_y=fit_y, FIT_METHOD=True
 )
 
 

@@ -243,3 +243,6 @@ form to optimize Pd-catalyzed C–N
 coupling reactions promoted by organic
 bases. Org. Process Res. Dev. 2019, 23,
 1594–1601
+
+
+_Das Zeitmaß, in dem er lebte, es hatte keine Begrenzung, es hatte keine Zwischenzeiten und keine Intervalle, es war eine ungeheure, gleichmäßige Dauer, die wie eine silberne Welle unendlich über den Horizont lief, und in der Stunden, Tage, Jahre, eine Ewigkeit aufgesogen wurden, ohne dass man ihres Verlustes gewahr wurde._
