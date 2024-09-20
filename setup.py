@@ -15,7 +15,7 @@ setup(
             # Add any console scripts here if needed
         ],
     },
-    author="Jan Weinreich, Alexandre Schoepfer, Rubén Laplaza, Clémence Corminboeuf, LCMD, EPFL",
+    author="Jan Weinreich, Alexandre Schoepfer, Ruben Laplaza, Clémence Corminboeuf, LCMD, EPFL",
     author_email="jan.weinreich@epfl.ch",
     description="Cost-Informed Bayesian Reaction Optimization (CIBO). Bayesian optimization (BO) of reactions becomes increasingly important for advancing chemical discovery. Although effective in guiding experimental design, BO does not account for experimentation costs. For example, it may be more cost-effective to measure a reaction with the same ligand multiple times at different temperatures than buying a new one. We present Cost-Informed BO (CIBO), a policy tailored for chemical experimentation to prioritize experiments with lower costs. In contrast to BO, CIBO finds a cost-effective sequence of experiments towards the global optimum, the “mountain peak”. We envision use cases for efficient resource allocation in experimentation planning for traditional or self-driving laboratories.",
     long_description=open("README.md").read(),
