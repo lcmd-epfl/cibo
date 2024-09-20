@@ -3,7 +3,7 @@ import numpy as np
 import random
 import copy as cp
 # from config import benchmark
-from exp_configs_worst import benchmark
+from config import benchmark
 
 
 from cibo.BO import update_model
@@ -233,5 +233,5 @@ if __name__ == "__main__":
     print("Saving results")
     save_pkl(
         RESULTS,
-        "cc_ch_results.pkl",
+        "cc_wo_results.pkl",
     )

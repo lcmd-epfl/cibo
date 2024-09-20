@@ -1,7 +1,7 @@
 benchmark = [
     {
         "dataset": "BMS",
-        "init_strategy": "worst_ligand",
+        "init_strategy": "worst_ligand_rnd",
         "cost_aware": True,
         "n_runs": 100,
         "n_iter": 30,
@@ -15,7 +15,7 @@ benchmark = [
     },
     {
         "dataset": "BMS",
-        "init_strategy": "worst_ligand",
+        "init_strategy": "worst_ligand_rnd",
         "cost_aware": False,
         "n_runs": 100,
         "n_iter": 30,

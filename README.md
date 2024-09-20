@@ -93,7 +93,7 @@ Finally, also specify the costs and which column corresponds to the reaction yie
 
 For each experiment, the parameters are set with the `config.py` file in the same directory.
 A subfolder `figures` will be created after executing and results will be plotted and saved as
-png in this folder. In addition results are saved in a pkl file `results.pkl`.
+png in this folder. In addition results are saved in a pkl file `results_*.pkl`.
 
 ### Initialization with cheapest ligand
 
@@ -109,24 +109,7 @@ Figure 5
 cd /cibo/AcqFuncPrice/CheapInit/Baumgartner
 python costs_min.py
 ```
-### Weight factor for including costs
 
-
-Figure S2
-
-```
-cd /cibo/AcqFuncPrice/CostWeight
-python costs_min.py
-```
-
-### Random initialization
-
-Figure S3
-
-```
-cd /cibo/AcqFuncPrice/RandomInit
-python costs_min.py
-```
 
 ## Repository Structure
 

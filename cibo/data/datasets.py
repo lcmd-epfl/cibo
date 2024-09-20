@@ -289,6 +289,44 @@ class Evaluation_data:
                 exp_holdout,
             )
 
+        elif self.init_strategy == "worst_ligand_rnd":
+            indices_init_raw = self.where_worst_ligand[: self.init_size]
+            indices_init = np.random.choice(indices_init_raw, size=10, replace=False)
+            exp_init = self.experiments[indices_init]
+            indices_holdout = np.setdiff1d(np.arange(len(self.y)), indices_init)
+
+            np.random.shuffle(indices_init)
+            np.random.shuffle(indices_holdout)
+
+            X_init, y_init = self.X[indices_init], self.y[indices_init]
+            X_holdout, y_holdout = self.X[indices_holdout], self.y[indices_holdout]
+            exp_holdout = self.experiments[indices_holdout]
+
+            price_dict_init = self.ligand_prices
+            price_dict_init[self.worst_ligand] = 0
+            LIGANDS_INIT = self.all_ligands[indices_init]
+            LIGANDS_HOLDOUT = self.all_ligands[indices_holdout]
+
+            costs_init = self.costs[indices_init]
+            costs_holdout = self.costs[indices_holdout]
+
+            X_init, y_init = convert2pytorch(X_init, y_init)
+            X_holdout, y_holdout = convert2pytorch(X_holdout, y_holdout)
+
+            return (
+                X_init,
+                y_init,
+                costs_init,
+                X_holdout,
+                y_holdout,
+                costs_holdout,
+                LIGANDS_INIT,
+                LIGANDS_HOLDOUT,
+                price_dict_init,
+                exp_init,
+                exp_holdout,
+            )
+
         elif self.init_strategy == "worst_ligand_and_more":
             if self.dataset == "BMS" or self.dataset == "user_data":
                 unique_bases = self.feauture_labels["names"]["bases"]
