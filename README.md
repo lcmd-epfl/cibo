@@ -1,12 +1,12 @@
 # Cost-Informed Bayesian Reaction Optimization (CIBO) a.k.a. Rules of Acquisition
 
 
-[PREPRINT:](https://chemrxiv.org/engage/chemrxiv/article-details/66220e8a21291e5d1d27408d)
+[Publication:](https://doi.org/10.1039/D4DD00225C)
 
 
 Authors:
 
-Alexandre A. Schoepfer, Jan Weinreich, Ruben Laplaza,Jerome
+Alexandre A. Schoepfer, Jan Weinreich, Ruben Laplaza, Jerome
 Waser, and Clemence Corminboeuf
 
 ## Motivation
